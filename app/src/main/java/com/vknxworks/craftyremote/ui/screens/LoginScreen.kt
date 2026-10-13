@@ -38,6 +38,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -88,16 +92,18 @@ fun LoginScreen(vm: SessionViewModel) {
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Image(
-                painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-            )
+            Box(
+                Modifier
+                    .size(84.dp)
+                    .clip(RoundedCornerShape(26.dp)),
+            ) {
+                Image(painterResource(R.drawable.ic_launcher_background), contentDescription = null, modifier = Modifier.matchParentSize())
+                Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.matchParentSize().scale(1.35f))
+            }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     "Crafty Remote",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.displaySmall,
                 )
                 Text(
                     "Connect to your Crafty Controller panel.",
@@ -189,7 +195,7 @@ fun LoginScreen(vm: SessionViewModel) {
             Button(
                 onClick = submit,
                 enabled = canSubmit,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
             ) {
                 if (vm.busy) {
                     CircularProgressIndicator(

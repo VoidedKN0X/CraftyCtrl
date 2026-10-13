@@ -40,6 +40,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.PhoneAndroid
+import com.vknxworks.craftyremote.ui.AccentCard
+import com.vknxworks.craftyremote.ui.RingGauge
+import com.vknxworks.craftyremote.ui.ratio
+import com.vknxworks.craftyremote.ui.ChartPlayers
+import com.vknxworks.craftyremote.ui.theme.stateColor
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -77,17 +88,25 @@ fun ServerListScreen(
 
     val host = remember(api.baseUrl) { runCatching { URI(api.baseUrl).host }.getOrNull() ?: api.baseUrl }
     var menuOpen by remember { mutableStateOf(false) }
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            LargeTopAppBar(
+                scrollBehavior = scroll,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
                 title = {
                     Column {
-                        Text("Servers", fontWeight = FontWeight.SemiBold)
+                        Text("Servers", fontWeight = FontWeight.Bold)
                         Text(
                             host,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
                         )
                     }
                 },
@@ -176,22 +195,31 @@ fun ServerListScreen(
 @Composable
 private fun ServerCard(row: ServerRow, onClick: () -> Unit) {
     val s = row.stats
-    Card(
-        onClick = onClick,
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val live = s != null && (s.state == ServerState.RUNNING || s.state == ServerState.STARTING)
+    AccentCard(accent = stateColor(s?.state), onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(44.dp)
+                        .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        if (row.summary.isBedrock) Icons.Filled.PhoneAndroid else Icons.Filled.Dns,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
                         row.summary.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    val subtitle = listOfNotNull(s?.version, prettyType(row.summary.type)).joinToString(" · ")
+                    val subtitle = listOfNotNull(prettyType(row.summary.type), s?.version).joinToString(" · ")
                     if (subtitle.isNotEmpty()) {
                         Text(
                             subtitle,
@@ -202,32 +230,23 @@ private fun ServerCard(row: ServerRow, onClick: () -> Unit) {
                         )
                     }
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(8.dp))
                 StatusPill(s?.state)
             }
 
-            if (s == null) {
-                Text(
+            when {
+                s == null -> Text(
                     "Stats unavailable",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            } else if (s.state == ServerState.RUNNING || s.state == ServerState.STARTING) {
-                Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    InlineMetric("CPU", s.cpu?.let { "%.0f%%".format(it) } ?: "—")
-                    InlineMetric("RAM", s.mem ?: "—")
-                    InlineMetric("Players", playersText(s.online, s.max))
+                live -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    RingGauge(s.cpu?.let { (it / 100).toFloat() }, s.cpu?.let { "%.0f%%".format(it) } ?: "—", "CPU", ChartCpu, size = 64.dp, stroke = 7.dp)
+                    RingGauge(s.memPercent?.let { (it / 100).toFloat() }, s.memPercent?.let { "%.0f%%".format(it) } ?: "—", s.mem ?: "Memory", ChartMem, size = 64.dp, stroke = 7.dp)
+                    RingGauge(ratio(s.online, s.max), s.online?.toString() ?: "—", "Players", ChartPlayers, size = 64.dp, stroke = 7.dp)
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun InlineMetric(label: String, value: String) {
-    Column {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -246,15 +265,12 @@ internal fun prettyType(type: String): String? = when (type) {
 
 @Composable
 private fun HostCard(h: HostStats, cpu: List<Float>, mem: List<Float>) {
-    Card(
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Computer, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(10.dp))
-                Text("Host", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text("Host machine", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 val cpuInfo = listOfNotNull(h.cpuCores?.let { "$it cores" }, h.cpuFreq).joinToString(" · ")
                 if (cpuInfo.isNotEmpty()) {
                     Text(cpuInfo, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -286,7 +302,12 @@ private fun HostMetric(
     detail: String?,
     modifier: Modifier,
 ) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        modifier
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(20.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
             Text(value, style = MaterialTheme.typography.titleMedium, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)

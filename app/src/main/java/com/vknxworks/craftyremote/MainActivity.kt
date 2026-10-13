@@ -4,6 +4,11 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -110,7 +115,14 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
         }
         val nav = rememberNavController()
 
-        NavHost(navController = nav, startDestination = "servers") {
+        NavHost(
+            navController = nav,
+            startDestination = "servers",
+            enterTransition = { slideInHorizontally(tween(260)) { it / 6 } + fadeIn(tween(260)) },
+            exitTransition = { fadeOut(tween(160)) },
+            popEnterTransition = { fadeIn(tween(220)) },
+            popExitTransition = { slideOutHorizontally(tween(220)) { it / 6 } + fadeOut(tween(200)) },
+        ) {
             composable("servers") {
                 ServerListScreen(
                     api = api,

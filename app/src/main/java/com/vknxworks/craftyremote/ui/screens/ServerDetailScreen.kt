@@ -87,6 +87,28 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
+import com.vknxworks.craftyremote.ui.PillTabs
+import com.vknxworks.craftyremote.ui.PillTab
+import com.vknxworks.craftyremote.ui.AccentCard
+import com.vknxworks.craftyremote.ui.RingGauge
+import com.vknxworks.craftyremote.ui.FactChip
+import com.vknxworks.craftyremote.ui.ratio
+import com.vknxworks.craftyremote.ui.ChartCpu
+import com.vknxworks.craftyremote.ui.ChartMem
+import com.vknxworks.craftyremote.ui.ChartPlayers
+import com.vknxworks.craftyremote.ui.theme.stateColor
+import com.vknxworks.craftyremote.data.parseTimestamp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -121,13 +143,13 @@ import com.vknxworks.craftyremote.ui.theme.ConsoleError
 import com.vknxworks.craftyremote.ui.theme.ConsoleText
 import com.vknxworks.craftyremote.ui.theme.ConsoleWarn
 
-private enum class DetailTab(val title: String) {
-    OVERVIEW("Overview"),
-    CONSOLE("Console"),
-    STATS("Stats"),
-    FILES("Files"),
-    BACKUPS("Backups"),
-    SCHEDULES("Schedules"),
+private enum class DetailTab(val title: String, val icon: ImageVector) {
+    OVERVIEW("Overview", Icons.Filled.Dashboard),
+    CONSOLE("Console", Icons.Filled.Terminal),
+    STATS("Stats", Icons.AutoMirrored.Filled.ShowChart),
+    FILES("Files", Icons.Filled.FolderOpen),
+    BACKUPS("Backups", Icons.Filled.Backup),
+    SCHEDULES("Schedules", Icons.Filled.Schedule),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -152,12 +174,22 @@ fun ServerDetailScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        serverName.ifBlank { "Server" },
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Column {
+                        Text(
+                            serverName.ifBlank { "Server" },
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        val sub = listOfNotNull(
+                            vm.info?.type?.let(::prettyType),
+                            vm.stats?.version,
+                        ).joinToString(" · ")
+                        if (sub.isNotEmpty()) {
+                            Text(sub, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -167,9 +199,10 @@ fun ServerDetailScreen(
                 actions = {
                     StatusPill(vm.stats?.state)
                     IconButton(onClick = vm::runDiagnostics) {
-                        Icon(Icons.Filled.BugReport, contentDescription = "Diagnostics")
+                        Icon(Icons.Outlined.BugReport, contentDescription = "Diagnostics")
                     }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
             )
         },
     ) { padding ->
@@ -178,18 +211,24 @@ fun ServerDetailScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 8.dp) {
-                DetailTab.entries.forEachIndexed { i, t ->
-                    Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t.title, maxLines = 1) })
+            PillTabs(
+                tabs = remember { DetailTab.entries.map { PillTab(it.title, it.icon) } },
+                selected = tab,
+                onSelect = { tab = it },
+            )
+            AnimatedContent(
+                targetState = DetailTab.entries[tab],
+                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                label = "tab",
+            ) { current ->
+                when (current) {
+                    DetailTab.OVERVIEW -> OverviewTab(vm)
+                    DetailTab.CONSOLE -> ConsoleTab(vm)
+                    DetailTab.STATS -> StatsTab(vm)
+                    DetailTab.FILES -> FilesTab(vm, onOpenFile)
+                    DetailTab.BACKUPS -> BackupsTab(vm)
+                    DetailTab.SCHEDULES -> SchedulesTab(vm)
                 }
-            }
-            when (DetailTab.entries[tab]) {
-                DetailTab.OVERVIEW -> OverviewTab(vm)
-                DetailTab.CONSOLE -> ConsoleTab(vm)
-                DetailTab.STATS -> StatsTab(vm)
-                DetailTab.FILES -> FilesTab(vm, onOpenFile)
-                DetailTab.BACKUPS -> BackupsTab(vm)
-                DetailTab.SCHEDULES -> SchedulesTab(vm)
             }
         }
     }
@@ -263,7 +302,7 @@ private fun OverviewTab(vm: ServerDetailViewModel) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
         }
 
-        if (s != null) StatusSummary(s)
+        if (s != null) StatusHero(s)
 
         SectionLabel("Power")
         PowerControls(
@@ -273,18 +312,14 @@ private fun OverviewTab(vm: ServerDetailViewModel) {
         )
 
         if (s != null) {
-            SectionLabel("Live stats")
+            SectionLabel("Details")
             TileRow(
-                { MetricTile("CPU", s.cpu?.let { "%.1f%%".format(it) } ?: "—", Icons.Filled.Speed, it) },
-                { MetricTile("Memory", memoryText(s), Icons.Filled.Memory, it) },
+                { FactChip("Memory", s.mem ?: "—", Icons.Filled.Memory, it) },
+                { FactChip("World size", s.worldSize ?: "—", Icons.Filled.SdStorage, it) },
             )
             TileRow(
-                { MetricTile("Players", playersText(s.online, s.max), Icons.Filled.Group, it) },
-                { MetricTile("Version", s.version ?: "—", Icons.Filled.Tag, it) },
-            )
-            TileRow(
-                { MetricTile("World size", s.worldSize ?: "—", Icons.Filled.SdStorage, it) },
-                { MetricTile("Port", s.port?.toString() ?: "—", Icons.Filled.Public, it) },
+                { FactChip("Version", s.version ?: "—", Icons.Filled.Tag, it) },
+                { FactChip("Port", s.port?.toString() ?: "—", Icons.Filled.Public, it) },
             )
 
             SectionLabel("Players")
@@ -359,31 +394,68 @@ private fun OverviewTab(vm: ServerDetailViewModel) {
 }
 
 @Composable
-private fun StatusSummary(s: ServerStats) {
-    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(s.state.label, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            val detail = when (s.state) {
-                ServerState.RUNNING -> s.started?.let { "Up since $it" }
-                ServerState.CRASHED -> "Crafty detected a crash."
-                ServerState.STARTING -> "Waiting for the server to come up…"
-                ServerState.UPDATING -> "Updating the server executable…"
-                ServerState.STOPPED -> "Not running."
+private fun StatusHero(s: ServerStats) {
+    AccentCard(accent = stateColor(s.state), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(s.state.label, style = MaterialTheme.typography.headlineMedium)
+                val detail = when (s.state) {
+                    ServerState.RUNNING -> s.started?.let { uptimeText(it) }
+                    ServerState.CRASHED -> "Crafty detected a crash."
+                    ServerState.STARTING -> "Waiting for the server to come up…"
+                    ServerState.UPDATING -> "Updating the server executable…"
+                    ServerState.STOPPED -> "Not running."
+                }
+                detail?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                s.description?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
-            detail?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            s.description?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                RingGauge(
+                    fraction = s.cpu?.let { (it / 100).toFloat() },
+                    value = s.cpu?.let { "%.0f%%".format(it) } ?: "—",
+                    label = "CPU",
+                    color = ChartCpu,
+                )
+                RingGauge(
+                    fraction = s.memPercent?.let { (it / 100).toFloat() },
+                    value = s.memPercent?.let { "%.0f%%".format(it) } ?: "—",
+                    label = "Memory",
+                    color = ChartMem,
+                )
+                RingGauge(
+                    fraction = ratio(s.online, s.max),
+                    value = s.online?.toString() ?: "—",
+                    label = s.max?.takeIf { it > 0 }?.let { "of $it players" } ?: "Players",
+                    color = ChartPlayers,
                 )
             }
         }
     }
+}
+
+/** "Up 1 d 3 h" from Crafty's start timestamp; falls back to the raw text. */
+private fun uptimeText(started: String): String {
+    val t = parseTimestamp(started) ?: return "Up since $started"
+    val mins = ((System.currentTimeMillis() - t) / 60_000).coerceAtLeast(0)
+    val d = mins / 1440
+    val h = (mins % 1440) / 60
+    val m = mins % 60
+    val span = when {
+        d > 0 -> "$d d $h h"
+        h > 0 -> "$h h $m min"
+        else -> "$m min"
+    }
+    return "Up $span"
 }
 
 @Composable

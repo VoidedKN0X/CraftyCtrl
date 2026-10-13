@@ -70,6 +70,19 @@ Keep the `.jks` file and passwords safe — losing them means you can't ship upd
    **Password**: enter your Crafty username, password and, if enabled, the 2FA code.
 3. Tap **Connect**. The app checks the address and credentials before saving anything.
 
+## Using your own app icon
+
+The icon is an adaptive icon made of two layers in `app/src/main/res/drawable/`:
+`ic_launcher_background.xml` (gradient) and `ic_launcher_foreground.xml` (the rack mark).
+To use your own artwork instead:
+
+1. Make a square PNG, 432×432 px, with the artwork centred inside the middle 264×264 px
+   (launchers crop the edges into circles or squircles).
+2. Save it as `app/src/main/res/drawable-nodpi/ic_launcher_foreground.png`.
+3. Delete `app/src/main/res/drawable/ic_launcher_foreground.xml` (two files with the same name won't build).
+4. Optionally change `ic_launcher_background.xml`, or replace it with a solid colour.
+5. Push to `main`; the next build uses the new icon.
+
 ## Crafty API endpoints used
 
 | Feature | Endpoint |
