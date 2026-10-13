@@ -149,7 +149,8 @@ data class ServerStats(
                 waitingStart = o.bool("waiting_start") ?: false,
                 updating = o.bool("updating") ?: false,
                 cpu = o.num("cpu"),
-                mem = o.str("mem").meaningful(),
+                // Newer Crafty sends raw bytes ("2129448960.0"); older sends "2.0GB". prettySize handles both.
+                mem = o.str("mem").meaningful()?.let(::prettySize),
                 memPercent = o.num("mem_percent"),
                 online = o.int("online"),
                 max = o.int("max"),
