@@ -84,7 +84,9 @@ fun ServerListScreen(
     onSignOut: () -> Unit,
 ) {
     val vm: ServerListViewModel = viewModel(factory = viewModelFactory { initializer { ServerListViewModel(api) } })
-    PollWhileVisible(api, 5_000) { vm.refresh() }
+    // The list asks for every server at once, so it refreshes a little less often than one server.
+    val refreshMs = rememberRefreshMs().coerceAtLeast(3_000)
+    PollWhileVisible(api to refreshMs, refreshMs) { vm.refresh() }
 
     val host = remember(api.baseUrl) { runCatching { URI(api.baseUrl).host }.getOrNull() ?: api.baseUrl }
     var menuOpen by remember { mutableStateOf(false) }
