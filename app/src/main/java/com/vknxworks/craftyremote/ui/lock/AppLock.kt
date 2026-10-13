@@ -3,6 +3,7 @@ package com.vknxworks.craftyremote.ui.lock
 import android.app.Application
 import android.content.Context
 import android.os.SystemClock
+import androidx.activity.compose.BackHandler
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricPrompt
@@ -95,18 +96,28 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
         refreshLockout()
     }
 
+    /** Set when the lock screen has already shown the biometric prompt, so rotation doesn't show it twice. */
+    var biometricShown = false
+
     fun onBackground() {
         backgroundedAt = SystemClock.elapsedRealtime()
+        // "Immediately" locks before the app is hidden, so its content isn't shown on return.
+        if (settings.pinSet && settings.lockAfterSeconds == 0) lockNow()
     }
 
     fun onForeground() {
-        if (!settings.pinSet || locked || backgroundedAt == 0L) return
-        val away = SystemClock.elapsedRealtime() - backgroundedAt
-        if (away >= settings.lockAfterSeconds * 1000L) locked = true
+        val since = backgroundedAt
+        backgroundedAt = 0L
+        if (!settings.pinSet || locked || since == 0L) return
+        val away = SystemClock.elapsedRealtime() - since
+        if (away >= settings.lockAfterSeconds * 1000L) lockNow()
     }
 
     fun lockNow() {
-        if (settings.pinSet) locked = true
+        if (settings.pinSet && !locked) {
+            locked = true
+            biometricShown = false
+        }
     }
 
     fun unlock() {
@@ -167,9 +178,18 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     val canBio = vm.settings.biometricEnabled && activity != null && biometricAvailable(context)
 
     val askBiometric: () -> Unit = {
-        if (canBio && activity != null) showBiometricPrompt(activity, "Unlock Crafty Remote") { vm.unlock() }
+        if (canBio && activity != null) {
+            runCatching { showBiometricPrompt(activity, "Unlock Crafty Remote") { vm.unlock() } }
+        }
     }
-    LaunchedEffect(Unit) { askBiometric() }
+    LaunchedEffect(Unit) {
+        if (!vm.biometricShown) {
+            vm.biometricShown = true
+            askBiometric()
+        }
+    }
+    // Back leaves the app rather than reaching the screens underneath.
+    BackHandler { activity?.moveTaskToBack(true) }
 
     fun press(d: Char) {
         if (vm.lockoutRemaining > 0 || vm.checking || pin.length >= PIN_MAX) return

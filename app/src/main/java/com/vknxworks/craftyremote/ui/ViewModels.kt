@@ -304,11 +304,11 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     /** Parent of the current folder, or null at the server's root. */
     val parentPath: String?
         get() {
-            val current = filePath ?: return null
-            val root = rootPath.orEmpty()
-            if (current.trimEnd('/') == root.trimEnd('/') || current.isEmpty()) return null
-            val parent = current.trimEnd('/').substringBeforeLast('/', "")
-            return if (root.isNotEmpty() && parent.length < root.trimEnd('/').length) root else parent
+            val current = filePath?.trimEnd('/') ?: return null
+            val root = rootPath?.trimEnd('/') ?: return null
+            if (current == root || !current.startsWith("$root/")) return null
+            val parent = current.substringBeforeLast('/')
+            return if (parent.length < root.length) root else parent
         }
 
     // ------------------------------------------------------------ players
