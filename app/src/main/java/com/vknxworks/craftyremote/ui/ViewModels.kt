@@ -331,6 +331,63 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
             return if (parent.length < root.length) root else parent
         }
 
+    /** Upload progress 0..1 while a file is uploading, otherwise null. */
+    var uploadProgress by mutableStateOf<Float?>(null)
+        private set
+
+    fun createEntry(name: String, directory: Boolean) {
+        val folder = filePath ?: return
+        viewModelScope.launch {
+            try {
+                api.createEntry(serverId, folder, name, directory)
+                _messages.send(if (directory) "Folder created" else "File created")
+                openFolder(folder)
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            }
+        }
+    }
+
+    /** Uploads a picked file into the open folder. */
+    fun upload(resolver: android.content.ContentResolver, uri: android.net.Uri) {
+        val folder = filePath ?: return
+        if (uploadProgress != null) return
+        viewModelScope.launch {
+            uploadProgress = 0f
+            try {
+                var name = "upload.bin"
+                var size = -1L
+                resolver.query(uri, null, null, null, null)?.use { c ->
+                    if (c.moveToFirst()) {
+                        val n = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        val sz = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                        if (n >= 0) name = c.getString(n) ?: name
+                        if (sz >= 0 && !c.isNull(sz)) size = c.getLong(sz)
+                    }
+                }
+                if (size < 0) {
+                    _messages.send("Couldn't read the file size.")
+                    return@launch
+                }
+                val input = resolver.openInputStream(uri) ?: run {
+                    _messages.send("Couldn't open that file.")
+                    return@launch
+                }
+                input.use { stream ->
+                    api.upload(serverId, folder, name, size, { b, off, len -> stream.read(b, off, len) }) { p ->
+                        uploadProgress = p
+                    }
+                }
+                _messages.send("Uploaded $name")
+                openFolder(folder)
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            } finally {
+                uploadProgress = null
+            }
+        }
+    }
+
     // ------------------------------------------------------------ players
 
     /** Runs a console command on behalf of a player action and reports the result. */
