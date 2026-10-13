@@ -150,6 +150,11 @@ class CraftyApi(
         return "HTTP $code\n$shown"
     }
 
+    suspend fun setTaskEnabled(serverId: String, taskId: String, enabled: Boolean) {
+        val body = buildJsonObject { put("enabled", enabled) }
+        call("PATCH", "/servers/$serverId/tasks/$taskId", jsonBody(body))
+    }
+
     private suspend fun call(
         method: String,
         path: String,
