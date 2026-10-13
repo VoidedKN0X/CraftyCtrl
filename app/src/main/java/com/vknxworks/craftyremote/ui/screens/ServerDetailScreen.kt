@@ -184,7 +184,7 @@ fun ServerDetailScreen(
                         )
                         val sub = listOfNotNull(
                             vm.info?.type?.let(::prettyType),
-                            vm.stats?.version,
+                            vm.version,
                         ).joinToString(" · ")
                         if (sub.isNotEmpty()) {
                             Text(sub, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
@@ -318,7 +318,7 @@ private fun OverviewTab(vm: ServerDetailViewModel) {
                 { FactChip("World size", s.worldSize ?: "—", Icons.Filled.SdStorage, it) },
             )
             TileRow(
-                { FactChip("Version", s.version ?: "—", Icons.Filled.Tag, it) },
+                { FactChip("Version", vm.version ?: "—", Icons.Filled.Tag, it) },
                 { FactChip("Port", s.port?.toString() ?: "—", Icons.Filled.Public, it) },
             )
 

@@ -122,6 +122,7 @@ class ServerListViewModel(private val api: CraftyApi) : ViewModel() {
     var hostMemSamples by mutableStateOf<List<Float>>(emptyList())
         private set
     private var hostDenied = false
+    private val fallbackVersions = mutableMapOf<String, String?>()
 
     private suspend fun refreshHost() {
         if (hostDenied) return
@@ -162,7 +163,16 @@ class ServerListViewModel(private val api: CraftyApi) : ViewModel() {
                     }
                 }.awaitAll()
             }
-            rows = servers.zip(stats) { summary, st -> ServerRow(summary, st) }
+            // Fill in versions the stats ping didn't report, once per server.
+            for (s in servers) {
+                val st = stats[servers.indexOf(s)]
+                if (st?.version == null && s.id !in fallbackVersions) {
+                    fallbackVersions[s.id] = runCatching { api.versionFallback(s.id, s.executable) }.getOrNull()
+                }
+            }
+            rows = servers.zip(stats) { summary, st ->
+                ServerRow(summary, st?.let { it.copy(version = it.version ?: fallbackVersions[summary.id]) })
+            }
             error = null
         } catch (e: Exception) {
             error = e.userMessage()
@@ -224,6 +234,8 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         viewModelScope.launch {
             val root = info?.path.orEmpty()
             val checks = listOf(
+                Triple("GET", "/servers/$serverId/stats", null),
+                Triple("GET", "/servers/$serverId", null),
                 Triple("GET", "/servers/$serverId/backups", null),
                 Triple("GET", "/servers/$serverId/history", null),
                 Triple("GET", "/crafty/stats", null),
@@ -246,9 +258,16 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     var info by mutableStateOf<ServerSummary?>(null)
         private set
 
+    /** Version from metrics or the jar name, used when the stats ping reports none. */
+    var fallbackVersion by mutableStateOf<String?>(null)
+        private set
+
+    val version: String? get() = stats?.version ?: fallbackVersion
+
     init {
         viewModelScope.launch {
             info = runCatching { api.serverInfo(serverId) }.getOrNull()
+            fallbackVersion = runCatching { api.versionFallback(serverId, info?.executable) }.getOrNull()
         }
     }
 
