@@ -72,6 +72,11 @@ import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DriveFileRenameOutline
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -235,6 +240,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
     var addMenu by remember { mutableStateOf(false) }
     var rowMenu by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf<FileEntry?>(null) }
+    var renaming by remember { mutableStateOf<FileEntry?>(null) }
     // true = new folder, false = new file, null = dialog closed
     var newEntry by remember { mutableStateOf<Boolean?>(null) }
     val resolver = LocalContext.current.contentResolver
@@ -295,7 +301,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
         if (vm.files.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         vm.files.error?.let { ErrorBanner(it, Modifier.padding(12.dp), onRetry = { vm.openFolder(vm.filePath) }) }
 
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+        LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(bottom = 24.dp)) {
             val entries = vm.files.data.orEmpty()
             if (entries.isEmpty() && !vm.files.loading && vm.files.error == null) {
                 item { Text("This folder is empty.", Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -338,6 +344,25 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                         }
                         DropdownMenu(expanded = rowMenu == e.path, onDismissRequest = { rowMenu = null }) {
                             DropdownMenuItem(
+                                text = { Text("Rename") },
+                                leadingIcon = { Icon(Icons.Filled.DriveFileRenameOutline, contentDescription = null) },
+                                onClick = { rowMenu = null; renaming = e },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Move…") },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = null) },
+                                onClick = { rowMenu = null; vm.startClip(e, copy = false) },
+                            )
+                            // Crafty has no copy command; the app copies text files by reading and re-saving them.
+                            val copyable = !e.isDir && e.canOpen != false &&
+                                e.name.substringAfterLast('.', "").lowercase() !in binaryExt
+                            DropdownMenuItem(
+                                text = { Text(if (copyable) "Copy…" else "Copy (text files only)") },
+                                leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+                                enabled = copyable,
+                                onClick = { rowMenu = null; vm.startClip(e, copy = true) },
+                            )
+                            DropdownMenuItem(
                                 text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                                 onClick = { rowMenu = null; confirmDelete = e },
@@ -348,6 +373,44 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             }
         }
+        vm.clip?.let { c ->
+            Surface(color = MaterialTheme.colorScheme.secondaryContainer, tonalElevation = 3.dp) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            (if (c.copy) "Copying " else "Moving ") + c.entry.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            "Open the destination folder, then paste",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+                        )
+                    }
+                    TextButton(onClick = vm::cancelClip) { Text("Cancel") }
+                    FilledTonalButton(onClick = vm::pasteHere) { Text("Paste here") }
+                }
+            }
+        }
+    }
+
+    renaming?.let { e ->
+        NameDialog(
+            title = "Rename ${e.name}",
+            hint = "New name",
+            initial = e.name,
+            confirmLabel = "Rename",
+            onDismiss = { renaming = null },
+            onConfirm = { name -> renaming = null; if (name != e.name) vm.renameEntry(e, name) },
+        )
     }
 
     confirmDelete?.let { e ->
@@ -563,8 +626,15 @@ private fun validName(name: String): String? = when {
 }
 
 @Composable
-private fun NameDialog(title: String, hint: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
-    var name by remember { mutableStateOf("") }
+private fun NameDialog(
+    title: String,
+    hint: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+    initial: String = "",
+    confirmLabel: String = "Create",
+) {
+    var name by remember { mutableStateOf(initial) }
     val error = if (name.isEmpty()) null else validName(name)
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -581,7 +651,7 @@ private fun NameDialog(title: String, hint: String, onDismiss: () -> Unit, onCon
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(name.trim()) }, enabled = validName(name) == null) { Text("Create") }
+            TextButton(onClick = { onConfirm(name.trim()) }, enabled = validName(name) == null) { Text(confirmLabel) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )

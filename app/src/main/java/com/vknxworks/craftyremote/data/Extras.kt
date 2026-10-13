@@ -171,6 +171,8 @@ data class FileEntry(
     val name: String,
     val path: String,
     val isDir: Boolean,
+    /** Crafty's "can_open": false for binary files it won't show as text. Null when not reported. */
+    val canOpen: Boolean? = null,
 )
 
 /** Result of asking Crafty for a path: a folder listing or a file's text. */
@@ -207,11 +209,14 @@ internal fun parseFileResult(root: JsonElement, requestedPath: String): FileResu
 }
 
 private fun entryFrom(o: JsonObject, key: String?, parent: String): FileEntry? {
-    val path = o.str("path")?.takeIf { it.isNotBlank() }
-    val name = key?.takeIf { it.isNotBlank() } ?: path?.trimEnd('/')?.substringAfterLast('/') ?: return null
+    // Crafty lists entries by name only ("path": "server.properties"), relative to the folder
+    // that was asked for, so build the absolute path from that folder.
+    val raw = o.str("path")?.takeIf { it.isNotBlank() }
+    val name = key?.takeIf { it.isNotBlank() } ?: raw?.trimEnd('/')?.substringAfterLast('/') ?: return null
+    val path = if (raw != null && raw.startsWith("/")) raw else join(parent, name)
     val isDir = o.bool("dir") ?: o.bool("is_dir") ?: o.bool("directory")
         ?: (o.str("type")?.lowercase()?.let { it == "dir" || it == "directory" || it == "folder" }) ?: false
-    return FileEntry(name, path ?: join(parent, name), isDir)
+    return FileEntry(name, path, isDir, o.bool("can_open"))
 }
 
 private fun List<FileEntry>.sorted(): List<FileEntry> =
