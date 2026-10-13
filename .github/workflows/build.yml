@@ -40,7 +40,17 @@ jobs:
           CRAFTY_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease
+          set +e
+          ./gradlew --no-daemon assembleRelease 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            # Surface compiler errors as annotations so they show on the run summary.
+            grep -E "^e: |What went wrong|^> " build.log | head -40 | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+            exit "$status"
+          fi
           mv app/build/outputs/apk/release/app-release.apk crafty-remote.apk
 
       - uses: actions/upload-artifact@v4
