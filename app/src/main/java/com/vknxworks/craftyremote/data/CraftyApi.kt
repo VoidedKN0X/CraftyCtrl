@@ -107,9 +107,103 @@ class CraftyApi(
         return parseFileResult(root, path)
     }
 
+    /**
+     * Saves a text file. Crafty answers 409 (conflict) unless it's told to overwrite an
+     * existing file, so the user's explicit Save always overwrites.
+     */
     suspend fun saveFile(serverId: String, path: String, contents: String) {
-        val body = buildJsonObject { put("path", path); put("contents", contents) }
+        val body = buildJsonObject {
+            put("path", path)
+            put("contents", contents)
+            put("overwrite", true)
+        }
         call("PATCH", "/servers/$serverId/files", jsonBody(body))
+    }
+
+    /** Creates an empty file or folder named [name] inside [parent]. */
+    suspend fun createEntry(serverId: String, parent: String, name: String, directory: Boolean) {
+        val body = buildJsonObject {
+            put("parent", parent)
+            put("name", name)
+            put("directory", directory)
+        }
+        call("PUT", "/servers/$serverId/files/create", jsonBody(body))
+    }
+
+    /**
+     * Uploads a file into [folder] using Crafty's chunked upload (the same one its web panel uses):
+     * an opening request returns an upload id, then each chunk is posted with its index and hash.
+     * [readInto] works like InputStream.read(buffer, offset, length): bytes read, or -1 at the end.
+     */
+    suspend fun upload(
+        serverId: String,
+        folder: String,
+        fileName: String,
+        size: Long,
+        readInto: (ByteArray, Int, Int) -> Int,
+        onProgress: (Float) -> Unit,
+    ) = withContext(Dispatchers.IO) {
+        val chunkSize = UPLOAD_CHUNK
+        val total = maxOf(1L, (size + chunkSize - 1) / chunkSize).toInt()
+        val url = "$baseUrl/api/v2/servers/$serverId/files/upload/".toHttpUrlOrNull()
+            ?: throw CraftyException(0, "BAD_URL", "That panel address isn't a valid URL.")
+
+        fun request(extra: Map<String, String>, body: ByteArray): Pair<Int, String> {
+            val b = Request.Builder().url(url).header("Accept", "application/json")
+            token?.let { b.header("Authorization", "Bearer $it") }
+            mapOf(
+                "chunked" to "true",
+                "type" to "server_upload",
+                "fileName" to fileName,
+                "fileSize" to size.toString(),
+                "chunkSize" to chunkSize.toString(),
+                "totalChunks" to total.toString(),
+                "location" to folder,
+            ).plus(extra).forEach { (k, v) -> b.header(k, v) }
+            b.post(body.toRequestBody(OCTET))
+            return try {
+                http.newCall(b.build()).execute().use { it.code to it.body?.string().orEmpty() }
+            } catch (e: IOException) {
+                throw CraftyException(0, "NETWORK", networkMessage(e))
+            }
+        }
+
+        fun check(code: Int, text: String) {
+            val obj = runCatching { json.parseToJsonElement(text) as? JsonObject }.getOrNull()
+            if (code !in 200..299 || obj?.str("status") == "error") {
+                val err = obj?.str("error") ?: "HTTP_$code"
+                throw CraftyException(code, err, describeError(code, err, obj?.str("error_data")))
+            }
+        }
+
+        // Opening request: newer Crafty hands back an id for the chunks that follow.
+        // Older versions don't have this step and reject it; they key chunks by file name instead.
+        val (code0, text0) = request(emptyMap(), ByteArray(0))
+        if (code0 == 401 || code0 == 403) check(code0, text0)
+        val init = if (code0 in 200..299) runCatching { json.parseToJsonElement(text0) as? JsonObject }.getOrNull() else null
+        val fileId = init?.obj("data")?.str("file_id") ?: init?.str("file_id")
+
+        val buffer = ByteArray(chunkSize)
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        for (i in 0 until total) {
+            // Fill a whole chunk; streams may return fewer bytes per read than asked.
+            var filled = 0
+            while (filled < chunkSize) {
+                val n = readInto(buffer, filled, chunkSize - filled)
+                if (n < 0) break
+                filled += n
+            }
+            val chunk = buffer.copyOf(filled)
+            val hash = digest.digest(chunk).joinToString("") { "%02x".format(it) }
+            val extra = buildMap {
+                put("chunkId", i.toString())
+                put("chunkHash", hash)
+                fileId?.let { put("fileId", it) }
+            }
+            val (code, text) = request(extra, chunk)
+            check(code, text)
+            onProgress((i + 1f) / total)
+        }
     }
 
     suspend fun stats(serverId: String): ServerStats =
@@ -321,6 +415,8 @@ class CraftyApi(
         private const val TASK_PROBE_BATCH = 20
         private const val TASK_PROBE_GAP = 60
         private const val RAW_LIMIT = 4000
+        private const val UPLOAD_CHUNK = 4 * 1024 * 1024
+        private val OCTET = "application/octet-stream".toMediaType()
         private val TEXT = "text/plain; charset=utf-8".toMediaType()
         private val JSON_TYPE = "application/json; charset=utf-8".toMediaType()
         private val ansi = Regex("\u001B\\[[;?0-9]*[A-Za-z]")

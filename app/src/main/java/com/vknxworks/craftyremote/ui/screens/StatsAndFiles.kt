@@ -59,6 +59,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.NoteAdd
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -219,6 +230,13 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
     val parent = vm.parentPath
     BackHandler(enabled = parent != null) { vm.openFolder(parent) }
     var binaryWarning by remember { mutableStateOf<FileEntry?>(null) }
+    var addMenu by remember { mutableStateOf(false) }
+    // true = new folder, false = new file, null = dialog closed
+    var newEntry by remember { mutableStateOf<Boolean?>(null) }
+    val resolver = LocalContext.current.contentResolver
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.upload(resolver, uri)
+    }
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -241,6 +259,34 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = { vm.openFolder(vm.filePath) }) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh") }
+            Box {
+                FilledTonalIconButton(onClick = { addMenu = true }, enabled = vm.filePath != null && vm.uploadProgress == null) {
+                    Icon(Icons.Filled.Add, contentDescription = "Add")
+                }
+                DropdownMenu(expanded = addMenu, onDismissRequest = { addMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text("New file") },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, contentDescription = null) },
+                        onClick = { addMenu = false; newEntry = false },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("New folder") },
+                        leadingIcon = { Icon(Icons.Filled.CreateNewFolder, contentDescription = null) },
+                        onClick = { addMenu = false; newEntry = true },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Upload file") },
+                        leadingIcon = { Icon(Icons.Filled.Upload, contentDescription = null) },
+                        onClick = { addMenu = false; picker.launch(arrayOf("*/*")) },
+                    )
+                }
+            }
+        }
+        vm.uploadProgress?.let { p ->
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Uploading… ${(p * 100).toInt()}%", style = MaterialTheme.typography.labelMedium)
+                LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth())
+            }
         }
         if (vm.files.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         vm.files.error?.let { ErrorBanner(it, Modifier.padding(12.dp), onRetry = { vm.openFolder(vm.filePath) }) }
@@ -280,6 +326,15 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             }
         }
+    }
+
+    newEntry?.let { folder ->
+        NameDialog(
+            title = if (folder) "New folder" else "New file",
+            hint = if (folder) "Folder name" else "File name, e.g. notes.txt",
+            onDismiss = { newEntry = null },
+            onConfirm = { name -> newEntry = null; vm.createEntry(name, folder) },
+        )
     }
 
     binaryWarning?.let { e ->
@@ -455,4 +510,38 @@ fun FileEditorScreen(api: CraftyApi, serverId: String, path: String, onBack: () 
             dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text("Keep editing") } },
         )
     }
+}
+
+/** Names can't contain path separators or be "." / "..", so nothing lands outside the folder. */
+private fun validName(name: String): String? = when {
+    name.isBlank() -> "Enter a name"
+    name.trim() in listOf(".", "..") -> "That name isn't allowed"
+    name.any { it == '/' || it == '\\' || it.code < 32 } -> "Names can't contain / or \\"
+    name.length > 120 -> "That name is too long"
+    else -> null
+}
+
+@Composable
+private fun NameDialog(title: String, hint: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    val error = if (name.isEmpty()) null else validName(name)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(hint) },
+                singleLine = true,
+                isError = error != null,
+                supportingText = error?.let { { Text(it) } },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(name.trim()) }, enabled = validName(name) == null) { Text("Create") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
