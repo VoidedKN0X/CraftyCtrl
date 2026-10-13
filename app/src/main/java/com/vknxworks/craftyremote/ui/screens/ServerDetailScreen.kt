@@ -83,6 +83,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -101,6 +105,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.vknxworks.craftyremote.data.BackupConfig
 import com.vknxworks.craftyremote.data.CraftyApi
 import com.vknxworks.craftyremote.data.ScheduledTask
+import com.vknxworks.craftyremote.data.TaskAction
 import com.vknxworks.craftyremote.data.ServerState
 import com.vknxworks.craftyremote.data.ServerStats
 import com.vknxworks.craftyremote.ui.ErrorBanner
@@ -584,6 +589,8 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
 private fun BackupsTab(vm: ServerDetailViewModel) {
     LaunchedEffect(vm) { if (vm.backups.data == null) vm.loadBackups() }
     val state = vm.backups
+    var editingTask by remember { mutableStateOf<TaskEdit?>(null) }
+    var editingBackup by remember { mutableStateOf<BackupConfig?>(null) }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -611,7 +618,7 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
             }
         }
         if (list != null) {
-            val backupTasks = vm.tasks.data.orEmpty().filter { it.action == "backup_server" }
+            val backupTasks = vm.tasks.data.orEmpty().filter { it.kind == TaskAction.BACKUP }
             items(list) { b ->
                 // A backup task names its config by id; tasks without one run the default config.
                 val mine = backupTasks.filter { t -> t.actionId == b.id || (t.actionId == null && b.isDefault) }
@@ -623,6 +630,9 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
                     busy = vm.backupInFlight == (b.id ?: ServerDetailViewModel.DEFAULT_BACKUP),
                     enabled = vm.backupInFlight == null,
                     onToggle = { t, on -> vm.setTaskEnabled(t, on) },
+                    onEditTask = { t -> editingTask = TaskEdit(t, null) },
+                    onAddSchedule = { editingTask = TaskEdit(null, TaskAction.BACKUP to b.id) },
+                    onEdit = { editingBackup = b },
                 ) { vm.runBackup(b) }
             }
         }
@@ -633,6 +643,16 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+
+    editingTask?.let { e -> TaskEditor(vm, e) { editingTask = null } }
+    editingBackup?.let { b ->
+        BackupEditorSheet(
+            config = b,
+            saving = vm.savingEdit,
+            onDismiss = { editingBackup = null },
+            onSave = { fields -> vm.saveBackup(b, fields) { editingBackup = null } },
+        )
     }
 }
 
@@ -645,6 +665,9 @@ private fun BackupCard(
     busy: Boolean,
     enabled: Boolean,
     onToggle: (ScheduledTask, Boolean) -> Unit,
+    onEditTask: (ScheduledTask) -> Unit,
+    onAddSchedule: () -> Unit,
+    onEdit: () -> Unit,
     onRun: () -> Unit,
 ) {
     Card(
@@ -688,7 +711,14 @@ private fun BackupCard(
             Text("Schedule", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
             when {
                 schedules.isNotEmpty() -> schedules.forEach { t ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { onEditTask(t) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Icon(
                             Icons.Filled.Schedule, contentDescription = null, modifier = Modifier.size(18.dp),
                             tint = if (t.enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -706,10 +736,22 @@ private fun BackupCard(
                 schedulesLoading -> Text("Loading schedule…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 schedulesError != null -> Text("Couldn't load schedules: $schedulesError", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 else -> Text(
-                    "Not scheduled. Add a backup task in the Crafty web panel's Schedules page.",
+                    "Not scheduled yet.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onAddSchedule, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Add schedule")
+                }
+                OutlinedButton(onClick = onEdit, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Settings")
+                }
             }
             FilledTonalButton(onClick = onRun, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
                 if (busy) {
@@ -726,8 +768,13 @@ private fun BackupCard(
 
 @Composable
 private fun SchedulesTab(vm: ServerDetailViewModel) {
-    LaunchedEffect(vm) { if (vm.tasks.data == null) vm.loadTasks() }
+    LaunchedEffect(vm) {
+        if (vm.tasks.data == null) vm.loadTasks()
+        // The editor offers backup profiles, so have them ready.
+        if (vm.backups.data == null) vm.loadBackups()
+    }
     val state = vm.tasks
+    var editing by remember { mutableStateOf<TaskEdit?>(null) }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -735,6 +782,13 @@ private fun SchedulesTab(vm: ServerDetailViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item(key = "header") { TabHeader("Scheduled tasks", state.loading, vm::loadTasks) }
+        item(key = "new") {
+            FilledTonalButton(onClick = { editing = TaskEdit(null, null) }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("New schedule")
+            }
+        }
         state.error?.let { item(key = "error") { ErrorBanner(it, onRetry = vm::loadTasks) } }
 
         val list = state.data
@@ -742,19 +796,40 @@ private fun SchedulesTab(vm: ServerDetailViewModel) {
             item(key = "empty") {
                 EmptyCard(
                     title = "No scheduled tasks",
-                    body = "Create schedules in the Crafty web panel; they'll show up here to switch on and off.",
+                    body = "Tap New schedule to restart, back up, or run a command automatically.",
                 )
             }
         }
         if (list != null) {
-            items(list, key = { it.id }) { t -> TaskCard(t) { enabled -> vm.setTaskEnabled(t, enabled) } }
+            items(list, key = { it.id }) { t ->
+                TaskCard(t, onClick = { editing = TaskEdit(t, null) }) { enabled -> vm.setTaskEnabled(t, enabled) }
+            }
         }
     }
+
+    editing?.let { e -> TaskEditor(vm, e) { editing = null } }
+}
+
+/** What the task editor is opened for: an existing task, or a new one with an optional preset action. */
+private data class TaskEdit(val task: ScheduledTask?, val preset: Pair<TaskAction, String?>?)
+
+@Composable
+private fun TaskEditor(vm: ServerDetailViewModel, e: TaskEdit, close: () -> Unit) {
+    TaskEditorSheet(
+        existing = e.task,
+        backups = vm.backups.data.orEmpty(),
+        saving = vm.savingEdit,
+        preset = e.preset,
+        onDismiss = close,
+        onSave = { fields -> vm.saveTask(e.task, fields, close) },
+        onDelete = e.task?.let { t -> { vm.deleteTask(t, close) } },
+    )
 }
 
 @Composable
-private fun TaskCard(t: ScheduledTask, onToggle: (Boolean) -> Unit) {
+private fun TaskCard(t: ScheduledTask, onClick: () -> Unit, onToggle: (Boolean) -> Unit) {
     Card(
+        onClick = onClick,
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {

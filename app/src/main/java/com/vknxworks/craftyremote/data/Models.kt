@@ -179,6 +179,13 @@ data class BackupConfig(
     val name: String,
     val isDefault: Boolean,
     val details: List<Pair<String, String>>,
+    // Raw values for the editor.
+    val maxBackups: Int? = null,
+    val compress: Boolean = false,
+    val shutdown: Boolean = false,
+    val before: String = "",
+    val after: String = "",
+    val enabled: Boolean = true,
 ) {
     companion object {
         private val shownFields = listOf(
@@ -205,14 +212,41 @@ data class BackupConfig(
                 }
                 label to pretty
             },
+            maxBackups = o.int("max_backups"),
+            compress = o.bool("compress") ?: false,
+            shutdown = o.bool("shutdown") ?: false,
+            before = o.str("before").orEmpty(),
+            after = o.str("after").orEmpty(),
+            enabled = o.bool("enabled") ?: true,
         )
+    }
+}
+
+/** The kinds of task Crafty can schedule, with the value its API uses. */
+enum class TaskAction(val api: String, val label: String) {
+    COMMAND("command", "Console command"),
+    BACKUP("backup", "Backup"),
+    RESTART("restart", "Restart server"),
+    START("start", "Start server"),
+    STOP("stop", "Stop server");
+
+    companion object {
+        /** Accepts both the short names and the *_server / custom_command spellings. */
+        fun of(raw: String): TaskAction? = when (raw.lowercase()) {
+            "command", "custom_command" -> COMMAND
+            "backup", "backup_server" -> BACKUP
+            "restart", "restart_server" -> RESTART
+            "start", "start_server" -> START
+            "stop", "stop_server" -> STOP
+            else -> null
+        }
     }
 }
 
 data class ScheduledTask(
     val id: String,
     val name: String,
-    /** Raw Crafty action, e.g. "backup_server". */
+    /** Raw Crafty action, e.g. "backup". */
     val action: String,
     /** For backup tasks: which backup config it runs; null means the default one. */
     val actionId: String?,
@@ -220,7 +254,16 @@ data class ScheduledTask(
     val command: String?,
     val schedule: String,
     val enabled: Boolean,
+    // Raw schedule fields, kept so the editor can start from the current values.
+    val interval: Int? = null,
+    val intervalType: String? = null,
+    val startTime: String? = null,
+    val cronString: String? = null,
+    val oneTime: Boolean = false,
+    val delay: Int = 0,
 ) {
+    val kind: TaskAction? get() = TaskAction.of(action)
+
     companion object {
         fun from(o: JsonObject): ScheduledTask? {
             val id = o.str("schedule_id") ?: o.str("id") ?: return null
@@ -234,18 +277,18 @@ data class ScheduledTask(
                 command = o.str("command").meaningful(),
                 schedule = describe(o),
                 enabled = o.bool("enabled") ?: false,
+                interval = o.int("interval"),
+                intervalType = o.str("interval_type").meaningful(),
+                startTime = o.str("start_time").meaningful(),
+                cronString = o.str("cron_string").meaningful(),
+                oneTime = o.bool("one_time") ?: false,
+                delay = o.int("delay") ?: 0,
             )
         }
 
-        private fun humanAction(action: String): String = when (action) {
-            "start_server" -> "Start server"
-            "stop_server" -> "Stop server"
-            "restart_server" -> "Restart server"
-            "backup_server" -> "Backup"
-            "custom_command", "command" -> "Console command"
-            "" -> "Task"
-            else -> action.replace('_', ' ').replaceFirstChar { it.uppercase() }
-        }
+        private fun humanAction(action: String): String =
+            TaskAction.of(action)?.label
+                ?: if (action.isEmpty()) "Task" else action.replace('_', ' ').replaceFirstChar { it.uppercase() }
 
         private fun describe(o: JsonObject): String {
             val cron = o.str("cron_string").meaningful()
@@ -255,7 +298,7 @@ data class ScheduledTask(
             val interval = o.str("interval").meaningful()
             val at = o.str("start_time").meaningful()
             val base = when {
-                interval != null && type != null -> "Every $interval $type"
+                interval != null && type != null -> if (interval == "1") "Every ${type.removeSuffix("s")}" else "Every $interval $type"
                 type != null -> type.replaceFirstChar { it.uppercase() }
                 else -> "Custom schedule"
             }
