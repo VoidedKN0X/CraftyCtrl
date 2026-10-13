@@ -77,7 +77,11 @@ data class ServerSummary(
     val id: String,
     val name: String,
     val type: String,
+    /** Absolute folder on the Crafty host; the root for the file browser. */
+    val path: String? = null,
 ) {
+    val isBedrock: Boolean get() = "bedrock" in type.lowercase()
+
     companion object {
         fun from(o: JsonObject): ServerSummary? {
             val id = o.str("server_id") ?: o.str("server_uuid") ?: return null
@@ -85,6 +89,7 @@ data class ServerSummary(
                 id = id,
                 name = o.str("server_name").meaningful() ?: "Unnamed server",
                 type = o.str("type").orEmpty(),
+                path = o.str("path").meaningful(),
             )
         }
     }
@@ -171,6 +176,8 @@ data class BackupConfig(
 ) {
     companion object {
         private val shownFields = listOf(
+            "backup_type" to "Type",
+            "enabled" to "Enabled",
             "backup_location" to "Location",
             "max_backups" to "Keep",
             "compress" to "Compressed",
@@ -199,6 +206,10 @@ data class BackupConfig(
 data class ScheduledTask(
     val id: String,
     val name: String,
+    /** Raw Crafty action, e.g. "backup_server". */
+    val action: String,
+    /** For backup tasks: which backup config it runs; null means the default one. */
+    val actionId: String?,
     val actionLabel: String,
     val command: String?,
     val schedule: String,
@@ -211,6 +222,8 @@ data class ScheduledTask(
             return ScheduledTask(
                 id = id,
                 name = o.str("name").meaningful() ?: humanAction(action),
+                action = action,
+                actionId = o.str("action_id").meaningful(),
                 actionLabel = humanAction(action),
                 command = o.str("command").meaningful(),
                 schedule = describe(o),

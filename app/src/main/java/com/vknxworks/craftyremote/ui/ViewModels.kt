@@ -13,6 +13,10 @@ import com.vknxworks.craftyremote.data.BackupConfig
 import com.vknxworks.craftyremote.data.CraftyApi
 import com.vknxworks.craftyremote.data.CraftyException
 import com.vknxworks.craftyremote.data.CredentialStore
+import com.vknxworks.craftyremote.data.FileEntry
+import com.vknxworks.craftyremote.data.FileResult
+import com.vknxworks.craftyremote.data.HistoryPoint
+import com.vknxworks.craftyremote.data.HostStats
 import com.vknxworks.craftyremote.data.ScheduledTask
 import com.vknxworks.craftyremote.data.ServerStats
 import com.vknxworks.craftyremote.data.ServerSummary
@@ -107,7 +111,41 @@ class ServerListViewModel(private val api: CraftyApi) : ViewModel() {
     var error by mutableStateOf<String?>(null)
         private set
 
-    suspend fun refresh() {
+    var host by mutableStateOf<HostStats?>(null)
+        private set
+    var hostError by mutableStateOf<String?>(null)
+        private set
+    /** Host CPU and RAM samples taken while this screen is open, for the sparklines. */
+    var hostCpuSamples by mutableStateOf<List<Float>>(emptyList())
+        private set
+    var hostMemSamples by mutableStateOf<List<Float>>(emptyList())
+        private set
+    private var hostDenied = false
+
+    private suspend fun refreshHost() {
+        if (hostDenied) return
+        try {
+            val h = api.hostStats()
+            host = h
+            hostError = null
+            h.cpuPercent?.let { hostCpuSamples = (hostCpuSamples + it.toFloat()).takeLast(HOST_SAMPLES) }
+            h.memPercent?.let { hostMemSamples = (hostMemSamples + it.toFloat()).takeLast(HOST_SAMPLES) }
+        } catch (e: CraftyException) {
+            hostError = e.message
+            // Permission problems won't fix themselves; stop asking every few seconds.
+            if (e.httpCode in listOf(400, 403) || e.errorCode == "HOST_STATS") hostDenied = true
+        } catch (e: Exception) {
+            hostError = e.userMessage()
+        }
+    }
+
+    /** Refreshes servers and host stats side by side. */
+    suspend fun refresh() = coroutineScope {
+        launch { refreshHost() }
+        refreshServers()
+    }
+
+    private suspend fun refreshServers() {
         try {
             val servers = api.servers()
             val stats = coroutineScope {
@@ -140,6 +178,8 @@ class ServerListViewModel(private val api: CraftyApi) : ViewModel() {
         }
     }
 }
+
+private const val HOST_SAMPLES = 60
 
 // ---------------------------------------------------------------- server detail
 
@@ -181,15 +221,108 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     fun runDiagnostics() {
         diagnostics = "Running…"
         viewModelScope.launch {
-            val paths = listOf(
-                "/servers/$serverId/backups",
-                "/servers/$serverId/tasks",
-                "/servers/$serverId/tasks/1",
+            val root = info?.path.orEmpty()
+            val checks = listOf(
+                Triple("GET", "/servers/$serverId/backups", null),
+                Triple("GET", "/servers/$serverId/history", null),
+                Triple("GET", "/crafty/stats", null),
+                Triple("POST", "/servers/$serverId/files", """{"page":"files","path":${jsonQuote(root)}}"""),
             )
             val report = StringBuilder("Server $serverId\n")
-            for (p in paths) {
-                report.append("\n── GET /api/v2$p\n").append(api.raw(p)).append('\n')
+            for ((method, p, body) in checks) {
+                report.append("\n── $method /api/v2$p").append(body?.let { " $it" }.orEmpty()).append('\n')
+                report.append(api.raw(p, body)).append('\n')
                 diagnostics = report.toString()
+            }
+        }
+    }
+
+    private fun jsonQuote(s: String) = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+    // ------------------------------------------------------------ server info
+
+    /** Name, type (Java/Bedrock) and folder; loaded once. */
+    var info by mutableStateOf<ServerSummary?>(null)
+        private set
+
+    init {
+        viewModelScope.launch {
+            info = runCatching { api.serverInfo(serverId) }.getOrNull()
+        }
+    }
+
+    // ------------------------------------------------------------ stats history
+
+    var history by mutableStateOf(Loadable<List<HistoryPoint>>())
+        private set
+
+    /** Samples taken from the live stats poll, used when Crafty has no history to give. */
+    var liveSamples by mutableStateOf<List<HistoryPoint>>(emptyList())
+        private set
+
+    fun loadHistory() {
+        viewModelScope.launch {
+            history = history.copy(loading = true, error = null)
+            history = try {
+                Loadable(api.history(serverId))
+            } catch (e: Exception) {
+                history.copy(loading = false, error = e.userMessage())
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ files
+
+    var filePath by mutableStateOf<String?>(null)
+        private set
+    var files by mutableStateOf(Loadable<List<FileEntry>>())
+        private set
+
+    /** Opens [path], or the server's root folder when null. */
+    fun openFolder(path: String?) {
+        viewModelScope.launch {
+            val target = path ?: (info ?: runCatching { api.serverInfo(serverId) }.getOrNull().also { info = it })?.path.orEmpty()
+            files = files.copy(loading = true, error = null)
+            try {
+                when (val r = api.browse(serverId, target)) {
+                    is FileResult.Folder -> {
+                        filePath = target
+                        files = Loadable(r.entries)
+                    }
+                    is FileResult.Text -> {
+                        files = files.copy(loading = false, error = "That's a file, not a folder.")
+                    }
+                }
+            } catch (e: Exception) {
+                files = files.copy(loading = false, error = e.userMessage())
+            }
+        }
+    }
+
+    val rootPath: String? get() = info?.path
+
+    /** Parent of the current folder, or null at the server's root. */
+    val parentPath: String?
+        get() {
+            val current = filePath ?: return null
+            val root = rootPath.orEmpty()
+            if (current.trimEnd('/') == root.trimEnd('/') || current.isEmpty()) return null
+            val parent = current.trimEnd('/').substringBeforeLast('/', "")
+            return if (root.isNotEmpty() && parent.length < root.trimEnd('/').length) root else parent
+        }
+
+    // ------------------------------------------------------------ players
+
+    /** Runs a console command on behalf of a player action and reports the result. */
+    fun playerCommand(command: String, done: String) {
+        viewModelScope.launch {
+            try {
+                api.sendCommand(serverId, command)
+                _messages.send(done)
+                delay(1200)
+                refreshStats()
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
             }
         }
     }
@@ -203,8 +336,15 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
     suspend fun refreshStats() {
         try {
-            stats = api.stats(serverId)
+            val s = api.stats(serverId)
+            stats = s
             statsError = null
+            liveSamples = (liveSamples + HistoryPoint(
+                time = System.currentTimeMillis(),
+                cpu = s.cpu,
+                memPercent = s.memPercent,
+                players = s.online,
+            )).takeLast(LIVE_SAMPLES)
         } catch (e: Exception) {
             statsError = e.userMessage()
         }
@@ -259,6 +399,8 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     }
 
     fun loadBackups() {
+        // Backup schedules are ordinary scheduled tasks, so the backups tab needs those too.
+        if (tasks.data == null && !tasks.loading) loadTasks()
         viewModelScope.launch {
             backups = backups.copy(loading = true, error = null)
             backups = try {
@@ -319,5 +461,6 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
     companion object {
         const val DEFAULT_BACKUP = "__default__"
+        private const val LIVE_SAMPLES = 200
     }
 }
