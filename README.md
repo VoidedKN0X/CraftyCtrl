@@ -25,7 +25,10 @@ Polling pauses whenever the app is in the background.
 
 1. Push this folder to a GitHub repository.
 2. The **Build APK** workflow runs on every push to `main`. Open the run → *Artifacts* → download `crafty-remote-apk`.
-3. Push a tag like `v1.0.0` to also publish the APK as a GitHub Release, which is easier to download on a phone.
+3. **Releases:** the first build of each new version is published under **Releases** as
+   `crafty-remote-<version>.apk`, with that version's notes from `CHANGELOG.md`. To release an update,
+   bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a `## [x.y.z]` section to
+   `CHANGELOG.md`, and push to `main`.
 
 ### Option B — Android Studio
 
