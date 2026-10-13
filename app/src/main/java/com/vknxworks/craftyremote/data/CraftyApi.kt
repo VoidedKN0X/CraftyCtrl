@@ -120,6 +120,22 @@ class CraftyApi(
         call("PATCH", "/servers/$serverId/files", jsonBody(body))
     }
 
+    /** Deletes a file or a folder with everything in it. */
+    suspend fun deleteEntry(serverId: String, path: String) {
+        val current = buildJsonObject {
+            put("file_system_objects", kotlinx.serialization.json.buildJsonArray {
+                add(buildJsonObject { put("filename", path) })
+            })
+        }
+        try {
+            call("DELETE", "/servers/$serverId/files", jsonBody(current))
+        } catch (e: CraftyException) {
+            // Older Crafty versions take a single filename instead of a list.
+            if (e.httpCode != 400) throw e
+            call("DELETE", "/servers/$serverId/files", jsonBody(buildJsonObject { put("filename", path) }))
+        }
+    }
+
     /** Creates an empty file or folder named [name] inside [parent]. */
     suspend fun createEntry(serverId: String, parent: String, name: String, directory: Boolean) {
         val body = buildJsonObject {

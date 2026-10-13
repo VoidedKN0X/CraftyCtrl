@@ -348,6 +348,22 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         }
     }
 
+    fun deleteEntry(entry: FileEntry) {
+        val folder = filePath ?: return
+        // Never delete the server's own folder or anything outside it.
+        val root = rootPath?.trimEnd('/')
+        if (root != null && (!entry.path.startsWith("$root/") || entry.path.trimEnd('/') == root)) return
+        viewModelScope.launch {
+            try {
+                api.deleteEntry(serverId, entry.path)
+                _messages.send("Deleted ${entry.name}")
+                openFolder(folder)
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            }
+        }
+    }
+
     /** Uploads a picked file into the open folder. */
     fun upload(resolver: android.content.ContentResolver, uri: android.net.Uri) {
         val folder = filePath ?: return
