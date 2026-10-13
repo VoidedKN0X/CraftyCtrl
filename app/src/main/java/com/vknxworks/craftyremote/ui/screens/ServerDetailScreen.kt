@@ -453,6 +453,7 @@ private fun PowerButton(
 
 private val presetCommands = listOf("list", "save-all", "say ", "weather clear", "time set day", "whitelist list")
 
+@Composable
 private fun lineColor(line: String): Color = when {
     "ERROR" in line || "SEVERE" in line || "Exception" in line -> ConsoleError
     "WARN" in line -> ConsoleWarn

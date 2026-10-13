@@ -1,10 +1,15 @@
 package com.vknxworks.craftyremote.ui.theme
 
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 import com.vknxworks.craftyremote.data.ServerState
 
@@ -65,12 +70,18 @@ private val Light = lightColorScheme(
     onErrorContainer = Color(0xFF410002),
 )
 
+/** Uses the phone's Material You colours (Android 12+), with the amber theme as a fallback. */
 @Composable
 fun CraftyTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) Dark else Light,
-        content = content,
-    )
+    val dark = isSystemInDarkTheme()
+    val context = LocalContext.current
+    val scheme = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+            if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        dark -> Dark
+        else -> Light
+    }
+    MaterialTheme(colorScheme = scheme, content = content)
 }
 
 /** Status colours read well on both light and dark surfaces. */
@@ -81,9 +92,14 @@ fun stateColor(state: ServerState?): Color = when (state) {
     ServerState.STOPPED, null -> Color(0xFF8B8F96)
 }
 
-// The console stays dark in both themes, like a terminal.
-val ConsoleBackground = Color(0xFF0D0F12)
-val ConsoleText = Color(0xFFD7D3CB)
-val ConsoleWarn = Color(0xFFFFC66D)
-val ConsoleError = Color(0xFFFF8A80)
-val ConsoleDim = Color(0xFF7D8088)
+// Console and editor colours come from the active theme, so they follow Material You.
+val ConsoleBackground: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.surfaceContainerLowest
+val ConsoleText: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurface
+val ConsoleWarn: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.tertiary
+val ConsoleError: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.error
+val ConsoleDim: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurfaceVariant
