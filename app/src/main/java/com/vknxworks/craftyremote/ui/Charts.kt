@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -148,7 +149,10 @@ fun UsageBar(label: String, percent: Double?, detail: String?) {
     }
 }
 
-// Series colours, readable in both themes.
-val ChartCpu = Color(0xFFFFB547)
-val ChartMem = Color(0xFF6CB6FF)
-val ChartPlayers = Color(0xFF3FB97A)
+// Series colours follow the theme's accent roles.
+val ChartCpu: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.primary
+val ChartMem: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.tertiary
+val ChartPlayers: Color
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.secondary

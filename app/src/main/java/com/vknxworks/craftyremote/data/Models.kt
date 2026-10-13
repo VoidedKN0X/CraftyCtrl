@@ -44,7 +44,10 @@ internal fun JsonElement.dataItems(): List<JsonObject> =
  * a list nested under a key like "backups", or plain names.
  */
 internal fun JsonElement.backupItems(): List<JsonObject> {
-    val d = (this as? JsonObject)?.get("data") ?: return emptyList()
+    // Crafty sends backups as a bare map ({"<backup id>": {...}}), without the usual
+    // {"status": "ok", "data": ...} wrapper, so fall back to the whole reply.
+    val root = this as? JsonObject ?: return emptyList()
+    val d = if ("data" in root && "status" in root) root["data"] ?: return emptyList() else root
     fun fromArray(a: JsonArray): List<JsonObject> = a.mapNotNull { el ->
         when (el) {
             is JsonObject -> el
