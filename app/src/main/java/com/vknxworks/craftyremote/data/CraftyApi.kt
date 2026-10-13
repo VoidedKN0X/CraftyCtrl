@@ -63,6 +63,12 @@ class CraftyApi(
                 ?.takeIf { it.isNotEmpty() && !it.equals("false", true) && !it.equals("none", true) }
                 ?.let { return it }
         }
+        // The startup line in the console log: Java "Starting minecraft server version 26.3",
+        // Bedrock "Version: 1.21.x". Only present while it's still in Crafty's console buffer.
+        runCatching { logs(serverId) }.getOrNull()?.let { lines ->
+            val re = Regex("""(?i)\bversion:?\s+v?(\d+\.\d+(?:\.\d+)*)""")
+            lines.asReversed().firstNotNullOfOrNull { re.find(it)?.groupValues?.get(1) }?.let { return it }
+        }
         return versionFromJar(executable)
     }
 

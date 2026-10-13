@@ -162,7 +162,7 @@ fun StatsTab(vm: ServerDetailViewModel) {
             maxY = 100f,
             footer = span,
         )
-        ChartCard(
+        if (vm.stats?.playersKnown != false) ChartCard(
             title = "Players",
             current = vm.stats?.let { playersText(it.online, it.max) } ?: "—",
             values = points.map { it.players?.toFloat() },
@@ -178,7 +178,7 @@ fun StatsTab(vm: ServerDetailViewModel) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SummaryRow("Average CPU", avgCpu?.let { "%.1f%%".format(it) })
                     SummaryRow("Peak CPU", peakCpu?.let { "%.1f%%".format(it) })
-                    SummaryRow("Most players at once", peakPlayers?.toString())
+                    if (vm.stats?.playersKnown != false) SummaryRow("Most players at once", peakPlayers?.toString())
                 }
             }
         }

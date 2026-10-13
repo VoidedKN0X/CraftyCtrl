@@ -128,7 +128,13 @@ data class ServerStats(
     val started: String?,
     val port: Int?,
     val description: String?,
+    /** Crafty's own ping of the game server; false means players/version are unknown, not zero. */
+    val pingOk: Boolean? = null,
 ) {
+    /** True when the player count is real data rather than a failed ping's default 0. */
+    val playersKnown: Boolean
+        get() = pingOk == true || (max ?: 0) > 0 || players.isNotEmpty()
+
     val state: ServerState
         get() = when {
             crashed -> ServerState.CRASHED
@@ -164,6 +170,7 @@ data class ServerStats(
                 started = o.str("started").meaningful(),
                 port = o.int("server_port"),
                 description = o.str("desc").meaningful()?.replace(minecraftFormatting, ""),
+                pingOk = o.bool("int_ping_results"),
             )
         }
 
