@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Dangerous
 import androidx.compose.material.icons.filled.Group
@@ -82,6 +84,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -146,7 +150,9 @@ fun ServerDetailScreen(
                 },
                 actions = {
                     StatusPill(vm.stats?.state)
-                    Spacer(Modifier.width(12.dp))
+                    IconButton(onClick = vm::runDiagnostics) {
+                        Icon(Icons.Filled.BugReport, contentDescription = "Diagnostics")
+                    }
                 },
             )
         },
@@ -169,6 +175,52 @@ fun ServerDetailScreen(
             }
         }
     }
+
+    vm.diagnostics?.let { report -> DiagnosticsDialog(report, onClose = vm::closeDiagnostics) }
+}
+
+@Composable
+private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
+    val clipboard = LocalClipboardManager.current
+    var copied by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("Diagnostics") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Raw replies from Crafty for backups and schedules. Copy and send them over to get these tabs fixed.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Surface(
+                    color = ConsoleBackground,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                ) {
+                    Text(
+                        report,
+                        color = ConsoleText,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        modifier = Modifier
+                            .verticalScroll(rememberScrollState())
+                            .padding(10.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    clipboard.setText(AnnotatedString(report))
+                    copied = true
+                },
+            ) { Text(if (copied) "Copied" else "Copy") }
+        },
+        dismissButton = { TextButton(onClick = onClose) { Text("Close") } },
+    )
 }
 
 // ---------------------------------------------------------------- overview

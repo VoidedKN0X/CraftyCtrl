@@ -39,6 +39,35 @@ internal fun JsonElement.dataItems(): List<JsonObject> =
         else -> emptyList()
     }
 
+/**
+ * Backup configs as objects, whatever wrapper Crafty uses: a list, a map keyed by id,
+ * a list nested under a key like "backups", or plain names.
+ */
+internal fun JsonElement.backupItems(): List<JsonObject> {
+    val d = (this as? JsonObject)?.get("data") ?: return emptyList()
+    fun fromArray(a: JsonArray): List<JsonObject> = a.mapNotNull { el ->
+        when (el) {
+            is JsonObject -> el
+            is JsonPrimitive -> el.contentOrNull?.let { JsonObject(mapOf("backup_name" to JsonPrimitive(it))) }
+            else -> null
+        }
+    }
+    return when (d) {
+        is JsonArray -> fromArray(d)
+        is JsonObject -> {
+            val nestedList = d.values.filterIsInstance<JsonArray>().firstOrNull()
+            val nestedObjects = d.values.filterIsInstance<JsonObject>()
+            when {
+                nestedList != null -> fromArray(nestedList)
+                nestedObjects.isNotEmpty() -> nestedObjects
+                d.isNotEmpty() -> listOf(d)
+                else -> emptyList()
+            }
+        }
+        else -> emptyList()
+    }
+}
+
 private fun String?.meaningful(): String? =
     this?.trim()?.takeIf { it.isNotEmpty() && !it.equals("false", true) && !it.equals("none", true) }
 

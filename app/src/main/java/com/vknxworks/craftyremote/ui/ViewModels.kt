@@ -174,6 +174,30 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
     val recentCommands = mutableStateListOf<String>()
 
+    /** Raw API responses for troubleshooting; null when the diagnostics view is closed. */
+    var diagnostics by mutableStateOf<String?>(null)
+        private set
+
+    fun runDiagnostics() {
+        diagnostics = "Running…"
+        viewModelScope.launch {
+            val paths = listOf(
+                "/servers/$serverId/backups",
+                "/servers/$serverId/tasks",
+                "/servers/$serverId/tasks/1",
+            )
+            val report = StringBuilder("Server $serverId\n")
+            for (p in paths) {
+                report.append("\n── GET /api/v2$p\n").append(api.raw(p)).append('\n')
+                diagnostics = report.toString()
+            }
+        }
+    }
+
+    fun closeDiagnostics() {
+        diagnostics = null
+    }
+
     private val _messages = Channel<String>(Channel.BUFFERED)
     val messages: Flow<String> = _messages.receiveAsFlow()
 
