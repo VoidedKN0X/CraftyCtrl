@@ -83,6 +83,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     var lockAfter by remember { mutableIntStateOf(settings.lockAfterSeconds) }
     var pinDialog by remember { mutableStateOf<PinDialog?>(null) }
 
+    var liveRefresh by remember { mutableIntStateOf(settings.liveRefreshSeconds) }
     var alerts by remember { mutableStateOf(settings.alertsEnabled) }
     var join by remember { mutableStateOf(settings.alertPlayerJoin) }
     var shutdown by remember { mutableStateOf(settings.alertShutdown) }
@@ -173,6 +174,24 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
 
             // ------------------------------------------------ alerts
+            SectionLabel("Live stats")
+            SettingsCard {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Refresh open screens every", style = MaterialTheme.typography.bodyLarge)
+                    ChoiceChips(
+                        options = listOf(1 to "1 s", 2 to "2 s", 5 to "5 s", 10 to "10 s"),
+                        selected = liveRefresh,
+                        onSelect = { settings.liveRefreshSeconds = it; liveRefresh = it },
+                    )
+                    Text(
+                        "Only while the app is open. Crafty itself recalculates server stats on its own timer " +
+                            "(\"status_update_frequency_seconds\" in Crafty's config.json), so numbers can't change faster than that.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
             SectionLabel("Alerts")
             SettingsCard {
                 SwitchRow(

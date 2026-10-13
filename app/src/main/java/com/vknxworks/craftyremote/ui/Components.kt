@@ -38,6 +38,20 @@ import com.vknxworks.craftyremote.data.ServerState
 import com.vknxworks.craftyremote.ui.theme.stateColor
 import kotlinx.coroutines.delay
 
+/** The in-app refresh interval from Settings, re-read whenever a screen comes back into view. */
+@Composable
+fun rememberRefreshMs(): Long {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var ms by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableLongStateOf(com.vknxworks.craftyremote.data.AppSettings(context).liveRefreshSeconds * 1000L)
+    }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        ms = com.vknxworks.craftyremote.data.AppSettings(context).liveRefreshSeconds * 1000L
+        onPauseOrDispose { }
+    }
+    return ms
+}
+
 /** Runs [block] every [intervalMs] while the screen is visible; pauses in the background. */
 @Composable
 fun PollWhileVisible(key: Any?, intervalMs: Long, block: suspend () -> Unit) {

@@ -60,6 +60,13 @@ class AppSettings(context: Context) {
         get() = prefs.getLong(KEY_LOCKOUT_UNTIL, 0)
         set(v) = prefs.edit().putLong(KEY_LOCKOUT_UNTIL, v).apply()
 
+    // ------------------------------------------------------------ in-app refresh
+
+    /** How often open screens ask Crafty for fresh stats (separate from background alerts). */
+    var liveRefreshSeconds: Int
+        get() = prefs.getInt(KEY_LIVE_REFRESH, 2)
+        set(v) = prefs.edit().putInt(KEY_LIVE_REFRESH, v).apply()
+
     // ------------------------------------------------------------ alerts
 
     var alertsEnabled: Boolean
@@ -99,6 +106,7 @@ class AppSettings(context: Context) {
         const val KEY_LOCK_AFTER = "lock_after"
         const val KEY_FAILED = "pin_failed"
         const val KEY_LOCKOUT_UNTIL = "pin_lockout_until"
+        const val KEY_LIVE_REFRESH = "live_refresh"
         const val KEY_ALERTS = "alerts_enabled"
         const val KEY_ALERT_JOIN = "alert_join"
         const val KEY_ALERT_SHUTDOWN = "alert_shutdown"

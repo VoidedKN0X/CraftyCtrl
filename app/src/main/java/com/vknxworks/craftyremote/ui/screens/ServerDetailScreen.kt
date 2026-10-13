@@ -166,7 +166,8 @@ fun ServerDetailScreen(
     val snackbar = remember { SnackbarHostState() }
 
     LaunchedEffect(vm) { vm.messages.collect { snackbar.showSnackbar(it) } }
-    PollWhileVisible(serverId, 3_000) { vm.refreshStats() }
+    val refreshMs = rememberRefreshMs()
+    PollWhileVisible(serverId to refreshMs, refreshMs) { vm.refreshStats() }
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -547,7 +548,8 @@ private fun lineColor(line: String): Color = when {
 
 @Composable
 private fun ConsoleTab(vm: ServerDetailViewModel) {
-    PollWhileVisible("console-${vm.serverId}", 2_000) { vm.refreshLogs() }
+    val consoleMs = rememberRefreshMs().coerceAtMost(2_000)
+    PollWhileVisible("console-${vm.serverId}" to consoleMs, consoleMs) { vm.refreshLogs() }
 
     val listState = rememberLazyListState()
     var follow by rememberSaveable { mutableStateOf(true) }
