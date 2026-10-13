@@ -51,6 +51,7 @@ import com.vknxworks.craftyremote.ui.RingGauge
 import com.vknxworks.craftyremote.ui.ratio
 import com.vknxworks.craftyremote.ui.ChartPlayers
 import com.vknxworks.craftyremote.ui.theme.stateColor
+import com.vknxworks.craftyremote.ui.rememberRefreshMs
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
