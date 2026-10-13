@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Original mark: a three-unit server rack with one "online" light. Kept inside the 66dp safe zone. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Isometric block, kept inside the 66dp adaptive-icon safe zone -->
-    <path android:fillColor="#FFB547" android:pathData="M54,30 L76,42 L54,54 L32,42 Z" />
-    <path android:fillColor="#E0852B" android:pathData="M32,42 L54,54 L54,78 L32,66 Z" />
-    <path android:fillColor="#B85E1C" android:pathData="M76,42 L76,66 L54,78 L54,54 Z" />
+    <!-- rack units -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M35,33h38a4,4 0,0 1,4 4v6a4,4 0,0 1,-4 4h-38a4,4 0,0 1,-4 -4v-6a4,4 0,0 1,4 -4z" />
+    <path android:fillColor="#E6FFFFFF" android:pathData="M35,50h38a4,4 0,0 1,4 4v6a4,4 0,0 1,-4 4h-38a4,4 0,0 1,-4 -4v-6a4,4 0,0 1,4 -4z" />
+    <path android:fillColor="#CCFFFFFF" android:pathData="M35,67h38a4,4 0,0 1,4 4v6a4,4 0,0 1,-4 4h-38a4,4 0,0 1,-4 -4v-6a4,4 0,0 1,4 -4z" />
+    <!-- status lights: top one green, others dim -->
+    <path android:fillColor="#FF22C55E" android:pathData="M40,40m-2.6,0a2.6,2.6 0,1 1,5.2 0a2.6,2.6 0,1 1,-5.2 0" />
+    <path android:fillColor="#FF5B4BDB" android:pathData="M40,57m-2.6,0a2.6,2.6 0,1 1,5.2 0a2.6,2.6 0,1 1,-5.2 0" />
+    <path android:fillColor="#FF5B4BDB" android:pathData="M40,74m-2.6,0a2.6,2.6 0,1 1,5.2 0a2.6,2.6 0,1 1,-5.2 0" />
+    <!-- vent lines -->
+    <path android:fillColor="#FF5B4BDB" android:pathData="M56,38.8h15v2.4h-15z" />
+    <path android:fillColor="#FF5B4BDB" android:pathData="M56,55.8h15v2.4h-15z" />
+    <path android:fillColor="#FF5B4BDB" android:pathData="M56,72.8h15v2.4h-15z" />
 </vector>
