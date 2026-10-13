@@ -243,7 +243,9 @@ private fun ServerCard(row: ServerRow, onClick: () -> Unit) {
                 live -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     RingGauge(s.cpu?.let { (it / 100).toFloat() }, s.cpu?.let { "%.0f%%".format(it) } ?: "—", "CPU", ChartCpu, size = 64.dp, stroke = 7.dp)
                     RingGauge(s.memPercent?.let { (it / 100).toFloat() }, s.memPercent?.let { "%.0f%%".format(it) } ?: "—", s.mem ?: "Memory", ChartMem, size = 64.dp, stroke = 7.dp)
-                    RingGauge(ratio(s.online, s.max), s.online?.toString() ?: "—", "Players", ChartPlayers, size = 64.dp, stroke = 7.dp)
+                    if (s.playersKnown) {
+                        RingGauge(ratio(s.online, s.max), s.online?.toString() ?: "—", "Players", ChartPlayers, size = 64.dp, stroke = 7.dp)
+                    }
                 }
             }
         }

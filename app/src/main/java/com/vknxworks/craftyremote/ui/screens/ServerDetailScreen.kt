@@ -313,14 +313,19 @@ private fun OverviewTab(vm: ServerDetailViewModel) {
 
         if (s != null) {
             SectionLabel("Details")
-            TileRow(
-                { FactChip("Memory", s.mem ?: "—", Icons.Filled.Memory, it) },
-                { FactChip("World size", s.worldSize ?: "—", Icons.Filled.SdStorage, it) },
+            // Only facts Crafty actually reported; unknown ones are left out rather than shown as "—".
+            val facts = listOfNotNull(
+                s.mem?.let { Triple("Memory", it, Icons.Filled.Memory) },
+                s.worldSize?.let { Triple("World size", it, Icons.Filled.SdStorage) },
+                vm.version?.let { Triple("Version", it, Icons.Filled.Tag) },
+                s.port?.let { Triple("Port", it.toString(), Icons.Filled.Public) },
             )
-            TileRow(
-                { FactChip("Version", vm.version ?: "—", Icons.Filled.Tag, it) },
-                { FactChip("Port", s.port?.toString() ?: "—", Icons.Filled.Public, it) },
-            )
+            facts.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    pair.forEach { (label, value, icon) -> FactChip(label, value, icon, Modifier.weight(1f)) }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
 
             SectionLabel("Players")
             if (s.players.isNotEmpty()) {
@@ -432,12 +437,14 @@ private fun StatusHero(s: ServerStats) {
                     label = "Memory",
                     color = ChartMem,
                 )
-                RingGauge(
-                    fraction = ratio(s.online, s.max),
-                    value = s.online?.toString() ?: "—",
-                    label = s.max?.takeIf { it > 0 }?.let { "of $it players" } ?: "Players",
-                    color = ChartPlayers,
-                )
+                if (s.playersKnown) {
+                    RingGauge(
+                        fraction = ratio(s.online, s.max),
+                        value = s.online?.toString() ?: "—",
+                        label = s.max?.takeIf { it > 0 }?.let { "of $it players" } ?: "Players",
+                        color = ChartPlayers,
+                    )
+                }
             }
         }
     }
