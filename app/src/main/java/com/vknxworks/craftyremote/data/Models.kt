@@ -105,6 +105,8 @@ enum class ServerState(val label: String) {
 
 data class ServerStats(
     val running: Boolean,
+    /** False when Crafty's reply had no "running" field, so [running] is only a guess. */
+    val runningReported: Boolean = true,
     val crashed: Boolean,
     val waitingStart: Boolean,
     val updating: Boolean,
@@ -139,6 +141,7 @@ data class ServerStats(
             val o = JsonObject(r + (r.obj("data") ?: emptyMap()))
             return ServerStats(
                 running = o.bool("running") ?: false,
+                runningReported = o.bool("running") != null,
                 crashed = o.bool("crashed") ?: false,
                 waitingStart = o.bool("waiting_start") ?: false,
                 updating = o.bool("updating") ?: false,

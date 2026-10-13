@@ -4,7 +4,11 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -20,6 +24,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.vknxworks.craftyremote.data.CraftyApi
+import com.vknxworks.craftyremote.data.Session
 import com.vknxworks.craftyremote.monitor.MonitorService
 import com.vknxworks.craftyremote.ui.SessionViewModel
 import com.vknxworks.craftyremote.ui.lock.AppLockViewModel
@@ -68,25 +73,34 @@ private fun AppRoot(
     }
 
     val session = sessionVm.session
+    val context = LocalContext.current
+    // Start or stop alerts whenever someone signs in or out.
+    LaunchedEffect(session?.token) { MonitorService.sync(context) }
     if (session == null) {
         LoginScreen(sessionVm)
         return
     }
 
-    if (lockVm.locked) {
-        LockScreen(
-            vm = lockVm,
-            onForgot = {
-                lockVm.settings.clearPin()
-                lockVm.settings.alertsEnabled = false
-                lockVm.unlock()
-                sessionVm.signOut("PIN removed. Sign in again to continue.")
-                activity?.let { MonitorService.sync(it) }
-            },
-        )
-        return
+    // The app keeps running underneath the lock, so open screens and unsaved edits survive it.
+    Box(Modifier.fillMaxSize()) {
+        AppContent(session, sessionVm)
+        if (lockVm.locked) {
+            LockScreen(
+                vm = lockVm,
+                onForgot = {
+                    lockVm.settings.clearPin()
+                    lockVm.settings.alertsEnabled = false
+                    lockVm.unlock()
+                    sessionVm.signOut("PIN removed. Sign in again to continue.")
+                },
+            )
+        }
     }
+}
 
+@Composable
+private fun AppContent(session: Session, sessionVm: SessionViewModel) {
+    val activity = LocalContext.current as? FragmentActivity
     // A new token means a fresh API client and a fresh navigation stack.
     key(session.token) {
         val api = remember {
@@ -102,10 +116,7 @@ private fun AppRoot(
                     api = api,
                     onOpen = { s -> nav.navigate("server/${Uri.encode(s.id)}?name=${Uri.encode(s.name)}") },
                     onSettings = { nav.navigate("settings") },
-                    onSignOut = {
-                        sessionVm.signOut()
-                        activity?.let { MonitorService.sync(it) }
-                    },
+                    onSignOut = { sessionVm.signOut() },
                 )
             }
             composable(

@@ -47,20 +47,44 @@ class MonitorService : Service() {
     private var loop: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
-    private data class Snapshot(val running: Boolean, val crashed: Boolean, val players: Set<String>, val online: Int)
+    private data class Snapshot(
+        val running: Boolean,
+        val crashed: Boolean,
+        val players: Set<String>,
+        val online: Int,
+        /** Polls in a row that looked stopped; a restart passes through one, a real stop stays. */
+        val stoppedPolls: Int = 0,
+        /** Whether the server was running when the current stopped streak began. */
+        val wasRunningBeforeStop: Boolean = false,
+        /** Set when the player list suddenly came back empty; one such poll is treated as a ping blip. */
+        val emptyBlip: Boolean = false,
+    )
 
     private val last = mutableMapOf<String, Snapshot>()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            AppSettings(this).alertsEnabled = false
+        ensureChannels(this)
+        // Must come first: Android kills the app if a foreground start isn't confirmed quickly.
+        try {
+            startInForeground(status("Starting…"))
+        } catch (e: Exception) {
+            // e.g. restarted by the system while the app is in the background (Android 12+).
             stopSelf()
             return START_NOT_STICKY
         }
-        ensureChannels(this)
-        startInForeground(status("Starting…"))
+        when (intent?.action) {
+            ACTION_STOP -> {
+                AppSettings(this).alertsEnabled = false
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            ACTION_QUIT -> {
+                stopSelf()
+                return START_NOT_STICKY
+            }
+        }
 
         val settings = AppSettings(this)
         updateWakeLock(settings.alertKeepAwake)
@@ -68,7 +92,13 @@ class MonitorService : Service() {
         return START_STICKY
     }
 
+    override fun onCreate() {
+        super.onCreate()
+        isRunning = true
+    }
+
     override fun onDestroy() {
+        isRunning = false
         scope.cancel()
         wakeLock?.let { if (it.isHeld) it.release() }
         super.onDestroy()
@@ -89,7 +119,7 @@ class MonitorService : Service() {
                 throw e
             } catch (e: CraftyException) {
                 if (e.httpCode == 401) {
-                    notifyStatus(status("Signed out — open the app to sign in again"))
+                    alert("Server alerts paused", "Crafty signed this phone out. Open the app to sign in again.", CHANNEL_SHUTDOWN)
                     stopSelf()
                     return
                 }
@@ -110,18 +140,39 @@ class MonitorService : Service() {
         var running = 0
         var playersOnline = 0
         for ((server, stats) in results) {
-            if (stats == null) continue
-            val now = snapshotOf(stats)
+            // Unknown or half-filled replies change nothing, so they can't cause false alerts.
+            if (stats == null || !stats.runningReported) continue
+            val before = last[server.id]
+            var now = snapshotOf(stats)
+            if (before != null) {
+                val down = !now.running && !stats.waitingStart && !stats.updating
+                now = if (down) {
+                    now.copy(
+                        stoppedPolls = before.stoppedPolls + 1,
+                        wasRunningBeforeStop = if (before.stoppedPolls == 0) before.running else before.wasRunningBeforeStop,
+                    )
+                } else {
+                    now.copy(stoppedPolls = 0)
+                }
+                // A running server whose list suddenly empties is usually a failed ping; wait one poll.
+                if (now.running && now.players.isEmpty() && before.players.isNotEmpty() && !before.emptyBlip) {
+                    now = now.copy(players = before.players, online = before.online, emptyBlip = true)
+                }
+            }
             if (now.running) running++
             playersOnline += now.online
-            val before = last[server.id]
             last[server.id] = now
             if (before == null) continue // first sighting is the baseline, not an event
 
-            if (settings.alertShutdown && before.running && !now.running) {
-                val title = if (now.crashed) "${server.name} crashed" else "${server.name} stopped"
-                val text = if (now.crashed) "Crafty detected a crash." else "The server is no longer running."
-                alert(title, text, CHANNEL_SHUTDOWN)
+            if (settings.alertShutdown) {
+                when {
+                    // Crashes are reported straight away.
+                    now.crashed && !before.crashed ->
+                        alert("${server.name} crashed", "Crafty detected a crash.", CHANNEL_SHUTDOWN)
+                    // A plain stop must hold for two polls, so restarts don't alert.
+                    !now.crashed && now.stoppedPolls == 2 && now.wasRunningBeforeStop ->
+                        alert("${server.name} stopped", "The server is no longer running.", CHANNEL_SHUTDOWN)
+                }
             }
             if (settings.alertPlayerJoin && now.running) {
                 val joined = now.players - before.players
@@ -220,6 +271,10 @@ class MonitorService : Service() {
 
     companion object {
         private const val ACTION_STOP = "com.vknxworks.craftyremote.STOP_MONITOR"
+        private const val ACTION_QUIT = "com.vknxworks.craftyremote.QUIT_MONITOR"
+
+        @Volatile
+        private var isRunning = false
         private const val STATUS_ID = 1001
         private const val CHANNEL_STATUS = "monitor_status"
         private const val CHANNEL_PLAYERS = "alerts_players"
@@ -253,16 +308,14 @@ class MonitorService : Service() {
             val intent = Intent(context, MonitorService::class.java)
             if (settings.alertsEnabled && signedIn) {
                 runCatching { ContextCompat.startForegroundService(context, intent) }
-            } else {
-                context.stopService(intent)
+            } else if (isRunning) {
+                // Stopping through onStartCommand avoids the crash when stopService beats startForeground.
+                runCatching { ContextCompat.startForegroundService(context, intent.setAction(ACTION_QUIT)) }
             }
         }
 
-        /** Restarts the running service so it picks up changed settings (e.g. keep-awake). */
-        fun restart(context: Context) {
-            context.stopService(Intent(context, MonitorService::class.java))
-            sync(context)
-        }
+        /** Makes a running service pick up changed settings (e.g. keep-awake). */
+        fun restart(context: Context) = sync(context)
     }
 }
 

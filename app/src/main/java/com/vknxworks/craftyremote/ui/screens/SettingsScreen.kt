@@ -48,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +58,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.vknxworks.craftyremote.data.AppSettings
 import com.vknxworks.craftyremote.monitor.MonitorService
 import com.vknxworks.craftyremote.ui.SectionLabel
@@ -85,6 +91,12 @@ fun SettingsScreen(onBack: () -> Unit) {
     var notifDenied by remember { mutableStateOf(false) }
 
     val bioAvailable = remember { biometricAvailable(context) }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        alerts = settings.alertsEnabled
+        pinSet = settings.pinSet
+        bio = settings.biometricEnabled
+    }
 
     fun turnAlertsOn() {
         settings.alertsEnabled = true
@@ -256,6 +268,8 @@ private fun PinSetupDialog(
     var first by remember { mutableStateOf("") }
     var second by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    var working by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     fun digits(v: String) = v.filter { it.isDigit() }.take(PIN_MAX)
 
@@ -282,16 +296,25 @@ private fun PinSetupDialog(
         },
         confirmButton = {
             TextButton(
+                enabled = !working,
                 onClick = {
-                    error = when {
-                        needsCurrent && !settings.checkPin(current) -> "Current PIN is wrong"
-                        needsNew && first.length < PIN_MIN -> "Use at least $PIN_MIN digits"
-                        needsNew && first != second -> "The PINs don't match"
-                        else -> null
-                    }
-                    if (error == null) {
-                        if (needsNew) settings.setPin(first) else settings.clearPin()
-                        onDone()
+                    scope.launch {
+                        working = true
+                        // PBKDF2 is deliberately slow; keep it off the main thread.
+                        val currentOk = !needsCurrent || withContext(Dispatchers.Default) { settings.checkPin(current) }
+                        error = when {
+                            !currentOk -> "Current PIN is wrong"
+                            needsNew && first.length < PIN_MIN -> "Use at least $PIN_MIN digits"
+                            needsNew && first != second -> "The PINs don't match"
+                            else -> null
+                        }
+                        if (error == null) {
+                            withContext(Dispatchers.Default) {
+                                if (needsNew) settings.setPin(first) else settings.clearPin()
+                            }
+                            onDone()
+                        }
+                        working = false
                     }
                 },
             ) { Text(if (mode == PinDialog.DISABLE) "Turn off" else "Save") }
