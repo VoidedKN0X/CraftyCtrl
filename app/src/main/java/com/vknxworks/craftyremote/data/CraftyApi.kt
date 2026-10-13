@@ -84,64 +84,70 @@ class CraftyApi(
         )
     }
 
-    /** Returns null if no task lookups succeeded at all, so the caller can report the original error. */
+    /**
+     * Looks task ids up one by one. Crafty answers a missing id with a 500 whose body names
+     * "SchedulesDoesNotExist", which still proves single lookups work. Returns null only if
+     * lookups fail for some other reason, so the caller can report the original error.
+     */
     private suspend fun probeTasks(serverId: String): List<ScheduledTask>? = coroutineScope {
         val found = mutableListOf<ScheduledTask>()
-        var anyLookupWorked = false
+        var lookupsWork = false
         var start = 1
         var highestHit = 0
         while (start <= MAX_TASK_PROBE && start <= highestHit + TASK_PROBE_GAP) {
             val batch = (start until start + TASK_PROBE_BATCH).map { id ->
-                async {
-                    try {
-                        call("GET", "/servers/$serverId/tasks/$id") as? JsonObject
-                    } catch (e: CraftyException) {
-                        null
-                    }
-                }
+                async { id to getRaw("/servers/$serverId/tasks/$id") }
             }.awaitAll()
-            batch.forEachIndexed { i, root ->
-                val data = root?.obj("data") ?: return@forEachIndexed
-                anyLookupWorked = true
-                // Task ids are shared across servers, so keep scanning past other servers' tasks.
-                highestHit = maxOf(highestHit, start + i)
-                val owner = data.str("server_id")
-                if (owner == null || owner == serverId) {
-                    val withId = if (data.str("schedule_id") == null && data.str("id") == null) {
-                        JsonObject(data + ("schedule_id" to JsonPrimitive((start + i).toString())))
-                    } else {
-                        data
+            for ((id, result) in batch) {
+                val (code, body) = result
+                if (code == 200) {
+                    val data = (runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject)
+                        ?.obj("data") ?: continue
+                    lookupsWork = true
+                    // Task ids are shared across servers, so keep scanning past other servers' tasks.
+                    highestHit = maxOf(highestHit, id)
+                    val owner = data.str("server_id")
+                    if (owner == null || owner == serverId) {
+                        val withId = if (data.str("schedule_id") == null && data.str("id") == null) {
+                            JsonObject(data + ("schedule_id" to JsonPrimitive(id.toString())))
+                        } else {
+                            data
+                        }
+                        ScheduledTask.from(withId)?.let(found::add)
                     }
-                    ScheduledTask.from(withId)?.let(found::add)
+                } else if ("DoesNotExist" in body) {
+                    lookupsWork = true
+                } else if (code == 401) {
+                    main.post { onUnauthorized() }
+                    throw CraftyException(401, "HTTP_401", "Not signed in, or the session expired.")
                 }
             }
             start += TASK_PROBE_BATCH
         }
-        if (anyLookupWorked) found else null
+        if (lookupsWork) found.sortedBy { it.id.toIntOrNull() ?: Int.MAX_VALUE } else null
     }
 
-    /** Status code and body of a GET, never throwing. Used by the diagnostics view. */
-    suspend fun raw(path: String): String = withContext(Dispatchers.IO) {
-        val url = "$baseUrl/api/v2$path".toHttpUrlOrNull() ?: return@withContext "Invalid URL"
+    /** Status code and body of an authenticated GET; code 0 means a network failure. */
+    private suspend fun getRaw(path: String): Pair<Int, String> = withContext(Dispatchers.IO) {
+        val url = "$baseUrl/api/v2$path".toHttpUrlOrNull() ?: return@withContext 0 to "Invalid URL"
         val request = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
             .apply { token?.let { header("Authorization", "Bearer $it") } }
             .build()
         try {
-            http.newCall(request).execute().use { resp ->
-                val body = resp.body?.string().orEmpty()
-                val shown = if (body.length > RAW_LIMIT) body.take(RAW_LIMIT) + "\n…(${body.length} chars total)" else body
-                "HTTP ${resp.code}\n$shown"
-            }
+            http.newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
         } catch (e: IOException) {
-            "Network error: ${networkMessage(e)}"
+            0 to "Network error: ${networkMessage(e)}"
         }
     }
 
-    suspend fun setTaskEnabled(serverId: String, taskId: String, enabled: Boolean) {
-        val body = buildJsonObject { put("enabled", enabled) }
-        call("PATCH", "/servers/$serverId/tasks/$taskId", jsonBody(body))
+    /** Status code and body of a GET, never throwing. Used by the diagnostics view. */
+    suspend fun raw(path: String): String {
+        val (code, body) = getRaw(path)
+        if (code == 0) return body
+        val shown = if (body.length > RAW_LIMIT) body.take(RAW_LIMIT) + "\n…(${body.length} chars total)" else body
+        return "HTTP $code\n$shown"
     }
 
     private suspend fun call(
@@ -188,9 +194,9 @@ class CraftyApi(
     }
 
     companion object {
-        private const val MAX_TASK_PROBE = 200
+        private const val MAX_TASK_PROBE = 300
         private const val TASK_PROBE_BATCH = 10
-        private const val TASK_PROBE_GAP = 20
+        private const val TASK_PROBE_GAP = 30
         private const val RAW_LIMIT = 4000
         private val TEXT = "text/plain; charset=utf-8".toMediaType()
         private val JSON_TYPE = "application/json; charset=utf-8".toMediaType()
