@@ -18,7 +18,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -48,6 +50,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.vknxworks.craftyremote.data.CraftyApi
+import com.vknxworks.craftyremote.data.HostStats
+import com.vknxworks.craftyremote.ui.ChartCpu
+import com.vknxworks.craftyremote.ui.ChartMem
+import com.vknxworks.craftyremote.ui.LineChart
+import com.vknxworks.craftyremote.ui.UsageBar
 import com.vknxworks.craftyremote.data.ServerState
 import com.vknxworks.craftyremote.data.ServerSummary
 import com.vknxworks.craftyremote.ui.ErrorBanner
@@ -62,6 +69,7 @@ import java.net.URI
 fun ServerListScreen(
     api: CraftyApi,
     onOpen: (ServerSummary) -> Unit,
+    onSettings: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     val vm: ServerListViewModel = viewModel(factory = viewModelFactory { initializer { ServerListViewModel(api) } })
@@ -90,6 +98,14 @@ fun ServerListScreen(
                         }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             DropdownMenuItem(
+                                text = { Text("Settings") },
+                                leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    onSettings()
+                                },
+                            )
+                            DropdownMenuItem(
                                 text = { Text("Sign out") },
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
                                 onClick = {
@@ -117,6 +133,9 @@ fun ServerListScreen(
             ) {
                 vm.error?.let { message ->
                     item(key = "error") { ErrorBanner(message, onRetry = vm::refreshNow) }
+                }
+                vm.host?.let { h ->
+                    item(key = "host") { HostCard(h, vm.hostCpuSamples, vm.hostMemSamples) }
                 }
                 when {
                     vm.loading && vm.rows.isEmpty() -> item(key = "loading") {
@@ -223,4 +242,58 @@ internal fun prettyType(type: String): String? = when (type) {
     "minecraft-bedrock" -> "Bedrock"
     "" -> null
     else -> type.replace('-', ' ').replaceFirstChar { it.uppercase() }
+}
+
+@Composable
+private fun HostCard(h: HostStats, cpu: List<Float>, mem: List<Float>) {
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Computer, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(10.dp))
+                Text("Host", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                val cpuInfo = listOfNotNull(h.cpuCores?.let { "$it cores" }, h.cpuFreq).joinToString(" · ")
+                if (cpuInfo.isNotEmpty()) {
+                    Text(cpuInfo, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                HostMetric(
+                    "CPU", h.cpuPercent?.let { "%.0f%%".format(it) } ?: "—", cpu, ChartCpu,
+                    null, Modifier.weight(1f),
+                )
+                HostMetric(
+                    "RAM", h.memPercent?.let { "%.0f%%".format(it) } ?: "—", mem, ChartMem,
+                    listOfNotNull(h.memUsed, h.memTotal).joinToString(" / ").ifEmpty { null }, Modifier.weight(1f),
+                )
+            }
+            h.disks.take(4).forEach { d ->
+                UsageBar(d.mount, d.percent, listOfNotNull(d.used, d.total).joinToString(" / ").ifEmpty { null })
+            }
+        }
+    }
+}
+
+@Composable
+private fun HostMetric(
+    label: String,
+    value: String,
+    samples: List<Float>,
+    color: androidx.compose.ui.graphics.Color,
+    detail: String?,
+    modifier: Modifier,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            Text(value, style = MaterialTheme.typography.titleMedium, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)
+        }
+        LineChart(samples.map { it }, color, maxY = 100f, height = 44.dp, gridLines = 0)
+        detail?.let {
+            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+    }
 }

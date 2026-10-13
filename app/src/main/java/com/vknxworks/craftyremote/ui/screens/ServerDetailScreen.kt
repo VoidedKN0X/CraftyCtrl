@@ -36,7 +36,9 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Dangerous
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -68,7 +70,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -80,6 +82,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -113,7 +116,14 @@ import com.vknxworks.craftyremote.ui.theme.ConsoleError
 import com.vknxworks.craftyremote.ui.theme.ConsoleText
 import com.vknxworks.craftyremote.ui.theme.ConsoleWarn
 
-private enum class DetailTab(val title: String) { OVERVIEW("Overview"), CONSOLE("Console"), BACKUPS("Backups"), SCHEDULES("Schedules") }
+private enum class DetailTab(val title: String) {
+    OVERVIEW("Overview"),
+    CONSOLE("Console"),
+    STATS("Stats"),
+    FILES("Files"),
+    BACKUPS("Backups"),
+    SCHEDULES("Schedules"),
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,6 +132,7 @@ fun ServerDetailScreen(
     serverId: String,
     serverName: String,
     onBack: () -> Unit,
+    onOpenFile: (String) -> Unit,
 ) {
     val vm: ServerDetailViewModel = viewModel(factory = viewModelFactory { initializer { ServerDetailViewModel(api, serverId) } })
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -162,7 +173,7 @@ fun ServerDetailScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            TabRow(selectedTabIndex = tab) {
+            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 8.dp) {
                 DetailTab.entries.forEachIndexed { i, t ->
                     Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t.title, maxLines = 1) })
                 }
@@ -170,6 +181,8 @@ fun ServerDetailScreen(
             when (DetailTab.entries[tab]) {
                 DetailTab.OVERVIEW -> OverviewTab(vm)
                 DetailTab.CONSOLE -> ConsoleTab(vm)
+                DetailTab.STATS -> StatsTab(vm)
+                DetailTab.FILES -> FilesTab(vm, onOpenFile)
                 DetailTab.BACKUPS -> BackupsTab(vm)
                 DetailTab.SCHEDULES -> SchedulesTab(vm)
             }
@@ -230,6 +243,8 @@ private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
 private fun OverviewTab(vm: ServerDetailViewModel) {
     val s = vm.stats
     var confirm by remember { mutableStateOf<PowerAction?>(null) }
+    // "" opens the sheet with a name field; a name opens it for that player.
+    var playerSheet by remember { mutableStateOf<String?>(null) }
 
     Column(
         Modifier
@@ -267,19 +282,52 @@ private fun OverviewTab(vm: ServerDetailViewModel) {
                 { MetricTile("Port", s.port?.toString() ?: "—", Icons.Filled.Public, it) },
             )
 
+            SectionLabel("Players")
             if (s.players.isNotEmpty()) {
-                SectionLabel("Online now")
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     s.players.forEach { name ->
-                        SuggestionChip(onClick = {}, label = { Text(name) })
+                        SuggestionChip(
+                            onClick = { playerSheet = name },
+                            label = { Text(name) },
+                            icon = { Icon(Icons.Filled.Person, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                        )
                     }
                 }
+                Text(
+                    "Tap a player for actions.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if ((s.online ?: 0) > 0) {
+                Text(
+                    "${s.online} online. This server doesn't share player names with Crafty, so type a name to manage someone.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            OutlinedButton(
+                onClick = { playerSheet = "" },
+                enabled = s.running,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Filled.ManageAccounts, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Manage a player by name…")
             }
         }
         Spacer(Modifier.height(8.dp))
+    }
+
+    playerSheet?.let { name ->
+        PlayerSheet(
+            fixedName = name.ifEmpty { null },
+            isBedrock = vm.info?.isBedrock == true,
+            onDismiss = { playerSheet = null },
+            onCommand = vm::playerCommand,
+        )
     }
 
     confirm?.let { action ->
@@ -541,7 +589,12 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(key = "header") { TabHeader("Backup profiles", state.loading, vm::loadBackups) }
+        item(key = "header") {
+            TabHeader("Backup profiles", state.loading) {
+                vm.loadBackups()
+                vm.loadTasks()
+            }
+        }
         state.error?.let { item(key = "error") { ErrorBanner(it, onRetry = vm::loadBackups) } }
 
         val list = state.data
@@ -557,8 +610,19 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
             }
         }
         if (list != null) {
+            val backupTasks = vm.tasks.data.orEmpty().filter { it.action == "backup_server" }
             items(list) { b ->
-                BackupCard(b, busy = vm.backupInFlight == (b.id ?: ServerDetailViewModel.DEFAULT_BACKUP), enabled = vm.backupInFlight == null) { vm.runBackup(b) }
+                // A backup task names its config by id; tasks without one run the default config.
+                val mine = backupTasks.filter { t -> t.actionId == b.id || (t.actionId == null && b.isDefault) }
+                BackupCard(
+                    b,
+                    schedules = mine,
+                    schedulesLoading = vm.tasks.loading,
+                    schedulesError = vm.tasks.error,
+                    busy = vm.backupInFlight == (b.id ?: ServerDetailViewModel.DEFAULT_BACKUP),
+                    enabled = vm.backupInFlight == null,
+                    onToggle = { t, on -> vm.setTaskEnabled(t, on) },
+                ) { vm.runBackup(b) }
             }
         }
         item(key = "note") {
@@ -572,7 +636,16 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
 }
 
 @Composable
-private fun BackupCard(b: BackupConfig, busy: Boolean, enabled: Boolean, onRun: () -> Unit) {
+private fun BackupCard(
+    b: BackupConfig,
+    schedules: List<ScheduledTask>,
+    schedulesLoading: Boolean,
+    schedulesError: String?,
+    busy: Boolean,
+    enabled: Boolean,
+    onToggle: (ScheduledTask, Boolean) -> Unit,
+    onRun: () -> Unit,
+) {
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -609,6 +682,33 @@ private fun BackupCard(b: BackupConfig, busy: Boolean, enabled: Boolean, onRun: 
                     )
                     Text(value, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
+            }
+            HorizontalDivider(Modifier.padding(vertical = 2.dp))
+            Text("Schedule", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+            when {
+                schedules.isNotEmpty() -> schedules.forEach { t ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Schedule, contentDescription = null, modifier = Modifier.size(18.dp),
+                            tint = if (t.enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(t.schedule, style = MaterialTheme.typography.bodyMedium)
+                            if (t.name != t.actionLabel) {
+                                Text(t.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Switch(checked = t.enabled, onCheckedChange = { onToggle(t, it) })
+                    }
+                }
+                schedulesLoading -> Text("Loading schedule…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                schedulesError != null -> Text("Couldn't load schedules: $schedulesError", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                else -> Text(
+                    "Not scheduled. Add a backup task in the Crafty web panel's Schedules page.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             FilledTonalButton(onClick = onRun, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
                 if (busy) {

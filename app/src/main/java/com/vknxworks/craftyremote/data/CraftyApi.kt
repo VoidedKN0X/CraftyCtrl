@@ -48,6 +48,49 @@ class CraftyApi(
         call("GET", "/servers").dataArray()
             .mapNotNull { (it as? JsonObject)?.let(ServerSummary::from) }
 
+    suspend fun serverInfo(serverId: String): ServerSummary? =
+        (call("GET", "/servers/$serverId") as? JsonObject)?.obj("data")?.let(ServerSummary::from)
+
+    suspend fun history(serverId: String): List<HistoryPoint> =
+        parseHistory(call("GET", "/servers/$serverId/history"))
+
+    /** Host CPU/RAM/disk. Prefers /crafty/stats, falls back to the Prometheus endpoint. */
+    suspend fun hostStats(): HostStats {
+        val first = try {
+            HostStats.fromJson(call("GET", "/crafty/stats"))
+        } catch (e: CraftyException) {
+            if (e.httpCode == 401) throw e
+            null
+        }
+        if (first != null && !first.isEmpty) return first
+        val (code, body) = getRaw("/metrics/host", apiPrefix = false)
+        if (code == 200) {
+            val m = HostStats.fromMetrics(body)
+            if (!m.isEmpty) return m
+        }
+        throw CraftyException(code, "HOST_STATS", "Host stats need an account with full panel access.")
+    }
+
+    /**
+     * Lists a folder or reads a file. Crafty uses one POST for both; some versions require a
+     * "page" field and some reject unknown fields, so try with it first and retry without.
+     */
+    suspend fun browse(serverId: String, path: String): FileResult {
+        val withPage = buildJsonObject { put("page", "files"); put("path", path) }
+        val root = try {
+            call("POST", "/servers/$serverId/files", jsonBody(withPage))
+        } catch (e: CraftyException) {
+            if (e.httpCode != 400) throw e
+            call("POST", "/servers/$serverId/files", jsonBody(buildJsonObject { put("path", path) }))
+        }
+        return parseFileResult(root, path)
+    }
+
+    suspend fun saveFile(serverId: String, path: String, contents: String) {
+        val body = buildJsonObject { put("path", path); put("contents", contents) }
+        call("PATCH", "/servers/$serverId/files", jsonBody(body))
+    }
+
     suspend fun stats(serverId: String): ServerStats =
         ServerStats.from(call("GET", "/servers/$serverId/stats"))
 
@@ -128,8 +171,9 @@ class CraftyApi(
     }
 
     /** Status code and body of an authenticated GET; code 0 means a network failure. */
-    private suspend fun getRaw(path: String): Pair<Int, String> = withContext(Dispatchers.IO) {
-        val url = "$baseUrl/api/v2$path".toHttpUrlOrNull() ?: return@withContext 0 to "Invalid URL"
+    private suspend fun getRaw(path: String, apiPrefix: Boolean = true): Pair<Int, String> = withContext(Dispatchers.IO) {
+        val prefix = if (apiPrefix) "/api/v2" else ""
+        val url = "$baseUrl$prefix$path".toHttpUrlOrNull() ?: return@withContext 0 to "Invalid URL"
         val request = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
@@ -142,12 +186,27 @@ class CraftyApi(
         }
     }
 
-    /** Status code and body of a GET, never throwing. Used by the diagnostics view. */
-    suspend fun raw(path: String): String {
-        val (code, body) = getRaw(path)
+    /** Status code and body of a request, never throwing. Used by the diagnostics view. */
+    suspend fun raw(path: String, postJson: String? = null): String {
+        val (code, body) = if (postJson == null) getRaw(path) else postRaw(path, postJson)
         if (code == 0) return body
         val shown = if (body.length > RAW_LIMIT) body.take(RAW_LIMIT) + "\n…(${body.length} chars total)" else body
         return "HTTP $code\n$shown"
+    }
+
+    private suspend fun postRaw(path: String, json: String): Pair<Int, String> = withContext(Dispatchers.IO) {
+        val url = "$baseUrl/api/v2$path".toHttpUrlOrNull() ?: return@withContext 0 to "Invalid URL"
+        val request = Request.Builder()
+            .url(url)
+            .header("Accept", "application/json")
+            .apply { token?.let { header("Authorization", "Bearer $it") } }
+            .post(json.toRequestBody(JSON_TYPE))
+            .build()
+        try {
+            http.newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
+        } catch (e: IOException) {
+            0 to "Network error: ${networkMessage(e)}"
+        }
     }
 
     suspend fun setTaskEnabled(serverId: String, taskId: String, enabled: Boolean) {
