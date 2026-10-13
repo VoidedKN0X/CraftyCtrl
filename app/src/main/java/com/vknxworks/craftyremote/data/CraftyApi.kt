@@ -120,6 +120,18 @@ class CraftyApi(
         call("PATCH", "/servers/$serverId/files", jsonBody(body))
     }
 
+    /**
+     * Renames or moves an item. Crafty joins [newName] onto the item's current folder, so a move
+     * passes a path relative to that folder (e.g. "../plugins/config.yml").
+     */
+    suspend fun renameEntry(serverId: String, path: String, newName: String) {
+        val body = buildJsonObject {
+            put("path", path)
+            put("new_name", newName)
+        }
+        call("PATCH", "/servers/$serverId/files/create", jsonBody(body))
+    }
+
     /** Deletes a file or a folder with everything in it. */
     suspend fun deleteEntry(serverId: String, path: String) {
         val current = buildJsonObject {
@@ -148,7 +160,7 @@ class CraftyApi(
 
     /**
      * Uploads a file into [folder] using Crafty's chunked upload (the same one its web panel uses):
-     * an opening request returns an upload id, then each chunk is posted with its index and hash.
+     * every chunk is posted with a client-chosen upload id, its index and its SHA-256.
      * [readInto] works like InputStream.read(buffer, offset, length): bytes read, or -1 at the end.
      */
     suspend fun upload(
@@ -188,16 +200,16 @@ class CraftyApi(
             val obj = runCatching { json.parseToJsonElement(text) as? JsonObject }.getOrNull()
             if (code !in 200..299 || obj?.str("status") == "error") {
                 val err = obj?.str("error") ?: "HTTP_$code"
-                throw CraftyException(code, err, describeError(code, err, obj?.str("error_data")))
+                // Crafty answers crashes with a Python traceback; its last line names the actual error.
+                val detail = obj?.str("error_data")
+                    ?: text.lineSequence().map { it.trim() }.lastOrNull { it.isNotEmpty() }?.take(160)
+                throw CraftyException(code, err, describeError(code, err, detail))
             }
         }
 
         // Opening request: newer Crafty hands back an id for the chunks that follow.
-        // Older versions don't have this step and reject it; they key chunks by file name instead.
-        val (code0, text0) = request(emptyMap(), ByteArray(0))
-        if (code0 == 401 || code0 == 403) check(code0, text0)
-        val init = if (code0 in 200..299) runCatching { json.parseToJsonElement(text0) as? JsonObject }.getOrNull() else null
-        val fileId = init?.obj("data")?.str("file_id") ?: init?.str("file_id")
+        // Crafty expects the client to pick the upload id and send it with every chunk.
+        val fileId = java.util.UUID.randomUUID().toString()
 
         val buffer = ByteArray(chunkSize)
         val digest = java.security.MessageDigest.getInstance("SHA-256")
@@ -214,7 +226,7 @@ class CraftyApi(
             val extra = buildMap {
                 put("chunkId", i.toString())
                 put("chunkHash", hash)
-                fileId?.let { put("fileId", it) }
+                put("fileId", fileId)
             }
             val (code, text) = request(extra, chunk)
             check(code, text)

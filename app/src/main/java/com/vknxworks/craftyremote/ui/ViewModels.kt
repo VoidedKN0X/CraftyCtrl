@@ -17,6 +17,7 @@ import com.vknxworks.craftyremote.data.FileEntry
 import com.vknxworks.craftyremote.data.FileResult
 import com.vknxworks.craftyremote.data.HistoryPoint
 import com.vknxworks.craftyremote.data.HostStats
+import com.vknxworks.craftyremote.data.join
 import com.vknxworks.craftyremote.data.ScheduledTask
 import com.vknxworks.craftyremote.data.ServerStats
 import com.vknxworks.craftyremote.data.ServerSummary
@@ -348,11 +349,92 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         }
     }
 
+    /** An item picked with Move or Copy, waiting to be pasted into another folder. */
+    data class FileClip(val entry: FileEntry, val fromFolder: String, val copy: Boolean)
+
+    var clip by mutableStateOf<FileClip?>(null)
+        private set
+
+    fun startClip(entry: FileEntry, copy: Boolean) {
+        val folder = filePath ?: return
+        clip = FileClip(entry, folder, copy)
+    }
+
+    fun cancelClip() {
+        clip = null
+    }
+
+    private fun insideServer(path: String): Boolean {
+        val root = rootPath?.trimEnd('/') ?: return false
+        return path.startsWith("$root/") && path.trimEnd('/') != root
+    }
+
+    fun renameEntry(entry: FileEntry, newName: String) {
+        val folder = filePath ?: return
+        if (!insideServer(entry.path)) return
+        viewModelScope.launch {
+            try {
+                api.renameEntry(serverId, entry.path, newName)
+                _messages.send("Renamed to $newName")
+                openFolder(folder)
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            }
+        }
+    }
+
+    /** Pastes the clipped item into the folder that's open now. */
+    fun pasteHere() {
+        val c = clip ?: return
+        val dest = filePath ?: return
+        val root = rootPath?.trimEnd('/') ?: return
+        if (!insideServer(c.entry.path) || !(dest.trimEnd('/') == root || insideServer(dest))) return
+        viewModelScope.launch {
+            try {
+                if (c.copy) {
+                    val existing = files.data.orEmpty().map { it.name }.toSet()
+                    val target = uniqueName(c.entry.name, existing)
+                    val text = when (val r = api.browse(serverId, c.entry.path)) {
+                        is FileResult.Text -> r.contents
+                        is FileResult.Folder -> throw IllegalStateException("Folders can't be copied.")
+                    }
+                    api.createEntry(serverId, dest, target, false)
+                    api.saveFile(serverId, join(dest, target), text)
+                    _messages.send("Copied to $target")
+                } else {
+                    val destTrim = dest.trimEnd('/')
+                    when {
+                        destTrim == c.fromFolder.trimEnd('/') -> {
+                            _messages.send("It's already in this folder.")
+                            return@launch
+                        }
+                        c.entry.isDir && (destTrim == c.entry.path.trimEnd('/') || destTrim.startsWith(c.entry.path.trimEnd('/') + "/")) -> {
+                            _messages.send("A folder can't be moved into itself.")
+                            return@launch
+                        }
+                        files.data.orEmpty().any { it.name == c.entry.name } -> {
+                            _messages.send("This folder already has an item called ${c.entry.name}.")
+                            return@launch
+                        }
+                    }
+                    api.renameEntry(serverId, c.entry.path, relativePath(c.fromFolder, dest) + c.entry.name)
+                    _messages.send("Moved ${c.entry.name}")
+                }
+                clip = null
+                openFolder(dest)
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            }
+        }
+    }
+
     fun deleteEntry(entry: FileEntry) {
         val folder = filePath ?: return
         // Never delete the server's own folder or anything outside it.
-        val root = rootPath?.trimEnd('/')
-        if (root != null && (!entry.path.startsWith("$root/") || entry.path.trimEnd('/') == root)) return
+        if (!insideServer(entry.path)) {
+            viewModelScope.launch { _messages.send("That item isn't inside this server's folder.") }
+            return
+        }
         viewModelScope.launch {
             try {
                 api.deleteEntry(serverId, entry.path)
@@ -610,5 +692,29 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     companion object {
         const val DEFAULT_BACKUP = "__default__"
         private const val LIVE_SAMPLES = 200
+    }
+}
+
+/** "a/b" relative to "a/c/d" -> "../../b/" (always ends with "/" unless empty). */
+internal fun relativePath(from: String, to: String): String {
+    val f = from.trimEnd('/').split('/').filter { it.isNotEmpty() }
+    val t = to.trimEnd('/').split('/').filter { it.isNotEmpty() }
+    var common = 0
+    while (common < f.size && common < t.size && f[common] == t[common]) common++
+    val parts = List(f.size - common) { ".." } + t.drop(common)
+    return if (parts.isEmpty()) "" else parts.joinToString("/") + "/"
+}
+
+/** "config.yml" -> "config (copy).yml", "config (copy 2).yml", ... when the name is taken. */
+internal fun uniqueName(name: String, taken: Set<String>): String {
+    if (name !in taken) return name
+    val dot = name.lastIndexOf('.').takeIf { it > 0 } ?: name.length
+    val base = name.substring(0, dot)
+    val ext = name.substring(dot)
+    var n = 1
+    while (true) {
+        val candidate = if (n == 1) "$base (copy)$ext" else "$base (copy $n)$ext"
+        if (candidate !in taken) return candidate
+        n++
     }
 }
