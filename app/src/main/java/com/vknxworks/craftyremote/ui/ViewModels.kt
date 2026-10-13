@@ -22,6 +22,7 @@ import com.vknxworks.craftyremote.data.ServerStats
 import com.vknxworks.craftyremote.data.ServerSummary
 import com.vknxworks.craftyremote.data.Session
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.JsonObject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
@@ -440,6 +441,61 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 Loadable(api.tasks(serverId))
             } catch (e: Exception) {
                 tasks.copy(loading = false, error = e.userMessage())
+            }
+        }
+    }
+
+    var savingEdit by mutableStateOf(false)
+        private set
+
+    /** Creates a task when [existing] is null, otherwise updates it. Calls [onDone] on success. */
+    fun saveTask(existing: ScheduledTask?, fields: JsonObject, onDone: () -> Unit) {
+        if (savingEdit) return
+        viewModelScope.launch {
+            savingEdit = true
+            try {
+                if (existing == null) api.createTask(serverId, fields) else api.updateTask(serverId, existing.id, fields)
+                _messages.send(if (existing == null) "Schedule created" else "Schedule saved")
+                onDone()
+                loadTasks()
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            } finally {
+                savingEdit = false
+            }
+        }
+    }
+
+    fun deleteTask(task: ScheduledTask, onDone: () -> Unit) {
+        if (savingEdit) return
+        viewModelScope.launch {
+            savingEdit = true
+            try {
+                api.deleteTask(serverId, task.id)
+                _messages.send("Schedule deleted")
+                onDone()
+                loadTasks()
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            } finally {
+                savingEdit = false
+            }
+        }
+    }
+
+    fun saveBackup(config: BackupConfig, fields: JsonObject, onDone: () -> Unit) {
+        if (savingEdit) return
+        viewModelScope.launch {
+            savingEdit = true
+            try {
+                api.updateBackup(serverId, config.id, fields)
+                _messages.send("Backup settings saved")
+                onDone()
+                loadBackups()
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            } finally {
+                savingEdit = false
             }
         }
     }

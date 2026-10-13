@@ -144,8 +144,9 @@ class CraftyApi(
             for ((id, result) in batch) {
                 val (code, body) = result
                 if (code == 200) {
-                    val data = (runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject)
-                        ?.obj("data") ?: continue
+                    // Crafty sends the task as a bare object here, not wrapped in "data".
+                    val root = runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject ?: continue
+                    val data = root.obj("data") ?: root
                     lookupsWork = true
                     // Task ids are shared across servers, so keep scanning past other servers' tasks.
                     highestHit = maxOf(highestHit, id)
@@ -209,6 +210,34 @@ class CraftyApi(
         }
     }
 
+    suspend fun createTask(serverId: String, fields: JsonObject) {
+        call("POST", "/servers/$serverId/tasks", jsonBody(fields))
+    }
+
+    suspend fun updateTask(serverId: String, taskId: String, fields: JsonObject) {
+        call("PATCH", "/servers/$serverId/tasks/$taskId", jsonBody(fields))
+    }
+
+    suspend fun deleteTask(serverId: String, taskId: String) {
+        call("DELETE", "/servers/$serverId/tasks/$taskId")
+    }
+
+    /**
+     * Saves a backup profile. Crafty 4.4+ addresses each profile by id; older versions have a
+     * single per-server config, so fall back to that endpoint if the first isn't routed.
+     */
+    suspend fun updateBackup(serverId: String, backupId: String?, fields: JsonObject) {
+        if (backupId != null) {
+            try {
+                call("PATCH", "/servers/$serverId/backups/backup/$backupId", jsonBody(fields))
+                return
+            } catch (e: CraftyException) {
+                if (e.httpCode !in listOf(404, 405)) throw e
+            }
+        }
+        call("PATCH", "/servers/$serverId/backups/config", jsonBody(fields))
+    }
+
     suspend fun setTaskEnabled(serverId: String, taskId: String, enabled: Boolean) {
         val body = buildJsonObject { put("enabled", enabled) }
         call("PATCH", "/servers/$serverId/tasks/$taskId", jsonBody(body))
@@ -259,8 +288,8 @@ class CraftyApi(
 
     companion object {
         private const val MAX_TASK_PROBE = 300
-        private const val TASK_PROBE_BATCH = 10
-        private const val TASK_PROBE_GAP = 30
+        private const val TASK_PROBE_BATCH = 20
+        private const val TASK_PROBE_GAP = 60
         private const val RAW_LIMIT = 4000
         private val TEXT = "text/plain; charset=utf-8".toMediaType()
         private val JSON_TYPE = "application/json; charset=utf-8".toMediaType()
