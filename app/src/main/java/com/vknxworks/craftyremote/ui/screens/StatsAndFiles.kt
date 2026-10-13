@@ -70,6 +70,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -231,6 +233,8 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
     BackHandler(enabled = parent != null) { vm.openFolder(parent) }
     var binaryWarning by remember { mutableStateOf<FileEntry?>(null) }
     var addMenu by remember { mutableStateOf(false) }
+    var rowMenu by remember { mutableStateOf<String?>(null) }
+    var confirmDelete by remember { mutableStateOf<FileEntry?>(null) }
     // true = new folder, false = new file, null = dialog closed
     var newEntry by remember { mutableStateOf<Boolean?>(null) }
     val resolver = LocalContext.current.contentResolver
@@ -307,7 +311,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                                 else -> onOpenFile(e.path)
                             }
                         }
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(start = 16.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val ext = e.name.substringAfterLast('.', "").lowercase()
@@ -321,11 +325,48 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                         },
                     )
                     Spacer(Modifier.width(14.dp))
-                    Text(e.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        e.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Box {
+                        IconButton(onClick = { rowMenu = e.path }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "More for ${e.name}")
+                        }
+                        DropdownMenu(expanded = rowMenu == e.path, onDismissRequest = { rowMenu = null }) {
+                            DropdownMenuItem(
+                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                                onClick = { rowMenu = null; confirmDelete = e },
+                            )
+                        }
+                    }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             }
         }
+    }
+
+    confirmDelete?.let { e ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text("Delete ${e.name}?") },
+            text = {
+                Text(
+                    if (e.isDir) "This folder and everything inside it will be permanently deleted. This can't be undone."
+                    else "This file will be permanently deleted. This can't be undone.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = null; vm.deleteEntry(e) }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel") } },
+        )
     }
 
     newEntry?.let { folder ->
