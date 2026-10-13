@@ -82,6 +82,8 @@ data class ServerSummary(
     val type: String,
     /** Absolute folder on the Crafty host; the root for the file browser. */
     val path: String? = null,
+    /** Server jar/executable file name, e.g. "paper-1.21.1.jar". */
+    val executable: String? = null,
 ) {
     val isBedrock: Boolean get() = "bedrock" in type.lowercase()
 
@@ -93,6 +95,7 @@ data class ServerSummary(
                 name = o.str("server_name").meaningful() ?: "Unnamed server",
                 type = o.str("type").orEmpty(),
                 path = o.str("path").meaningful(),
+                executable = o.str("executable").meaningful(),
             )
         }
     }

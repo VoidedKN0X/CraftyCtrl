@@ -51,6 +51,21 @@ class CraftyApi(
     suspend fun serverInfo(serverId: String): ServerSummary? =
         (call("GET", "/servers/$serverId") as? JsonObject)?.obj("data")?.let(ServerSummary::from)
 
+    /**
+     * Version when the stats ping doesn't report one: first Crafty's Prometheus metrics
+     * (Minecraft_Version_info{version="Paper 1.21.10"}), then the jar's file name.
+     */
+    suspend fun versionFallback(serverId: String, executable: String?): String? {
+        val (code, body) = getRaw("/metrics/servers/$serverId", apiPrefix = false)
+        if (code == 200) {
+            Regex("""Minecraft_Version_info\{[^}]*version="([^"]+)"""").find(body)
+                ?.groupValues?.get(1)?.trim()
+                ?.takeIf { it.isNotEmpty() && !it.equals("false", true) && !it.equals("none", true) }
+                ?.let { return it }
+        }
+        return versionFromJar(executable)
+    }
+
     suspend fun history(serverId: String): List<HistoryPoint> =
         parseHistory(call("GET", "/servers/$serverId/history"))
 
@@ -287,6 +302,15 @@ class CraftyApi(
     }
 
     companion object {
+        /** "paper-1.21.1.jar" -> "Paper 1.21.1"; "server.jar" -> null. */
+        fun versionFromJar(executable: String?): String? {
+            val name = executable?.substringAfterLast('/')?.removeSuffix(".jar") ?: return null
+            val m = Regex("""^([A-Za-z]+)?[-_ ]*(\d+\.\d+(?:\.\d+)?(?:[-.][\w.]+)?)""").find(name) ?: return null
+            val brand = m.groupValues[1].takeIf { it.isNotEmpty() && !it.equals("server", true) && !it.equals("minecraft", true) }
+            val ver = m.groupValues[2].substringBefore("-build").substringBefore("-R")
+            return listOfNotNull(brand?.replaceFirstChar { it.uppercase() }, ver).joinToString(" ")
+        }
+
         private const val MAX_TASK_PROBE = 300
         private const val TASK_PROBE_BATCH = 20
         private const val TASK_PROBE_GAP = 60
