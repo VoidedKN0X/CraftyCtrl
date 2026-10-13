@@ -3,6 +3,9 @@ package com.vknxworks.craftyremote.data
 import android.os.Handler
 import android.os.Looper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -65,10 +68,76 @@ class CraftyApi(
     }
 
     suspend fun backups(serverId: String): List<BackupConfig> =
-        call("GET", "/servers/$serverId/backups").dataItems().map(BackupConfig::from)
+        call("GET", "/servers/$serverId/backups").backupItems().map(BackupConfig::from)
 
-    suspend fun tasks(serverId: String): List<ScheduledTask> =
+    /**
+     * Some Crafty versions have no working "list schedules" call (it errors or isn't routed),
+     * but single-task lookups work. In that case, look task ids up one by one instead.
+     */
+    suspend fun tasks(serverId: String): List<ScheduledTask> = try {
         call("GET", "/servers/$serverId/tasks").dataItems().mapNotNull(ScheduledTask::from)
+    } catch (e: CraftyException) {
+        if (e.httpCode in listOf(401, 403) || e.httpCode == 0) throw e
+        probeTasks(serverId) ?: throw CraftyException(
+            e.httpCode, e.errorCode,
+            "This Crafty version can't list schedules through its API (${e.message})",
+        )
+    }
+
+    /** Returns null if no task lookups succeeded at all, so the caller can report the original error. */
+    private suspend fun probeTasks(serverId: String): List<ScheduledTask>? = coroutineScope {
+        val found = mutableListOf<ScheduledTask>()
+        var anyLookupWorked = false
+        var start = 1
+        var highestHit = 0
+        while (start <= MAX_TASK_PROBE && start <= highestHit + TASK_PROBE_GAP) {
+            val batch = (start until start + TASK_PROBE_BATCH).map { id ->
+                async {
+                    try {
+                        call("GET", "/servers/$serverId/tasks/$id") as? JsonObject
+                    } catch (e: CraftyException) {
+                        null
+                    }
+                }
+            }.awaitAll()
+            batch.forEachIndexed { i, root ->
+                val data = root?.obj("data") ?: return@forEachIndexed
+                anyLookupWorked = true
+                // Task ids are shared across servers, so keep scanning past other servers' tasks.
+                highestHit = maxOf(highestHit, start + i)
+                val owner = data.str("server_id")
+                if (owner == null || owner == serverId) {
+                    val withId = if (data.str("schedule_id") == null && data.str("id") == null) {
+                        JsonObject(data + ("schedule_id" to JsonPrimitive((start + i).toString())))
+                    } else {
+                        data
+                    }
+                    ScheduledTask.from(withId)?.let(found::add)
+                }
+            }
+            start += TASK_PROBE_BATCH
+        }
+        if (anyLookupWorked) found else null
+    }
+
+    /** Status code and body of a GET, never throwing. Used by the diagnostics view. */
+    suspend fun raw(path: String): String = withContext(Dispatchers.IO) {
+        val url = "$baseUrl/api/v2$path".toHttpUrlOrNull() ?: return@withContext "Invalid URL"
+        val request = Request.Builder()
+            .url(url)
+            .header("Accept", "application/json")
+            .apply { token?.let { header("Authorization", "Bearer $it") } }
+            .build()
+        try {
+            http.newCall(request).execute().use { resp ->
+                val body = resp.body?.string().orEmpty()
+                val shown = if (body.length > RAW_LIMIT) body.take(RAW_LIMIT) + "\n…(${body.length} chars total)" else body
+                "HTTP ${resp.code}\n$shown"
+            }
+        } catch (e: IOException) {
+            "Network error: ${networkMessage(e)}"
+        }
+    }
 
     suspend fun setTaskEnabled(serverId: String, taskId: String, enabled: Boolean) {
         val body = buildJsonObject { put("enabled", enabled) }
@@ -119,6 +188,10 @@ class CraftyApi(
     }
 
     companion object {
+        private const val MAX_TASK_PROBE = 200
+        private const val TASK_PROBE_BATCH = 10
+        private const val TASK_PROBE_GAP = 20
+        private const val RAW_LIMIT = 4000
         private val TEXT = "text/plain; charset=utf-8".toMediaType()
         private val JSON_TYPE = "application/json; charset=utf-8".toMediaType()
         private val ansi = Regex("\u001B\\[[;?0-9]*[A-Za-z]")
