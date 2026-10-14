@@ -23,6 +23,7 @@ import com.vknxworks.craftyremote.data.AppSettings
 import com.vknxworks.craftyremote.data.CraftyApi
 import com.vknxworks.craftyremote.data.CraftyException
 import com.vknxworks.craftyremote.data.CredentialStore
+import com.vknxworks.craftyremote.data.BackupConfig
 import com.vknxworks.craftyremote.data.ServerConfig
 import com.vknxworks.craftyremote.data.ServerStats
 import kotlinx.coroutines.CancellationException
@@ -142,10 +143,15 @@ class MonitorService : Service() {
             async { s to runCatching { api.stats(s.id) }.getOrNull() }
         }.awaitAll()
         if (settings.alertBackup) {
-            val configs = servers.map { s -> async { s to runCatching { api.serverConfig(s.id) }.getOrNull() } }.awaitAll()
-            for ((server, cfg) in configs) checkBackup(server.id, server.name, cfg)
+            val info = servers.map { s ->
+                async {
+                    Triple(s, runCatching { api.serverConfig(s.id) }.getOrNull(), runCatching { api.backups(s.id) }.getOrNull())
+                }
+            }.awaitAll()
+            for ((server, cfg, profiles) in info) checkBackup(server.id, server.name, cfg, profiles)
         } else {
             lastBackup.clear()
+            profileStatus.clear()
         }
 
         var running = 0
@@ -206,28 +212,62 @@ class MonitorService : Service() {
         notifyStatus(status(summary))
     }
 
+    /** Per backup profile (Crafty 4.4+): last status seen, e.g. "standby", "running", "failed". */
+    private val profileStatus = mutableMapOf<String, String>()
+    /** When each server last got a backup alert of each kind, so two signals for one backup alert once. */
+    private val lastBackupAlert = mutableMapOf<String, Long>()
+
+    private fun backupAlert(serverId: String, failed: Boolean, title: String, text: String) {
+        val key = "$serverId/$failed"
+        val now = System.currentTimeMillis()
+        if (now - (lastBackupAlert[key] ?: 0L) < BACKUP_ALERT_DEDUP_MS) return
+        lastBackupAlert[key] = now
+        alert(title, text, CHANNEL_BACKUP)
+    }
+
     /**
-     * "Backup finished" when the last-backup time moves on; "Backup failed" when a backup stops
-     * and the time still hasn't moved one poll later (Crafty can update it a moment after).
+     * Backup results, from whichever signals this Crafty version gives:
+     * - each backup profile's status turning "Failed", or going from running back to idle;
+     * - the server's last-backup time moving on (finished);
+     * - the server's backing-up flag dropping while that time stays put for another poll (failed).
      * Only results are notified, never the start.
      */
-    private fun checkBackup(id: String, name: String, cfg: ServerConfig?) {
-        if (cfg == null || (cfg.backingUp == null && cfg.lastBackup == null)) return
+    private fun checkBackup(id: String, name: String, cfg: ServerConfig?, profiles: List<BackupConfig>?) {
+        val hasProfileStatus = profiles?.any { it.status != null } == true
+        val several = (profiles?.size ?: 0) > 1
+        profiles?.forEach { b ->
+            val status = b.status?.lowercase() ?: return@forEach
+            val key = "$id/${b.id ?: b.name}"
+            val before = profileStatus.put(key, status) ?: return@forEach // first sighting is the baseline
+            if (before == status) return@forEach
+            val label = if (several) "${b.name} on $name" else name
+            when {
+                b.failed -> backupAlert(id, true, "Backup failed: $label", b.statusMessage ?: "Crafty reported the backup as failed.")
+                isActive(before) && !isActive(status) -> backupAlert(id, false, "Backup finished: $label", "The backup completed.")
+            }
+        }
+
+        if (cfg == null) return
         var now = BackupSnap(cfg.backingUp == true, cfg.lastBackup)
         val before = lastBackup[id]
         lastBackup[id] = now
         if (before == null) return // first sighting is the baseline
         val finished = now.lastBackup != null && now.lastBackup != before.lastBackup
         when {
-            finished -> alert("Backup finished: $name", "Completed ${now.lastBackup}", CHANNEL_BACKUP)
-            before.awaitingResult ->
-                alert("Backup failed: $name", "The backup stopped without completing. Check the server's logs in Crafty.", CHANNEL_BACKUP)
+            finished -> backupAlert(id, false, "Backup finished: $name", "Completed ${now.lastBackup}")
+            // Profiles with a status say directly when a backup fails; otherwise infer it.
+            hasProfileStatus -> Unit
+            before.awaitingResult && !now.running ->
+                backupAlert(id, true, "Backup failed: $name", "The backup stopped without completing. Check the server's logs in Crafty.")
             before.running && !now.running -> {
                 now = now.copy(awaitingResult = true)
                 lastBackup[id] = now
             }
         }
     }
+
+    private fun isActive(status: String) =
+        status !in listOf("standby", "idle", "failed", "completed", "complete", "success", "done", "none", "")
 
     private fun snapshotOf(s: ServerStats) = Snapshot(
         running = s.running,
@@ -314,6 +354,7 @@ class MonitorService : Service() {
         private const val CHANNEL_PLAYERS = "alerts_players"
         private const val CHANNEL_SHUTDOWN = "alerts_shutdown"
         private const val CHANNEL_BACKUP = "alerts_backup"
+        private const val BACKUP_ALERT_DEDUP_MS = 3 * 60_000L
         private val nextId = AtomicInteger(2000)
 
         fun canNotify(context: Context): Boolean =

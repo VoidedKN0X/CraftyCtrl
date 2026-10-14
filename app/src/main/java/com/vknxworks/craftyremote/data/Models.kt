@@ -203,8 +203,25 @@ data class BackupConfig(
     val before: String = "",
     val after: String = "",
     val enabled: Boolean = true,
+    /** Result of the last run as Crafty 4.4+ keeps it per profile, e.g. "Standby", "Failed". */
+    val status: String? = null,
+    val statusMessage: String? = null,
 ) {
+    val failed: Boolean get() = status?.contains("fail", ignoreCase = true) == true
+
     companion object {
+        /** Crafty stores status as a JSON string ('{"status": "Failed", "message": "..."}') or an object. */
+        private fun statusOf(o: JsonObject): Pair<String?, String?> {
+            val el = o["status"] ?: return null to null
+            val obj = el as? JsonObject
+                ?: (el as? JsonPrimitive)?.contentOrNull?.let { raw ->
+                    runCatching { kotlinx.serialization.json.Json.parseToJsonElement(raw) as? JsonObject }.getOrNull()
+                        ?: return raw.meaningful() to null
+                }
+                ?: return null to null
+            return obj.str("status").meaningful() to obj.str("message").meaningful()
+        }
+
         private val shownFields = listOf(
             "backup_type" to "Type",
             "enabled" to "Enabled",
@@ -235,6 +252,8 @@ data class BackupConfig(
             before = o.str("before").orEmpty(),
             after = o.str("after").orEmpty(),
             enabled = o.bool("enabled") ?: true,
+            status = statusOf(o).first,
+            statusMessage = statusOf(o).second,
         )
     }
 }

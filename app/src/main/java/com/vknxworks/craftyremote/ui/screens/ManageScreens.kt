@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,6 +38,7 @@ import com.vknxworks.craftyremote.data.PlayerList
 import com.vknxworks.craftyremote.data.PropDef
 import com.vknxworks.craftyremote.data.PropKind
 import com.vknxworks.craftyremote.data.ServerConfig
+import com.vknxworks.craftyremote.data.canSetMemory
 import com.vknxworks.craftyremote.data.memoryOf
 import com.vknxworks.craftyremote.data.withMemory
 import com.vknxworks.craftyremote.ui.ErrorBanner
@@ -63,7 +65,7 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
     BackHandler(onBack = leave)
 
     // Invalid numbers block saving, so a typo can't break the file.
-    val invalid = vm.defs.filter { it.kind == PropKind.INT && it.key in vm.edits }
+    val invalid = vm.defs.filter { it.kind == PropKind.INT && it.key in vm.edits && vm.edits[it.key] != vm.original[it.key] }
         .filter { intError(it, vm.value(it)) != null }
 
     fun save() = vm.save { needsRestart ->
@@ -363,7 +365,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                         Text("Nobody here yet.", Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                items(entries.orEmpty(), key = { it.raw.toString() }) { e ->
+                itemsIndexed(entries.orEmpty(), key = { i, e -> "$i:${e.raw}" }) { _, e ->
                     Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
                         Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -504,12 +506,12 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
     var showStatus by remember { mutableStateOf(c.showStatus ?: true) }
     var countPlayers by remember { mutableStateOf(c.countPlayers ?: true) }
     var command by remember { mutableStateOf(c.executionCommand.orEmpty()) }
-    var commandEdited by remember { mutableStateOf(false) }
 
-    val hasMemory = !bedrock && (minMem0 != null || maxMem0 != null || c.executionCommand?.contains("java") == true)
+    val hasMemory = !bedrock && canSetMemory(c.executionCommand)
     val minN = minMem.toIntOrNull()
     val maxN = maxMem.toIntOrNull()
-    val memChanged = minN != minMem0 || maxN != maxMem0
+    // Compared with what the command (possibly hand-edited) currently says.
+    val memChanged = (minN to maxN) != memoryOf(command)
     val memError = when {
         !hasMemory || !memChanged -> null
         minN == null || maxN == null -> "Enter both values in MB"
@@ -524,12 +526,8 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
         else -> null
     }
 
-    // The start command, with the memory fields applied unless it was edited by hand.
-    val finalCommand = when {
-        commandEdited -> command
-        hasMemory && memChanged && memError == null -> withMemory(command, minN!!, maxN!!)
-        else -> command
-    }
+    // The start command with the memory fields applied.
+    val finalCommand = if (hasMemory && memChanged && memError == null) withMemory(command, minN!!, maxN!!) else command
 
     val fields: JsonObject = run {
         val m = linkedMapOf<String, JsonPrimitive>()
@@ -542,7 +540,7 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
         timeout.toIntOrNull()?.let { if (it != c.shutdownTimeout) m["shutdown_timeout"] = JsonPrimitive(it) }
         logsDays.toIntOrNull()?.let { if (it != c.logsDeleteAfter) m["logs_delete_after"] = JsonPrimitive(it) }
         port.toIntOrNull()?.let { if (it != c.serverPort && portError == null) m["server_port"] = JsonPrimitive(it) }
-        if (ip != c.serverIp.orEmpty()) m["server_ip"] = JsonPrimitive(ip.trim())
+        if (ip.isNotBlank() && ip.trim() != c.serverIp.orEmpty()) m["server_ip"] = JsonPrimitive(ip.trim())
         if (updateUrl.trim() != c.updateUrl.orEmpty()) m["executable_update_url"] = JsonPrimitive(updateUrl.trim())
         if (c.showStatus != null && showStatus != c.showStatus) m["show_status"] = JsonPrimitive(showStatus)
         if (c.countPlayers != null && countPlayers != c.countPlayers) m["count_players"] = JsonPrimitive(countPlayers)
@@ -563,8 +561,8 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
         if (hasMemory) {
             SectionLabel("Memory")
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                NumberField("Min (MB)", minMem, Modifier.weight(1f)) { minMem = it; commandEdited = false; command = c.executionCommand.orEmpty() }
-                NumberField("Max (MB)", maxMem, Modifier.weight(1f)) { maxMem = it; commandEdited = false; command = c.executionCommand.orEmpty() }
+                NumberField("Min (MB)", minMem, Modifier.weight(1f)) { minMem = it }
+                NumberField("Max (MB)", maxMem, Modifier.weight(1f)) { maxMem = it }
             }
             Text(
                 memError ?: "Sets -Xms and -Xmx in the start command. Restart the server to apply.",
@@ -607,7 +605,11 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
         SectionLabel("Start command")
         OutlinedTextField(
             value = finalCommand,
-            onValueChange = { command = it; commandEdited = true },
+            onValueChange = { edited ->
+                // A hand edit wins; the memory fields follow whatever it now says.
+                command = edited
+                memoryOf(edited).let { (lo, hi) -> minMem = lo?.toString().orEmpty(); maxMem = hi?.toString().orEmpty() }
+            },
             textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
             supportingText = { Text("Advanced. Crafty may only let admins change this.") },
             modifier = Modifier.fillMaxWidth(),
