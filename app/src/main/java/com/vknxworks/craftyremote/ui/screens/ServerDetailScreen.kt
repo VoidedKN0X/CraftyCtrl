@@ -110,6 +110,7 @@ import com.vknxworks.craftyremote.ui.ChartPlayers
 import com.vknxworks.craftyremote.ui.theme.stateColor
 import com.vknxworks.craftyremote.data.parseTimestamp
 import com.vknxworks.craftyremote.ui.rememberRefreshMs
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -366,6 +367,27 @@ private fun OverviewTab(vm: ServerDetailViewModel) {
             }
         }
         Spacer(Modifier.height(8.dp))
+    }
+
+    if (vm.eulaNeeded) {
+        val uri = LocalUriHandler.current
+        AlertDialog(
+            onDismissRequest = vm::dismissEula,
+            title = { Text("Accept the Minecraft EULA?") },
+            text = {
+                Text(
+                    "This server won't start until its EULA is accepted. Accepting writes eula=true " +
+                        "to the server's eula.txt, the same as accepting it in Crafty's web panel.",
+                )
+            },
+            confirmButton = { TextButton(onClick = vm::acceptEulaAndStart) { Text("Accept & start") } },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { uri.openUri("https://aka.ms/MinecraftEULA") }) { Text("Read EULA") }
+                    TextButton(onClick = vm::dismissEula) { Text("Cancel") }
+                }
+            },
+        )
     }
 
     playerSheet?.let { name ->

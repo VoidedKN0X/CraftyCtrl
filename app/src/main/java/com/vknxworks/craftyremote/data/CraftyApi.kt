@@ -155,6 +155,29 @@ class CraftyApi(
         }
     }
 
+    /**
+     * Whether a Java server's eula.txt says eula=true. A missing file counts as not accepted;
+     * null means the app couldn't tell (e.g. no file permission), so callers shouldn't block on it.
+     */
+    suspend fun eulaAccepted(serverId: String, serverPath: String): Boolean? = try {
+        when (val r = browse(serverId, join(serverPath, "eula.txt"))) {
+            is FileResult.Text -> Regex("""(?im)^\s*eula\s*=\s*true\s*$""").containsMatchIn(r.contents)
+            is FileResult.Folder -> null
+        }
+    } catch (e: CraftyException) {
+        if (e.httpCode in listOf(401, 403)) null else false
+    }
+
+    /** Writes eula=true, which is what accepting the Minecraft EULA means for a Java server. */
+    suspend fun acceptEula(serverId: String, serverPath: String) {
+        runCatching { createEntry(serverId, serverPath, "eula.txt", false) } // may already exist
+        saveFile(
+            serverId,
+            join(serverPath, "eula.txt"),
+            "# Accepted in Crafty Remote. See https://aka.ms/MinecraftEULA\neula=true\n",
+        )
+    }
+
     /** Creates an empty file or folder named [name] inside [parent]. */
     suspend fun createEntry(serverId: String, parent: String, name: String, directory: Boolean) {
         val body = buildJsonObject {

@@ -534,11 +534,42 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         }
     }
 
-    fun runAction(action: PowerAction) {
+    /** Set when Start was pressed on a Java server whose EULA isn't accepted yet. */
+    var eulaNeeded by mutableStateOf(false)
+        private set
+
+    fun dismissEula() {
+        eulaNeeded = false
+    }
+
+    /** Accepts the EULA (writes eula=true) and then starts the server. */
+    fun acceptEulaAndStart() {
+        eulaNeeded = false
+        val path = info?.path ?: return
+        viewModelScope.launch {
+            try {
+                api.acceptEula(serverId, path)
+            } catch (e: Exception) {
+                _messages.send("Couldn't write eula.txt: ${e.userMessage()}")
+                return@launch
+            }
+            runAction(PowerAction.START, skipEulaCheck = true)
+        }
+    }
+
+    fun runAction(action: PowerAction, skipEulaCheck: Boolean = false) {
         if (pendingAction != null) return
         viewModelScope.launch {
             pendingAction = action
             try {
+                // A Java server without an accepted EULA silently refuses to start, so ask first.
+                val i = info
+                if (action == PowerAction.START && !skipEulaCheck && i?.path != null && !i.isBedrock &&
+                    api.eulaAccepted(serverId, i.path) == false
+                ) {
+                    eulaNeeded = true
+                    return@launch
+                }
                 api.action(serverId, action.apiName)
                 _messages.send("${action.label} sent")
                 delay(1500)
