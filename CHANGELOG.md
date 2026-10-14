@@ -3,6 +3,16 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [1.1.0] - 2026-10-14
+
+### New
+- **Create servers from the app.** Tap **New server** on the Servers screen to set up a Java or Bedrock server:
+  - Java: pick the server software (Vanilla, Paper, Purpur, Fabric, …) and version from Crafty's download list, and set memory and port.
+  - Bedrock: Crafty downloads the official Bedrock server.
+  - A free port is suggested automatically, and names or ports already in use are flagged.
+  - The app waits while Crafty downloads the server files, then starts the server if you choose to, and opens its page.
+  - Requires accepting the Minecraft EULA, and an account or API key allowed to create servers in Crafty.
+
 ## [1.0.0] - 2026-10-14
 
 First release of Crafty Remote, an Android app for managing a Crafty Controller 4 panel.
