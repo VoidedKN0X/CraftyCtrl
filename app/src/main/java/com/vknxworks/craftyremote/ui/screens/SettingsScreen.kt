@@ -85,9 +85,6 @@ fun SettingsScreen(onBack: () -> Unit) {
 
     var liveRefresh by remember { mutableIntStateOf(settings.liveRefreshSeconds) }
     var alerts by remember { mutableStateOf(settings.alertsEnabled) }
-    var join by remember { mutableStateOf(settings.alertPlayerJoin) }
-    var shutdown by remember { mutableStateOf(settings.alertShutdown) }
-    var backup by remember { mutableStateOf(settings.alertBackup) }
     var interval by remember { mutableIntStateOf(settings.alertIntervalSeconds) }
     var keepAwake by remember { mutableStateOf(settings.alertKeepAwake) }
     var notifDenied by remember { mutableStateOf(false) }
@@ -197,7 +194,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             SettingsCard {
                 SwitchRow(
                     title = "Server alerts",
-                    body = "Get notified even when the app is closed. Shows a quiet ongoing notification while on.",
+                    body = "Get notified when a server stops or crashes, even with the app closed. Shows a quiet ongoing notification while on.",
                     checked = alerts,
                     onChange = { on ->
                         if (on) {
@@ -221,10 +218,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
                 }
-                HorizontalDivider()
-                CheckRow("A player joins", join) { settings.alertPlayerJoin = it; join = it }
-                CheckRow("A server stops or crashes", shutdown) { settings.alertShutdown = it; shutdown = it }
-                CheckRow("A backup finishes or fails", backup) { settings.alertBackup = it; backup = it }
                 HorizontalDivider()
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Check every", style = MaterialTheme.typography.bodyLarge)

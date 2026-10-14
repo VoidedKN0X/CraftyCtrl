@@ -73,17 +73,9 @@ class AppSettings(context: Context) {
         get() = prefs.getBoolean(KEY_ALERTS, false)
         set(v) = prefs.edit().putBoolean(KEY_ALERTS, v).apply()
 
-    var alertPlayerJoin: Boolean
-        get() = prefs.getBoolean(KEY_ALERT_JOIN, true)
-        set(v) = prefs.edit().putBoolean(KEY_ALERT_JOIN, v).apply()
-
     var alertShutdown: Boolean
         get() = prefs.getBoolean(KEY_ALERT_SHUTDOWN, true)
         set(v) = prefs.edit().putBoolean(KEY_ALERT_SHUTDOWN, v).apply()
-
-    var alertBackup: Boolean
-        get() = prefs.getBoolean(KEY_ALERT_BACKUP, true)
-        set(v) = prefs.edit().putBoolean(KEY_ALERT_BACKUP, v).apply()
 
     var alertIntervalSeconds: Int
         get() = prefs.getInt(KEY_ALERT_INTERVAL, 30)
@@ -112,10 +104,8 @@ class AppSettings(context: Context) {
         const val KEY_LOCKOUT_UNTIL = "pin_lockout_until"
         const val KEY_LIVE_REFRESH = "live_refresh"
         const val KEY_ALERTS = "alerts_enabled"
-        const val KEY_ALERT_JOIN = "alert_join"
         const val KEY_ALERT_SHUTDOWN = "alert_shutdown"
         const val KEY_ALERT_INTERVAL = "alert_interval"
-        const val KEY_ALERT_BACKUP = "alert_backup"
         const val KEY_ALERT_AWAKE = "alert_keep_awake"
     }
 }

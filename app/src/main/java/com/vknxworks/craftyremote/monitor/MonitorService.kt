@@ -23,8 +23,6 @@ import com.vknxworks.craftyremote.data.AppSettings
 import com.vknxworks.craftyremote.data.CraftyApi
 import com.vknxworks.craftyremote.data.CraftyException
 import com.vknxworks.craftyremote.data.CredentialStore
-import com.vknxworks.craftyremote.data.BackupConfig
-import com.vknxworks.craftyremote.data.ServerConfig
 import com.vknxworks.craftyremote.data.ServerStats
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -41,7 +39,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Polls Crafty in the background and notifies on player joins and server shutdowns.
+ * Polls Crafty in the background and notifies when a server stops or crashes.
  * Runs as a foreground service (with a quiet ongoing notification) so Android keeps it alive.
  */
 class MonitorService : Service() {
@@ -52,21 +50,15 @@ class MonitorService : Service() {
     private data class Snapshot(
         val running: Boolean,
         val crashed: Boolean,
-        val players: Set<String>,
         val online: Int,
         /** Polls in a row that looked stopped; a restart passes through one, a real stop stays. */
         val stoppedPolls: Int = 0,
         /** Whether the server was running when the current stopped streak began. */
         val wasRunningBeforeStop: Boolean = false,
-        /** Set when the player list suddenly came back empty; one such poll is treated as a ping blip. */
-        val emptyBlip: Boolean = false,
     )
 
     private val last = mutableMapOf<String, Snapshot>()
 
-    /** Last seen backup state per server: whether one was running, and when the last one finished. */
-    private data class BackupSnap(val running: Boolean, val lastBackup: String?, val awaitingResult: Boolean = false)
-    private val lastBackup = mutableMapOf<String, BackupSnap>()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -142,17 +134,6 @@ class MonitorService : Service() {
         val results = servers.map { s ->
             async { s to runCatching { api.stats(s.id) }.getOrNull() }
         }.awaitAll()
-        if (settings.alertBackup) {
-            val info = servers.map { s ->
-                async {
-                    Triple(s, runCatching { api.serverConfig(s.id) }.getOrNull(), runCatching { api.backups(s.id) }.getOrNull())
-                }
-            }.awaitAll()
-            for ((server, cfg, profiles) in info) checkBackup(server.id, server.name, cfg, profiles)
-        } else {
-            lastBackup.clear()
-            profileStatus.clear()
-        }
 
         var running = 0
         var playersOnline = 0
@@ -171,40 +152,20 @@ class MonitorService : Service() {
                 } else {
                     now.copy(stoppedPolls = 0)
                 }
-                // A running server whose list suddenly empties is usually a failed ping; wait one poll.
-                if (now.running && now.players.isEmpty() && before.players.isNotEmpty() && !before.emptyBlip) {
-                    now = now.copy(players = before.players, online = before.online, emptyBlip = true)
-                }
             }
             if (now.running) running++
             playersOnline += now.online
             last[server.id] = now
             if (before == null) continue // first sighting is the baseline, not an event
 
-            if (settings.alertShutdown) {
-                when {
-                    // Crashes are reported straight away.
-                    now.crashed && !before.crashed ->
-                        alert("${server.name} crashed", "Crafty detected a crash.", CHANNEL_SHUTDOWN)
-                    // A plain stop must hold for two polls, so restarts don't alert.
-                    !now.crashed && now.stoppedPolls == 2 && now.wasRunningBeforeStop ->
-                        alert("${server.name} stopped", "The server is no longer running.", CHANNEL_SHUTDOWN)
-                }
-            }
-            if (settings.alertPlayerJoin && now.running) {
-                val joined = now.players - before.players
-                when {
-                    joined.isNotEmpty() -> {
-                        val who = joined.sorted().joinToString(", ")
-                        alert("$who joined ${server.name}", "${now.online} online now", CHANNEL_PLAYERS)
-                    }
-                    // Bedrock usually reports a count but no names.
-                    before.players.isEmpty() && now.players.isEmpty() && now.online > before.online -> {
-                        val n = now.online - before.online
-                        val who = if (n == 1) "A player" else "$n players"
-                        alert("$who joined ${server.name}", "${now.online} online now", CHANNEL_PLAYERS)
-                    }
-                }
+            // Stops and crashes are the only alerts.
+            when {
+                // Crashes are reported straight away.
+                now.crashed && !before.crashed ->
+                    alert("${server.name} crashed", "Crafty detected a crash.", CHANNEL_SHUTDOWN)
+                // A plain stop must hold for two polls, so restarts don't alert.
+                !now.crashed && now.stoppedPolls == 2 && now.wasRunningBeforeStop ->
+                    alert("${server.name} stopped", "The server is no longer running.", CHANNEL_SHUTDOWN)
             }
         }
         val summary = "Watching ${servers.size} server${if (servers.size == 1) "" else "s"} · " +
@@ -212,67 +173,9 @@ class MonitorService : Service() {
         notifyStatus(status(summary))
     }
 
-    /** Per backup profile (Crafty 4.4+): last status seen, e.g. "standby", "running", "failed". */
-    private val profileStatus = mutableMapOf<String, String>()
-    /** When each server last got a backup alert of each kind, so two signals for one backup alert once. */
-    private val lastBackupAlert = mutableMapOf<String, Long>()
-
-    private fun backupAlert(serverId: String, failed: Boolean, title: String, text: String) {
-        val key = "$serverId/$failed"
-        val now = System.currentTimeMillis()
-        if (now - (lastBackupAlert[key] ?: 0L) < BACKUP_ALERT_DEDUP_MS) return
-        lastBackupAlert[key] = now
-        alert(title, text, CHANNEL_BACKUP)
-    }
-
-    /**
-     * Backup results, from whichever signals this Crafty version gives:
-     * - each backup profile's status turning "Failed", or going from running back to idle;
-     * - the server's last-backup time moving on (finished);
-     * - the server's backing-up flag dropping while that time stays put for another poll (failed).
-     * Only results are notified, never the start.
-     */
-    private fun checkBackup(id: String, name: String, cfg: ServerConfig?, profiles: List<BackupConfig>?) {
-        val hasProfileStatus = profiles?.any { it.status != null } == true
-        val several = (profiles?.size ?: 0) > 1
-        profiles?.forEach { b ->
-            val status = b.status?.lowercase() ?: return@forEach
-            val key = "$id/${b.id ?: b.name}"
-            val before = profileStatus.put(key, status) ?: return@forEach // first sighting is the baseline
-            if (before == status) return@forEach
-            val label = if (several) "${b.name} on $name" else name
-            when {
-                b.failed -> backupAlert(id, true, "Backup failed: $label", b.statusMessage ?: "Crafty reported the backup as failed.")
-                isActive(before) && !isActive(status) -> backupAlert(id, false, "Backup finished: $label", "The backup completed.")
-            }
-        }
-
-        if (cfg == null) return
-        var now = BackupSnap(cfg.backingUp == true, cfg.lastBackup)
-        val before = lastBackup[id]
-        lastBackup[id] = now
-        if (before == null) return // first sighting is the baseline
-        val finished = now.lastBackup != null && now.lastBackup != before.lastBackup
-        when {
-            finished -> backupAlert(id, false, "Backup finished: $name", "Completed ${now.lastBackup}")
-            // Profiles with a status say directly when a backup fails; otherwise infer it.
-            hasProfileStatus -> Unit
-            before.awaitingResult && !now.running ->
-                backupAlert(id, true, "Backup failed: $name", "The backup stopped without completing. Check the server's logs in Crafty.")
-            before.running && !now.running -> {
-                now = now.copy(awaitingResult = true)
-                lastBackup[id] = now
-            }
-        }
-    }
-
-    private fun isActive(status: String) =
-        status !in listOf("standby", "idle", "failed", "completed", "complete", "success", "done", "none", "")
-
     private fun snapshotOf(s: ServerStats) = Snapshot(
         running = s.running,
         crashed = s.crashed,
-        players = s.players.toSet(),
         online = s.online ?: s.players.size,
     )
 
@@ -351,10 +254,7 @@ class MonitorService : Service() {
         private var isRunning = false
         private const val STATUS_ID = 1001
         private const val CHANNEL_STATUS = "monitor_status"
-        private const val CHANNEL_PLAYERS = "alerts_players"
         private const val CHANNEL_SHUTDOWN = "alerts_shutdown"
-        private const val CHANNEL_BACKUP = "alerts_backup"
-        private const val BACKUP_ALERT_DEDUP_MS = 3 * 60_000L
         private val nextId = AtomicInteger(2000)
 
         fun canNotify(context: Context): Boolean =
@@ -370,14 +270,11 @@ class MonitorService : Service() {
                 },
             )
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_PLAYERS, "Player joins", NotificationManager.IMPORTANCE_DEFAULT),
-            )
-            nm.createNotificationChannel(
                 NotificationChannel(CHANNEL_SHUTDOWN, "Server stopped or crashed", NotificationManager.IMPORTANCE_HIGH),
             )
-            nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_BACKUP, "Backup finished or failed", NotificationManager.IMPORTANCE_DEFAULT),
-            )
+            // Player-join and backup alerts were removed; drop their channels from Android's settings too.
+            nm.deleteNotificationChannel("alerts_players")
+            nm.deleteNotificationChannel("alerts_backup")
         }
 
         /** Starts or stops the service to match the saved settings. Call from the foreground. */
