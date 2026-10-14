@@ -37,6 +37,10 @@ import com.vknxworks.craftyremote.ui.lock.LockScreen
 import com.vknxworks.craftyremote.ui.screens.CreateServerScreen
 import com.vknxworks.craftyremote.ui.screens.FileEditorScreen
 import com.vknxworks.craftyremote.ui.screens.LoginScreen
+import com.vknxworks.craftyremote.ui.screens.ManagePage
+import com.vknxworks.craftyremote.ui.screens.PlayersScreen
+import com.vknxworks.craftyremote.ui.screens.ServerOptionsScreen
+import com.vknxworks.craftyremote.ui.screens.ServerPropertiesScreen
 import com.vknxworks.craftyremote.ui.screens.ServerDetailScreen
 import com.vknxworks.craftyremote.ui.screens.ServerListScreen
 import com.vknxworks.craftyremote.ui.screens.SettingsScreen
@@ -161,7 +165,26 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
                         nav.navigate("file/${Uri.encode(serverId)}?path=${Uri.encode(path)}")
                     },
                     onDeleted = { nav.popBackStack("servers", inclusive = false) },
+                    onManage = { page -> nav.navigate("manage/${page.route}/${Uri.encode(serverId)}") },
+                    onOpenServer = { id, name ->
+                        nav.navigate("server/${Uri.encode(id)}?name=${Uri.encode(name)}") { popUpTo("servers") }
+                    },
                 )
+            }
+            composable(
+                route = "manage/{page}/{id}",
+                arguments = listOf(
+                    navArgument("page") { type = NavType.StringType },
+                    navArgument("id") { type = NavType.StringType },
+                ),
+            ) { entry ->
+                val serverId = entry.arguments?.getString("id").orEmpty()
+                val back: () -> Unit = { nav.popBackStack() }
+                when (entry.arguments?.getString("page")) {
+                    ManagePage.PROPERTIES.route -> ServerPropertiesScreen(api, serverId, back)
+                    ManagePage.PLAYERS.route -> PlayersScreen(api, serverId, back)
+                    else -> ServerOptionsScreen(api, serverId, back)
+                }
             }
             composable(
                 route = "file/{id}?path={path}",

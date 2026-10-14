@@ -19,6 +19,8 @@ import com.vknxworks.craftyremote.data.HistoryPoint
 import com.vknxworks.craftyremote.data.HostStats
 import com.vknxworks.craftyremote.data.join
 import com.vknxworks.craftyremote.data.ScheduledTask
+import com.vknxworks.craftyremote.data.ServerConfig
+import com.vknxworks.craftyremote.data.TaskAction
 import com.vknxworks.craftyremote.data.ServerStats
 import com.vknxworks.craftyremote.data.ServerSummary
 import com.vknxworks.craftyremote.data.Session
@@ -240,6 +242,8 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 Triple("GET", "/servers/$serverId/backups", null),
                 Triple("GET", "/servers/$serverId/history", null),
                 Triple("GET", "/crafty/stats", null),
+                Triple("GET", "/servers/$serverId/backups/backup/${backups.data?.firstOrNull()?.id ?: "default"}/files", null),
+                Triple("GET", "/servers/$serverId/backups/backup/${backups.data?.firstOrNull()?.id ?: "default"}", null),
                 Triple("POST", "/servers/$serverId/files", """{"page":"files","path":${jsonQuote(root)}}"""),
             )
             val report = StringBuilder("Server $serverId\n")
@@ -265,9 +269,14 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
     val version: String? get() = stats?.version ?: fallbackVersion
 
+    /** Crafty's own settings for this server; used for the update URL in the menu. */
+    var config by mutableStateOf<ServerConfig?>(null)
+        private set
+
     init {
         viewModelScope.launch {
             info = runCatching { api.serverInfo(serverId) }.getOrNull()
+            config = runCatching { api.serverConfig(serverId) }.getOrNull()
             fallbackVersion = runCatching { api.versionFallback(serverId, info?.executable) }.getOrNull()
         }
     }
@@ -742,6 +751,147 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
             } catch (e: Exception) {
                 swap(!enabled)
                 _messages.send(e.userMessage())
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ run now, unzip, update, clone, restore
+
+    /** Runs a schedule straight away; older Crafty without a "run" call gets the same action sent directly. */
+    fun runTaskNow(task: ScheduledTask) {
+        viewModelScope.launch {
+            try {
+                try {
+                    api.runTask(serverId, task.id)
+                } catch (e: CraftyException) {
+                    if (e.httpCode !in listOf(404, 405)) throw e
+                    when (task.kind) {
+                        TaskAction.COMMAND -> api.sendCommand(serverId, task.command ?: throw e)
+                        TaskAction.BACKUP -> api.action(serverId, "backup_server", task.actionId)
+                        TaskAction.START -> api.action(serverId, "start_server")
+                        TaskAction.STOP -> api.action(serverId, "stop_server")
+                        TaskAction.RESTART -> api.action(serverId, "restart_server")
+                        null -> throw e
+                    }
+                }
+                _messages.send("Ran ${task.name}")
+                delay(1200)
+                refreshStats()
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            }
+        }
+    }
+
+    fun unzip(entry: FileEntry) {
+        val folder = filePath ?: return
+        if (!insideServer(entry.path)) return
+        viewModelScope.launch {
+            try {
+                _messages.send("Extracting ${entry.name}…")
+                api.unzip(serverId, entry.path)
+                _messages.send("Extracted ${entry.name}")
+                delay(800)
+                openFolder(folder)
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            }
+        }
+    }
+
+    fun loadConfig() {
+        viewModelScope.launch { config = runCatching { api.serverConfig(serverId) }.getOrNull() }
+    }
+
+    var managing by mutableStateOf(false)
+        private set
+
+    /** Stops the server and waits up to a minute for it to go down. */
+    private suspend fun stopAndWait() {
+        if (runCatching { api.stats(serverId).running }.getOrDefault(false)) {
+            api.action(serverId, "stop_server")
+            for (attempt in 0 until 30) {
+                delay(2_000)
+                if (!runCatching { api.stats(serverId).running }.getOrDefault(false)) return
+            }
+            throw CraftyException(0, "STILL_RUNNING", "The server didn't stop within a minute. Try again, or kill it first.")
+        }
+    }
+
+    /** Downloads the server jar again from its update URL (Crafty's "Update executable"). */
+    fun updateExecutable() {
+        if (managing) return
+        viewModelScope.launch {
+            managing = true
+            try {
+                stopAndWait()
+                api.action(serverId, "update_executable")
+                _messages.send("Update started. Crafty downloads the new server jar; start the server when it's done.")
+                delay(1500)
+                refreshStats()
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            } finally {
+                managing = false
+            }
+        }
+    }
+
+    /** Copies the server (files and settings) into a new one, then opens it. */
+    fun cloneServer(onCloned: (id: String, name: String) -> Unit) {
+        if (managing) return
+        viewModelScope.launch {
+            managing = true
+            try {
+                val res = api.actionResult(serverId, "clone_server") as? JsonObject
+                val data = res?.get("data") as? JsonObject
+                val id = (data?.get("new_server_id") as? kotlinx.serialization.json.JsonPrimitive)?.content
+                    ?: (data?.get("new_server_uuid") as? kotlinx.serialization.json.JsonPrimitive)?.content
+                if (id == null) {
+                    _messages.send("Clone started. It appears in the server list when Crafty is done.")
+                } else {
+                    val name = runCatching { api.serverInfo(id)?.name }.getOrNull() ?: "Copy of ${info?.name.orEmpty()}"
+                    onCloned(id, name)
+                }
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            } finally {
+                managing = false
+            }
+        }
+    }
+
+    /** Archive names per backup profile id (DEFAULT_BACKUP for none); null data means Crafty can't list them. */
+    var backupFiles by mutableStateOf(Loadable<List<String>>())
+        private set
+
+    fun loadBackupFiles(config: BackupConfig) {
+        viewModelScope.launch {
+            backupFiles = Loadable(loading = true)
+            val location = config.details.firstOrNull { it.first == "Location" }?.second
+            backupFiles = try {
+                Loadable(api.backupFiles(serverId, config.id, location) ?: emptyList())
+            } catch (e: Exception) {
+                Loadable(emptyList(), error = e.userMessage())
+            }
+        }
+    }
+
+    fun restoreBackup(config: BackupConfig, fileName: String, inPlace: Boolean, onDone: () -> Unit) {
+        if (managing) return
+        viewModelScope.launch {
+            managing = true
+            try {
+                stopAndWait()
+                api.restoreBackup(serverId, config.id, fileName.trim(), inPlace)
+                _messages.send("Restoring $fileName. Start the server when Crafty is done.")
+                onDone()
+                delay(1500)
+                refreshStats()
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            } finally {
+                managing = false
             }
         }
     }

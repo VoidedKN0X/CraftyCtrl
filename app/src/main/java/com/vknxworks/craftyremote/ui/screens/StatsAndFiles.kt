@@ -75,6 +75,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.Alignment
@@ -362,6 +363,13 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                                 enabled = copyable,
                                 onClick = { rowMenu = null; vm.startClip(e, copy = true) },
                             )
+                            if (!e.isDir && e.name.endsWith(".zip", ignoreCase = true)) {
+                                DropdownMenuItem(
+                                    text = { Text("Extract here") },
+                                    leadingIcon = { Icon(Icons.Filled.Unarchive, contentDescription = null) },
+                                    onClick = { rowMenu = null; vm.unzip(e) },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },

@@ -23,6 +23,7 @@ import com.vknxworks.craftyremote.data.AppSettings
 import com.vknxworks.craftyremote.data.CraftyApi
 import com.vknxworks.craftyremote.data.CraftyException
 import com.vknxworks.craftyremote.data.CredentialStore
+import com.vknxworks.craftyremote.data.ServerConfig
 import com.vknxworks.craftyremote.data.ServerStats
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -61,6 +62,10 @@ class MonitorService : Service() {
     )
 
     private val last = mutableMapOf<String, Snapshot>()
+
+    /** Last seen backup state per server: whether one was running, and when the last one finished. */
+    private data class BackupSnap(val running: Boolean, val lastBackup: String?, val awaitingResult: Boolean = false)
+    private val lastBackup = mutableMapOf<String, BackupSnap>()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -136,6 +141,12 @@ class MonitorService : Service() {
         val results = servers.map { s ->
             async { s to runCatching { api.stats(s.id) }.getOrNull() }
         }.awaitAll()
+        if (settings.alertBackup) {
+            val configs = servers.map { s -> async { s to runCatching { api.serverConfig(s.id) }.getOrNull() } }.awaitAll()
+            for ((server, cfg) in configs) checkBackup(server.id, server.name, cfg)
+        } else {
+            lastBackup.clear()
+        }
 
         var running = 0
         var playersOnline = 0
@@ -193,6 +204,29 @@ class MonitorService : Service() {
         val summary = "Watching ${servers.size} server${if (servers.size == 1) "" else "s"} · " +
             "$running running · $playersOnline player${if (playersOnline == 1) "" else "s"} online"
         notifyStatus(status(summary))
+    }
+
+    /**
+     * "Backup finished" when the last-backup time moves on; "Backup failed" when a backup stops
+     * and the time still hasn't moved one poll later (Crafty can update it a moment after).
+     * Only results are notified, never the start.
+     */
+    private fun checkBackup(id: String, name: String, cfg: ServerConfig?) {
+        if (cfg == null || (cfg.backingUp == null && cfg.lastBackup == null)) return
+        var now = BackupSnap(cfg.backingUp == true, cfg.lastBackup)
+        val before = lastBackup[id]
+        lastBackup[id] = now
+        if (before == null) return // first sighting is the baseline
+        val finished = now.lastBackup != null && now.lastBackup != before.lastBackup
+        when {
+            finished -> alert("Backup finished: $name", "Completed ${now.lastBackup}", CHANNEL_BACKUP)
+            before.awaitingResult ->
+                alert("Backup failed: $name", "The backup stopped without completing. Check the server's logs in Crafty.", CHANNEL_BACKUP)
+            before.running && !now.running -> {
+                now = now.copy(awaitingResult = true)
+                lastBackup[id] = now
+            }
+        }
     }
 
     private fun snapshotOf(s: ServerStats) = Snapshot(
@@ -279,6 +313,7 @@ class MonitorService : Service() {
         private const val CHANNEL_STATUS = "monitor_status"
         private const val CHANNEL_PLAYERS = "alerts_players"
         private const val CHANNEL_SHUTDOWN = "alerts_shutdown"
+        private const val CHANNEL_BACKUP = "alerts_backup"
         private val nextId = AtomicInteger(2000)
 
         fun canNotify(context: Context): Boolean =
@@ -298,6 +333,9 @@ class MonitorService : Service() {
             )
             nm.createNotificationChannel(
                 NotificationChannel(CHANNEL_SHUTDOWN, "Server stopped or crashed", NotificationManager.IMPORTANCE_HIGH),
+            )
+            nm.createNotificationChannel(
+                NotificationChannel(CHANNEL_BACKUP, "Backup finished or failed", NotificationManager.IMPORTANCE_DEFAULT),
             )
         }
 
