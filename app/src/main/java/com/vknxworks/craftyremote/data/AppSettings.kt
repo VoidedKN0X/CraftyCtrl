@@ -81,6 +81,10 @@ class AppSettings(context: Context) {
         get() = prefs.getBoolean(KEY_ALERT_SHUTDOWN, true)
         set(v) = prefs.edit().putBoolean(KEY_ALERT_SHUTDOWN, v).apply()
 
+    var alertBackup: Boolean
+        get() = prefs.getBoolean(KEY_ALERT_BACKUP, true)
+        set(v) = prefs.edit().putBoolean(KEY_ALERT_BACKUP, v).apply()
+
     var alertIntervalSeconds: Int
         get() = prefs.getInt(KEY_ALERT_INTERVAL, 30)
         set(v) = prefs.edit().putInt(KEY_ALERT_INTERVAL, v).apply()
@@ -111,6 +115,7 @@ class AppSettings(context: Context) {
         const val KEY_ALERT_JOIN = "alert_join"
         const val KEY_ALERT_SHUTDOWN = "alert_shutdown"
         const val KEY_ALERT_INTERVAL = "alert_interval"
+        const val KEY_ALERT_BACKUP = "alert_backup"
         const val KEY_ALERT_AWAKE = "alert_keep_awake"
     }
 }

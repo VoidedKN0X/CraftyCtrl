@@ -48,6 +48,8 @@ import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -112,6 +114,10 @@ import com.vknxworks.craftyremote.data.parseTimestamp
 import com.vknxworks.craftyremote.ui.rememberRefreshMs
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.SystemUpdateAlt
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.SettingsBackupRestore
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -169,12 +175,16 @@ fun ServerDetailScreen(
     onBack: () -> Unit,
     onOpenFile: (String) -> Unit,
     onDeleted: () -> Unit,
+    onManage: (ManagePage) -> Unit = {},
+    onOpenServer: (id: String, name: String) -> Unit = { _, _ -> },
 ) {
     val vm: ServerDetailViewModel = viewModel(factory = viewModelFactory { initializer { ServerDetailViewModel(api, serverId) } })
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val snackbar = remember { SnackbarHostState() }
     var overflow by remember { mutableStateOf(false) }
     var confirmDeleteServer by remember { mutableStateOf(false) }
+    var confirmUpdate by remember { mutableStateOf(false) }
+    var confirmClone by remember { mutableStateOf(false) }
 
     LaunchedEffect(vm) { vm.messages.collect { snackbar.showSnackbar(it) } }
     val refreshMs = rememberRefreshMs()
@@ -215,6 +225,26 @@ fun ServerDetailScreen(
                             Icon(Icons.Filled.MoreVert, contentDescription = "More")
                         }
                         DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
+                            ManagePage.entries.forEach { page ->
+                                DropdownMenuItem(
+                                    text = { Text(page.title) },
+                                    leadingIcon = { Icon(page.icon, contentDescription = null) },
+                                    onClick = { overflow = false; onManage(page) },
+                                )
+                            }
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("Update server software") },
+                                leadingIcon = { Icon(Icons.Filled.SystemUpdateAlt, contentDescription = null) },
+                                enabled = vm.info?.isBedrock != true,
+                                onClick = { overflow = false; vm.loadConfig(); confirmUpdate = true },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Clone server") },
+                                leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+                                onClick = { overflow = false; confirmClone = true },
+                            )
+                            HorizontalDivider()
                             DropdownMenuItem(
                                 text = { Text("Diagnostics") },
                                 leadingIcon = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
@@ -248,7 +278,7 @@ fun ServerDetailScreen(
                 label = "tab",
             ) { current ->
                 when (current) {
-                    DetailTab.OVERVIEW -> OverviewTab(vm)
+                    DetailTab.OVERVIEW -> OverviewTab(vm, onManage)
                     DetailTab.CONSOLE -> ConsoleTab(vm)
                     DetailTab.STATS -> StatsTab(vm)
                     DetailTab.FILES -> FilesTab(vm, onOpenFile)
@@ -260,6 +290,53 @@ fun ServerDetailScreen(
     }
 
     vm.diagnostics?.let { report -> DiagnosticsDialog(report, onClose = vm::closeDiagnostics) }
+
+    if (confirmUpdate) {
+        val url = vm.config?.updateUrl
+        AlertDialog(
+            onDismissRequest = { confirmUpdate = false },
+            icon = { Icon(Icons.Filled.SystemUpdateAlt, contentDescription = null) },
+            title = { Text("Update server software?") },
+            text = {
+                Text(
+                    if (url == null) {
+                        "This server has no update URL set, so Crafty has nothing to download. Add the new jar's download link in Server options first."
+                    } else {
+                        "Crafty downloads the server jar again from:\n$url\n\nThe server is stopped first and the old jar is replaced. Back up the world before a big version jump."
+                    },
+                )
+            },
+            confirmButton = {
+                if (url == null) {
+                    TextButton(onClick = { confirmUpdate = false; onManage(ManagePage.OPTIONS) }) { Text("Open Server options") }
+                } else {
+                    TextButton(onClick = { confirmUpdate = false; vm.updateExecutable() }) { Text("Update") }
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmUpdate = false }) { Text("Cancel") } },
+        )
+    }
+
+    if (confirmClone) {
+        AlertDialog(
+            onDismissRequest = { if (!vm.managing) confirmClone = false },
+            icon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+            title = { Text("Clone this server?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Crafty copies the whole server folder (world, configs, jar) and its settings into a new server. Large worlds take a while and use the same disk space again.")
+                    if (vm.managing) LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !vm.managing,
+                    onClick = { vm.cloneServer { id, name -> confirmClone = false; onOpenServer(id, name) } },
+                ) { Text("Clone") }
+            },
+            dismissButton = { TextButton(onClick = { confirmClone = false }, enabled = !vm.managing) { Text("Cancel") } },
+        )
+    }
 
     if (confirmDeleteServer) {
         DeleteServerDialog(
@@ -382,7 +459,7 @@ private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun OverviewTab(vm: ServerDetailViewModel) {
+private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Unit) {
     val s = vm.stats
     var confirm by remember { mutableStateOf<PowerAction?>(null) }
     // "" opens the sheet with a name field; a name opens it for that player.
@@ -459,6 +536,25 @@ private fun OverviewTab(vm: ServerDetailViewModel) {
                 Icon(Icons.Filled.ManageAccounts, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("Manage a player by name…")
+            }
+        }
+
+        SectionLabel("Manage")
+        ManagePage.entries.forEach { page ->
+            Card(
+                onClick = { onManage(page) },
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            ) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(page.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(page.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text(page.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -790,6 +886,7 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
     val state = vm.backups
     var editingTask by remember { mutableStateOf<TaskEdit?>(null) }
     var editingBackup by remember { mutableStateOf<BackupConfig?>(null) }
+    var restoring by remember { mutableStateOf<BackupConfig?>(null) }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -832,12 +929,13 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
                     onEditTask = { t -> editingTask = TaskEdit(t, null) },
                     onAddSchedule = { editingTask = TaskEdit(null, TaskAction.BACKUP to b.id) },
                     onEdit = { editingBackup = b },
+                    onRestore = { vm.loadBackupFiles(b); restoring = b },
                 ) { vm.runBackup(b) }
             }
         }
         item(key = "note") {
             Text(
-                "Backups run on the Crafty host. Restoring and downloading backups stays in the web panel.",
+                "Backups run on the Crafty host. Downloading backup archives stays in the web panel.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -845,6 +943,16 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
     }
 
     editingTask?.let { e -> TaskEditor(vm, e) { editingTask = null } }
+    restoring?.let { b ->
+        RestoreDialog(
+            config = b,
+            files = vm.backupFiles,
+            busy = vm.managing,
+            running = vm.stats?.running == true,
+            onDismiss = { if (!vm.managing) restoring = null },
+            onRestore = { name, inPlace -> vm.restoreBackup(b, name, inPlace) { restoring = null } },
+        )
+    }
     editingBackup?.let { b ->
         BackupEditorSheet(
             config = b,
@@ -867,6 +975,7 @@ private fun BackupCard(
     onEditTask: (ScheduledTask) -> Unit,
     onAddSchedule: () -> Unit,
     onEdit: () -> Unit,
+    onRestore: () -> Unit,
     onRun: () -> Unit,
 ) {
     Card(
@@ -952,6 +1061,11 @@ private fun BackupCard(
                     Text("Settings")
                 }
             }
+            OutlinedButton(onClick = onRestore, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Filled.SettingsBackupRestore, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Restore a backup…")
+            }
             FilledTonalButton(onClick = onRun, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
                 if (busy) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -974,6 +1088,7 @@ private fun SchedulesTab(vm: ServerDetailViewModel) {
     }
     val state = vm.tasks
     var editing by remember { mutableStateOf<TaskEdit?>(null) }
+    var confirmRun by remember { mutableStateOf<ScheduledTask?>(null) }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -1001,12 +1116,21 @@ private fun SchedulesTab(vm: ServerDetailViewModel) {
         }
         if (list != null) {
             items(list, key = { it.id }) { t ->
-                TaskCard(t, onClick = { editing = TaskEdit(t, null) }) { enabled -> vm.setTaskEnabled(t, enabled) }
+                TaskCard(t, onClick = { editing = TaskEdit(t, null) }, onRun = { confirmRun = t }) { enabled -> vm.setTaskEnabled(t, enabled) }
             }
         }
     }
 
     editing?.let { e -> TaskEditor(vm, e) { editing = null } }
+    confirmRun?.let { t ->
+        AlertDialog(
+            onDismissRequest = { confirmRun = null },
+            title = { Text("Run ${t.name} now?") },
+            text = { Text(t.command?.let { "${t.actionLabel}: $it" } ?: t.actionLabel) },
+            confirmButton = { TextButton(onClick = { confirmRun = null; vm.runTaskNow(t) }) { Text("Run now") } },
+            dismissButton = { TextButton(onClick = { confirmRun = null }) { Text("Cancel") } },
+        )
+    }
 }
 
 /** What the task editor is opened for: an existing task, or a new one with an optional preset action. */
@@ -1026,7 +1150,7 @@ private fun TaskEditor(vm: ServerDetailViewModel, e: TaskEdit, close: () -> Unit
 }
 
 @Composable
-private fun TaskCard(t: ScheduledTask, onClick: () -> Unit, onToggle: (Boolean) -> Unit) {
+private fun TaskCard(t: ScheduledTask, onClick: () -> Unit, onRun: () -> Unit, onToggle: (Boolean) -> Unit) {
     Card(
         onClick = onClick,
         shape = RoundedCornerShape(18.dp),
@@ -1051,7 +1175,7 @@ private fun TaskCard(t: ScheduledTask, onClick: () -> Unit, onToggle: (Boolean) 
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.width(8.dp))
+            IconButton(onClick = onRun) { Icon(Icons.Filled.PlayArrow, contentDescription = "Run now") }
             Switch(checked = t.enabled, onCheckedChange = onToggle)
         }
     }
@@ -1089,4 +1213,115 @@ private fun EmptyCard(
             }
         }
     }
+}
+
+// ---------------------------------------------------------------- management pages
+
+/** The full-screen management pages reachable from a server. */
+enum class ManagePage(val route: String, val title: String, val subtitle: String, val icon: ImageVector) {
+    PROPERTIES("properties", "Server settings", "Everything in server.properties", Icons.Filled.Tune),
+    PLAYERS("players", "Players & bans", "Whitelist, operators and bans", Icons.Filled.Group),
+    OPTIONS("options", "Server options", "Name, memory, auto-start, crash detection", Icons.Filled.Settings),
+}
+
+@Composable
+private fun RestoreDialog(
+    config: BackupConfig,
+    files: com.vknxworks.craftyremote.ui.Loadable<List<String>>,
+    busy: Boolean,
+    running: Boolean,
+    onDismiss: () -> Unit,
+    onRestore: (fileName: String, inPlace: Boolean) -> Unit,
+) {
+    var picked by remember { mutableStateOf<String?>(null) }
+    var typed by remember { mutableStateOf("") }
+    var inPlace by remember { mutableStateOf(true) }
+    var confirm by remember { mutableStateOf("") }
+    val list = files.data.orEmpty()
+    val name = (picked ?: typed).trim()
+    val armed = confirm.trim().equals("restore", ignoreCase = true)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Filled.SettingsBackupRestore, contentDescription = null) },
+        title = { Text("Restore from ${config.name}") },
+        text = {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                when {
+                    files.loading -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                    list.isNotEmpty() -> {
+                        Text("Pick a backup", style = MaterialTheme.typography.labelLarge)
+                        list.take(30).forEach { f ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable(enabled = !busy) { picked = f }
+                                    .padding(vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                androidx.compose.material3.RadioButton(selected = picked == f, onClick = { picked = f }, enabled = !busy)
+                                Text(f, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                    else -> {
+                        Text(
+                            "Crafty doesn't list backup files through its API, so type the archive's file name " +
+                                "(see the Backups page in the web panel, e.g. 2026-10-14_03-00-00.zip).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedTextField(
+                            value = typed,
+                            onValueChange = { typed = it },
+                            label = { Text("Backup file name") },
+                            singleLine = true,
+                            enabled = !busy,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+                Row(
+                    Modifier.fillMaxWidth().clickable(enabled = !busy) { inPlace = !inPlace },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = inPlace, onCheckedChange = { inPlace = it }, enabled = !busy)
+                    Column {
+                        Text("Restore in place", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            if (inPlace) "Backup files overwrite the current ones; files not in the backup stay."
+                            else "The server folder is cleared first, so it ends up exactly like the backup.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Text(
+                    (if (running) "The server is stopped first. " else "") +
+                        "Everything since this backup is lost. Type RESTORE to confirm.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                OutlinedTextField(
+                    value = confirm,
+                    onValueChange = { confirm = it },
+                    placeholder = { Text("RESTORE") },
+                    singleLine = true,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onRestore(name, inPlace) }, enabled = name.isNotEmpty() && armed && !busy) {
+                Text("Restore", color = if (name.isNotEmpty() && armed && !busy) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("Cancel") } },
+    )
 }

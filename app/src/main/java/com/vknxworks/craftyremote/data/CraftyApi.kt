@@ -423,6 +423,95 @@ class CraftyApi(
         call("PATCH", "/servers/$serverId/tasks/$taskId", jsonBody(body))
     }
 
+    // ------------------------------------------------------------ server management
+
+    /** Crafty's settings for the server (name, auto-start, start command, ...) and its live status flags. */
+    suspend fun serverConfig(serverId: String): ServerConfig =
+        ServerConfig.from(call("GET", "/servers/$serverId"))
+            ?: throw CraftyException(0, "BAD_RESPONSE", "Crafty didn't send this server's settings.")
+
+    /** Changes Crafty's settings for the server; only the given fields change. */
+    suspend fun updateServer(serverId: String, fields: JsonObject) {
+        call("PATCH", "/servers/$serverId", jsonBody(fields))
+    }
+
+    /** Like [action], but returns Crafty's reply (clone_server answers with the new server's id). */
+    suspend fun actionResult(serverId: String, action: String): JsonElement =
+        call("POST", "/servers/$serverId/action/$action")
+
+    /** Runs a scheduled task straight away. */
+    suspend fun runTask(serverId: String, taskId: String) {
+        call("POST", "/servers/$serverId/tasks/$taskId/run")
+    }
+
+    /** Extracts a .zip inside the server folder, next to the archive. */
+    suspend fun unzip(serverId: String, path: String) {
+        call("POST", "/servers/$serverId/files/zip", jsonBody(buildJsonObject { put("folder", path) }))
+    }
+
+    /** Contents of a text file in the server folder, or null if it doesn't exist. */
+    suspend fun readText(serverId: String, path: String): String? = try {
+        when (val r = browse(serverId, path)) {
+            is FileResult.Text -> r.contents
+            is FileResult.Folder -> null
+        }
+    } catch (e: CraftyException) {
+        // A missing file comes back as one of several errors depending on the Crafty version.
+        if (e.httpCode in listOf(0, 401, 403)) throw e else null
+    }
+
+    /** Writes a whole text file, creating it first if needed. */
+    suspend fun writeText(serverId: String, folder: String, name: String, contents: String, exists: Boolean) {
+        if (!exists) runCatching { createEntry(serverId, folder, name, false) }
+        saveFile(serverId, join(folder, name), contents)
+    }
+
+    /**
+     * Backup archives for a backup profile. Crafty has no documented call for this, so try the
+     * likely ones and, last, the backup folder through the file browser. Null means none worked.
+     */
+    suspend fun backupFiles(serverId: String, backupId: String?, location: String?): List<String>? {
+        val paths = buildList {
+            if (backupId != null) {
+                add("/servers/$serverId/backups/backup/$backupId/files")
+                add("/servers/$serverId/backups/backup/$backupId")
+            }
+            add("/servers/$serverId/backups")
+        }
+        for (p in paths) {
+            val (code, body) = getRaw(p)
+            if (code != 200) continue
+            val names = backupNamesIn(runCatching { json.parseToJsonElement(body) }.getOrNull())
+            if (names.isNotEmpty()) return names.sortedDescending()
+        }
+        if (location != null && backupId != null) {
+            for (folder in listOf(join(location, backupId), location)) {
+                val r = runCatching { browse(serverId, folder) }.getOrNull() as? FileResult.Folder ?: continue
+                val names = r.entries.filter { !it.isDir }.map { it.name }.filter { backupNamesIn(JsonPrimitive(it)).isNotEmpty() }
+                if (names.isNotEmpty()) return names.sortedDescending()
+            }
+        }
+        return null
+    }
+
+    /**
+     * Restores a backup archive. [inPlace] extracts over the current files; otherwise Crafty
+     * clears the server folder first. The endpoint moved between Crafty versions, so try both.
+     */
+    suspend fun restoreBackup(serverId: String, backupId: String?, fileName: String, inPlace: Boolean) {
+        val body = buildJsonObject {
+            put("filename", fileName)
+            put("inPlace", inPlace)
+        }
+        val bid = backupId ?: "default"
+        try {
+            call("POST", "/servers/$serverId/backups/backup/$bid/restore", jsonBody(body))
+        } catch (e: CraftyException) {
+            if (e.httpCode !in listOf(404, 405)) throw e
+            call("POST", "/servers/$serverId/backups/backup/$bid", jsonBody(body))
+        }
+    }
+
     private suspend fun call(
         method: String,
         path: String,
@@ -506,6 +595,28 @@ class CraftyApi(
             // Drop any pasted page path (e.g. /panel/dashboard) but keep a reverse-proxy subpath.
             val path = rest.removePrefix(host).substringBefore("/panel/").substringBefore("/login")
             return "$scheme://$host$path".trimEnd('/')
+        }
+
+        /**
+         * A Java account's UUID from Mojang, dashed. Null when no account has that name;
+         * throws when Mojang can't be reached.
+         */
+        suspend fun mojangUuid(name: String): String? = withContext(Dispatchers.IO) {
+            val url = "https://api.mojang.com/users/profiles/minecraft/".toHttpUrlOrNull()!!
+                .newBuilder().addPathSegment(name).build()
+            val req = Request.Builder().url(url).header("Accept", "application/json").build()
+            try {
+                http.newCall(req).execute().use { resp ->
+                    when {
+                        resp.code == 200 -> (json.parseToJsonElement(resp.body?.string().orEmpty()) as? JsonObject)
+                            ?.str("id")?.let(::dashedUuid)
+                        resp.code == 204 || resp.code == 404 -> null
+                        else -> throw CraftyException(resp.code, "MOJANG", "Mojang's name lookup failed (HTTP ${resp.code}).")
+                    }
+                }
+            } catch (e: IOException) {
+                throw CraftyException(0, "NETWORK", "Couldn't reach Mojang to look the player up: ${networkMessage(e)}")
+            }
         }
 
         /** Username/password (+ optional TOTP) login. Returns a bearer token. */
