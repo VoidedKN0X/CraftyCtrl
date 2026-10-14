@@ -169,7 +169,9 @@ class CraftyApi(
      */
     suspend fun eulaAccepted(serverId: String, serverPath: String): Boolean? = try {
         when (val r = browse(serverId, join(serverPath, "eula.txt"))) {
-            is FileResult.Text -> Regex("""(?im)^\s*eula\s*=\s*true\s*$""").containsMatchIn(r.contents)
+            // Mirror Crafty's own check: it only reads the first line and wants exactly "eula=true".
+            // (Minecraft accepts comment lines above it, but then Crafty refuses to start the server.)
+            is FileResult.Text -> r.contents.lineSequence().firstOrNull()?.trim()?.lowercase() == "eula=true"
             is FileResult.Folder -> null
         }
     } catch (e: CraftyException) {
@@ -179,11 +181,8 @@ class CraftyApi(
     /** Writes eula=true, which is what accepting the Minecraft EULA means for a Java server. */
     suspend fun acceptEula(serverId: String, serverPath: String) {
         runCatching { createEntry(serverId, serverPath, "eula.txt", false) } // may already exist
-        saveFile(
-            serverId,
-            join(serverPath, "eula.txt"),
-            "# Accepted in Crafty Remote. See https://aka.ms/MinecraftEULA\neula=true\n",
-        )
+        // Exactly what Crafty's web panel writes when you accept the EULA there.
+        saveFile(serverId, join(serverPath, "eula.txt"), "eula=true")
     }
 
     /** Creates an empty file or folder named [name] inside [parent]. */

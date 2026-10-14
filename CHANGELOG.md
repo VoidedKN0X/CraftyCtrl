@@ -3,6 +3,11 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [1.2.1] - 2026-10-14
+
+### Fixed
+- New Java servers still wouldn't start from the app. The EULA file the app wrote had a comment line above `eula=true`; Minecraft accepts that, but Crafty only reads the first line, so it kept treating the EULA as not accepted. The app now writes exactly `eula=true`, like Crafty's web panel does, and checks it the same way Crafty does. Servers created with 1.1.1–1.2.0 are fixed the next time you press **Start** (accept the EULA prompt).
+
 ## [1.2.0] - 2026-10-14
 
 ### New
