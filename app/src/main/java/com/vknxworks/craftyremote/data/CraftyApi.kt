@@ -55,6 +55,14 @@ class CraftyApi(
             ?: throw CraftyException(0, "NO_ID", "Crafty created the server but didn't say which one it is. Pull to refresh the list.")
     }
 
+    /**
+     * Removes a server from Crafty. With [deleteFiles], Crafty also deletes its folder
+     * (world, configs, jar); otherwise the files stay on disk and only the server entry goes.
+     */
+    suspend fun deleteServer(serverId: String, deleteFiles: Boolean) {
+        call("DELETE", "/servers/$serverId" + if (deleteFiles) "?files=true" else "")
+    }
+
     suspend fun serverInfo(serverId: String): ServerSummary? =
         (call("GET", "/servers/$serverId") as? JsonObject)?.obj("data")?.let(ServerSummary::from)
 

@@ -3,6 +3,13 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [1.2.0] - 2026-10-14
+
+### New
+- **Delete a server.** On a server's page, open the **⋮** menu → **Delete server**. To confirm, you type the server's name. A running server is stopped first.
+  - **Also delete its files** (on by default) removes the server folder with its world, configs and jar. Turn it off to only remove the server from Crafty and keep the files on disk.
+- The diagnostics view moved into the same **⋮** menu.
+
 ## [1.1.1] - 2026-10-14
 
 ### Fixed

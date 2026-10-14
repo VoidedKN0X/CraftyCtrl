@@ -160,6 +160,7 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
                     onOpenFile = { path ->
                         nav.navigate("file/${Uri.encode(serverId)}?path=${Uri.encode(path)}")
                     },
+                    onDeleted = { nav.popBackStack("servers", inclusive = false) },
                 )
             }
             composable(
