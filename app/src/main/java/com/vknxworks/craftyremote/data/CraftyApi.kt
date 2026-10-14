@@ -476,7 +476,6 @@ class CraftyApi(
                 add("/servers/$serverId/backups/backup/$backupId/files")
                 add("/servers/$serverId/backups/backup/$backupId")
             }
-            add("/servers/$serverId/backups")
         }
         for (p in paths) {
             val (code, body) = getRaw(p)
@@ -503,12 +502,13 @@ class CraftyApi(
             put("filename", fileName)
             put("inPlace", inPlace)
         }
-        val bid = backupId ?: "default"
+        // Crafty before 4.4 has one backup setup per server and no profile ids.
+        val base = if (backupId != null) "/servers/$serverId/backups/backup/$backupId" else "/servers/$serverId/backups/backup"
         try {
-            call("POST", "/servers/$serverId/backups/backup/$bid/restore", jsonBody(body))
+            call("POST", "$base/restore", jsonBody(body))
         } catch (e: CraftyException) {
             if (e.httpCode !in listOf(404, 405)) throw e
-            call("POST", "/servers/$serverId/backups/backup/$bid", jsonBody(body))
+            call("POST", base, jsonBody(body))
         }
     }
 

@@ -26,6 +26,7 @@ import com.vknxworks.craftyremote.data.ServerSummary
 import com.vknxworks.craftyremote.data.Session
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
@@ -808,11 +809,12 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
     /** Stops the server and waits up to a minute for it to go down. */
     private suspend fun stopAndWait() {
-        if (runCatching { api.stats(serverId).running }.getOrDefault(false)) {
+        // A failed status check counts as running, so nothing destructive runs against a live server.
+        if (api.stats(serverId).running) {
             api.action(serverId, "stop_server")
             for (attempt in 0 until 30) {
                 delay(2_000)
-                if (!runCatching { api.stats(serverId).running }.getOrDefault(false)) return
+                if (runCatching { !api.stats(serverId).running }.getOrDefault(false)) return
             }
             throw CraftyException(0, "STILL_RUNNING", "The server didn't stop within a minute. Try again, or kill it first.")
         }
@@ -845,8 +847,8 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
             try {
                 val res = api.actionResult(serverId, "clone_server") as? JsonObject
                 val data = res?.get("data") as? JsonObject
-                val id = (data?.get("new_server_id") as? kotlinx.serialization.json.JsonPrimitive)?.content
-                    ?: (data?.get("new_server_uuid") as? kotlinx.serialization.json.JsonPrimitive)?.content
+                val id = (data?.get("new_server_id") as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+                    ?: (data?.get("new_server_uuid") as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
                 if (id == null) {
                     _messages.send("Clone started. It appears in the server list when Crafty is done.")
                 } else {

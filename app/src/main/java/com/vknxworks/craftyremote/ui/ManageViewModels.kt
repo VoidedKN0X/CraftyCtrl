@@ -143,7 +143,8 @@ class PropertiesViewModel(api: CraftyApi, serverId: String) : ManageBase(api, se
             saving = true
             try {
                 // Re-read first so changes made since opening (e.g. by the server) aren't overwritten.
-                val latest = api.readText(serverId, join(folder(), "server.properties"))?.let(::PropertiesFile) ?: f
+                val latest = api.readText(serverId, join(folder(), "server.properties"))?.let(::PropertiesFile)
+                    ?: throw CraftyException(0, "READ_FAILED", "Couldn't read server.properties just now. Nothing was changed.")
                 api.saveFile(serverId, join(folder(), "server.properties"), latest.render(changes))
                 file = PropertiesFile(latest.render(changes))
                 original = file!!.values.mapValues { (_, v) -> if (isBedrock) v else unescapeProp(v) }
@@ -202,16 +203,31 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
         lists[list] = (lists[list] ?: Loadable()).copy(loading = true, error = null)
         lists[list] = try {
             val text = api.readText(serverId, join(folder(), name))
-            Loadable(parsePlayerList(text.orEmpty(), list, isBedrock))
+            val parsed = parsePlayerList(text.orEmpty(), list, isBedrock)
+                ?: throw CraftyException(0, "BAD_FILE", "$name isn't valid JSON, so the app won't change it. Fix it in the Files tab.")
+            Loadable(parsed)
         } catch (e: Exception) {
             Loadable(lists[list]?.data, error = e.msg())
         }
     }
 
-    private suspend fun write(list: PlayerList, entries: List<PlayerEntry>) {
+    /**
+     * Applies [change] to the list file as it is on the server right now, never to a stale or
+     * partial copy, so a failed read can't wipe the list.
+     */
+    private suspend fun edit(list: PlayerList, change: (List<PlayerEntry>) -> List<PlayerEntry>) {
         val name = list.fileName(isBedrock) ?: return
-        val exists = api.readText(serverId, join(folder(), name)) != null
-        api.writeText(serverId, folder(), name, renderPlayerList(entries), exists)
+        val loaded = lists[list]
+        if (loaded?.data == null || loaded.error != null) {
+            throw CraftyException(0, "NOT_LOADED", "The ${list.titleFor(isBedrock).lowercase()} hasn't loaded, so it can't be changed safely. Reload and try again.")
+        }
+        val text = api.readText(serverId, join(folder(), name))
+        if (text == null && loaded.data.isNotEmpty()) {
+            throw CraftyException(0, "READ_FAILED", "Couldn't read $name just now. Nothing was changed.")
+        }
+        val fresh = parsePlayerList(text.orEmpty(), list, isBedrock)
+            ?: throw CraftyException(0, "BAD_FILE", "$name isn't valid JSON, so the app won't change it.")
+        api.writeText(serverId, folder(), name, renderPlayerList(change(fresh)), exists = text != null)
     }
 
     /** Java needs a UUID to list a player in the files; online servers use the Mojang account's. */
@@ -248,7 +264,10 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
                         isBedrock -> null
                         else -> uuidFor(name)
                     }
-                    write(list, current + newPlayerEntry(list, isBedrock, name, id, reason))
+                    edit(list) { fresh ->
+                        if (fresh.any { it.label.equals(name, ignoreCase = true) }) fresh
+                        else fresh + newPlayerEntry(list, isBedrock, name, id, reason)
+                    }
                     _messages.send("Added $name. It takes effect when the server starts.")
                 }
                 load(list)
@@ -272,7 +291,7 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
                     _messages.send("Sent to the server")
                     delay(1500)
                 } else {
-                    write(list, lists[list]?.data.orEmpty().filter { it.raw != entry.raw })
+                    edit(list) { fresh -> fresh.filter { it.raw != entry.raw } }
                     _messages.send(
                         if (running == true) "Removed. Restart the server to apply it." else "Removed ${entry.label}",
                     )

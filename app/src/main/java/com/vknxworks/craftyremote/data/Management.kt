@@ -63,8 +63,13 @@ data class ServerConfig(
     }
 }
 
-private val xms = Regex("""-Xms(\d+)([kKmMgG])\b""")
-private val xmx = Regex("""-Xmx(\d+)([kKmMgG])\b""")
+private val xms = Regex("""-Xms(\d+)([kKmMgG]?)(?=\s|"|$)""")
+private val xmx = Regex("""-Xmx(\d+)([kKmMgG]?)(?=\s|"|$)""")
+private val javaWord = Regex("""\bjava(\.exe)?"?\s""")
+
+/** Whether the app can set memory in this start command (it runs java directly). */
+fun canSetMemory(command: String?): Boolean =
+    command != null && (xms.containsMatchIn(command) || xmx.containsMatchIn(command) || javaWord.containsMatchIn(command))
 
 private fun toMb(n: String, unit: String): Int? {
     val v = n.toLongOrNull() ?: return null
@@ -72,6 +77,7 @@ private fun toMb(n: String, unit: String): Int? {
         "k" -> (v / 1024).toInt()
         "m" -> v.toInt()
         "g" -> (v * 1024).toInt()
+        "" -> (v / (1024 * 1024)).toInt() // plain bytes
         else -> null
     }
 }
@@ -87,8 +93,8 @@ fun memoryOf(command: String?): Pair<Int?, Int?> {
 /** The start command with its heap flags set to [minMb] and [maxMb], adding them after "java" if missing. */
 fun withMemory(command: String, minMb: Int, maxMb: Int): String {
     var c = command
-    c = if (xms.containsMatchIn(c)) c.replace(xms, "-Xms${minMb}M") else c.replaceFirst(Regex("""\bjava(\.exe)?"?\s"""), "$0-Xms${minMb}M ")
-    c = if (xmx.containsMatchIn(c)) c.replace(xmx, "-Xmx${maxMb}M") else c.replaceFirst(Regex("""-Xms\d+M\s"""), "$0-Xmx${maxMb}M ")
+    c = if (xms.containsMatchIn(c)) c.replace(xms, "-Xms${minMb}M") else c.replaceFirst(javaWord, "$0-Xms${minMb}M ")
+    c = if (xmx.containsMatchIn(c)) c.replace(xmx, "-Xmx${maxMb}M") else c.replaceFirst(Regex("""-Xms\d+M(?=\s|"|$)"""), "$0 -Xmx${maxMb}M")
     return c
 }
 
@@ -127,9 +133,10 @@ data class PlayerEntry(
     val label: String get() = name ?: ip ?: id ?: "Unknown"
 }
 
-fun parsePlayerList(text: String, list: PlayerList, bedrock: Boolean): List<PlayerEntry> {
+/** Null when the file isn't a JSON list, so callers never mistake a broken file for an empty one. */
+fun parsePlayerList(text: String, list: PlayerList, bedrock: Boolean): List<PlayerEntry>? {
     val arr = runCatching { lenientJson.parseToJsonElement(text.ifBlank { "[]" }) }.getOrNull() as? JsonArray
-        ?: return emptyList()
+        ?: return null
     return arr.filterIsInstance<JsonObject>().map { o ->
         val detail = when (list) {
             PlayerList.OPS -> if (bedrock) o.str("permission")?.replaceFirstChar { it.uppercase() } else o.str("level")?.let { "Level $it" }
@@ -170,6 +177,8 @@ fun newPlayerEntry(list: PlayerList, bedrock: Boolean, name: String, id: String?
                 put("name", name)
             }
             PlayerList.OPS -> {
+                // Bedrock's permissions.json needs an Xbox ID, which only the running server can look up.
+                require(!bedrock) { "Bedrock operators can only be added while the server runs." }
                 put("uuid", id.orEmpty())
                 put("name", name)
                 put("level", 4)
@@ -219,7 +228,8 @@ internal fun backupNamesIn(e: JsonElement?): List<String> {
             is JsonArray -> x.forEach(::walk)
             is JsonObject -> {
                 (x.str("filename") ?: x.str("name") ?: x.str("path"))?.let { if (looksLikeBackup(it)) out += it.substringAfterLast('/') }
-                x.values.forEach(::walk)
+                // Skip settings such as excluded folders, which can contain .zip paths that aren't backups.
+                x.forEach { (k, v) -> if (!k.contains("exclu", ignoreCase = true)) walk(v) }
             }
             is JsonPrimitive -> if (x.isString && looksLikeBackup(x.content)) out += x.content.substringAfterLast('/')
             else -> Unit

@@ -1015,6 +1015,23 @@ private fun BackupCard(
                     Text(value, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
+            b.status?.let { status ->
+                Row {
+                    Text(
+                        "Last result",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(120.dp),
+                    )
+                    Text(
+                        listOfNotNull(status, b.statusMessage).joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (b.failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             HorizontalDivider(Modifier.padding(vertical = 2.dp))
             Text("Schedule", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
             when {

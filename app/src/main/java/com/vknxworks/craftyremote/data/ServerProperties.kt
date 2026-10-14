@@ -69,8 +69,8 @@ val JAVA_PROPERTIES: List<PropDef> = listOf(
     b("prevent-proxy-connections", "Block VPN/proxy connections", G_PLAYERS, false),
     b("hide-online-players", "Hide online players", G_PLAYERS, false, "Don't show the player list in server pings."),
     i("player-idle-timeout", "Idle kick (minutes)", G_PLAYERS, 0, 0, help = "0 never kicks idle players."),
-    i("op-permission-level", "Operator permission level", G_PLAYERS, 4, 1, 4),
-    i("function-permission-level", "Function permission level", G_PLAYERS, 2, 1, 4),
+    i("op-permission-level", "Operator permission level", G_PLAYERS, 4, 0, 4),
+    i("function-permission-level", "Function permission level", G_PLAYERS, 2, 0, 4),
     b("broadcast-console-to-ops", "Show console commands to ops", G_PLAYERS, true),
     b("log-ips", "Log player IPs", G_PLAYERS, true),
     b("accepts-transfers", "Accept transfers", G_PLAYERS, false, "Allow players to be transferred here from another server."),
@@ -188,8 +188,11 @@ val PROPERTY_GROUP_ORDER = listOf(G_GAMEPLAY, G_PLAYERS, G_WORLD, G_PERFORMANCE,
  * so saving only touches the values that changed and appends keys that weren't there.
  */
 class PropertiesFile(text: String) {
-    private val lines: MutableList<String> = text.replace("\r\n", "\n").split('\n').toMutableList()
+    private val bom = text.startsWith('\uFEFF')
+    private val newline = if ("\r\n" in text) "\r\n" else "\n"
+    private val lines: MutableList<String> = text.removePrefix("\uFEFF").replace("\r\n", "\n").split('\n').toMutableList()
 
+    /** Later lines win for duplicate keys, the same as Java's Properties. */
     val values: Map<String, String>
         get() = lines.mapNotNull(::parse).toMap()
 
@@ -197,20 +200,26 @@ class PropertiesFile(text: String) {
         val l = line.trimStart()
         if (l.isEmpty() || l.startsWith("#") || l.startsWith("!")) return null
         val sep = l.indexOfFirst { it == '=' || it == ':' }.takeIf { it > 0 } ?: return null
-        return l.substring(0, sep).trim() to l.substring(sep + 1).trim()
+        // Like Java: whitespace after the separator is dropped, trailing whitespace is part of the value.
+        return l.substring(0, sep).trim() to l.substring(sep + 1).trimStart()
     }
 
-    /** Returns the file text with [changes] applied (key -> new raw value). */
+    /** Returns the file text with [changes] applied (key -> new raw value), in its original line endings. */
     fun render(changes: Map<String, String>): String {
-        val pending = changes.toMutableMap()
+        val seen = mutableSetOf<String>()
         val out = lines.map { line ->
             val kv = parse(line)
-            if (kv != null && kv.first in pending) "${kv.first}=${pending.remove(kv.first)}" else line
+            if (kv != null && kv.first in changes) {
+                seen += kv.first
+                "${kv.first}=${changes.getValue(kv.first)}" // every copy of a duplicated key gets the new value
+            } else {
+                line
+            }
         }.toMutableList()
         // Drop the trailing empty line from split() before appending, then restore a final newline.
         while (out.isNotEmpty() && out.last().isEmpty()) out.removeAt(out.lastIndex)
-        pending.forEach { (k, v) -> out += "$k=$v" }
-        return out.joinToString("\n") + "\n"
+        changes.filterKeys { it !in seen }.forEach { (k, v) -> out += "$k=$v" }
+        return (if (bom) "\uFEFF" else "") + out.joinToString(newline) + newline
     }
 }
 
