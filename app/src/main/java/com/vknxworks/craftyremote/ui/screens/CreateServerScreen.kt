@@ -184,6 +184,9 @@ class CreateServerViewModel(private val api: CraftyApi) : ViewModel() {
             }
             step = CreateStep.Starting
             val note = try {
+                // The user accepted the EULA in the form; Java servers need it written to eula.txt.
+                val info = runCatching { api.serverInfo(id) }.getOrNull()
+                if (info?.path != null && !info.isBedrock) api.acceptEula(id, info.path)
                 api.action(id, "start_server")
                 null
             } catch (e: CancellationException) {
