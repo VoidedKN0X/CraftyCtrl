@@ -34,6 +34,7 @@ import com.vknxworks.craftyremote.monitor.MonitorService
 import com.vknxworks.craftyremote.ui.SessionViewModel
 import com.vknxworks.craftyremote.ui.lock.AppLockViewModel
 import com.vknxworks.craftyremote.ui.lock.LockScreen
+import com.vknxworks.craftyremote.ui.screens.CreateServerScreen
 import com.vknxworks.craftyremote.ui.screens.FileEditorScreen
 import com.vknxworks.craftyremote.ui.screens.LoginScreen
 import com.vknxworks.craftyremote.ui.screens.ServerDetailScreen
@@ -129,6 +130,18 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
                     onOpen = { s -> nav.navigate("server/${Uri.encode(s.id)}?name=${Uri.encode(s.name)}") },
                     onSettings = { nav.navigate("settings") },
                     onSignOut = { sessionVm.signOut() },
+                    onCreate = { nav.navigate("create") },
+                )
+            }
+            composable("create") {
+                CreateServerScreen(
+                    api = api,
+                    onBack = { nav.popBackStack() },
+                    onOpenServer = { id, name ->
+                        nav.navigate("server/${Uri.encode(id)}?name=${Uri.encode(name)}") {
+                            popUpTo("servers")
+                        }
+                    },
                 )
             }
             composable(

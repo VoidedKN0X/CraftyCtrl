@@ -48,6 +48,13 @@ class CraftyApi(
         call("GET", "/servers").dataArray()
             .mapNotNull { (it as? JsonObject)?.let(ServerSummary::from) }
 
+    /** Creates a server (see CreateServerScreen for the body). Returns the new server's id. */
+    suspend fun createServer(body: JsonObject): String {
+        val res = call("POST", "/servers", jsonBody(body)) as? JsonObject
+        return res?.obj("data")?.let { it.str("new_server_id") ?: it.str("new_server_uuid") }
+            ?: throw CraftyException(0, "NO_ID", "Crafty created the server but didn't say which one it is. Pull to refresh the list.")
+    }
+
     suspend fun serverInfo(serverId: String): ServerSummary? =
         (call("GET", "/servers/$serverId") as? JsonObject)?.obj("data")?.let(ServerSummary::from)
 

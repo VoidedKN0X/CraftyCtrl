@@ -84,6 +84,8 @@ data class ServerSummary(
     val path: String? = null,
     /** Server jar/executable file name, e.g. "paper-1.21.1.jar". */
     val executable: String? = null,
+    /** The game port Crafty checks, e.g. 25566. */
+    val port: Int? = null,
 ) {
     val isBedrock: Boolean get() = "bedrock" in type.lowercase()
 
@@ -96,6 +98,7 @@ data class ServerSummary(
                 type = o.str("type").orEmpty(),
                 path = o.str("path").meaningful(),
                 executable = o.str("executable").meaningful(),
+                port = o.int("server_port"),
             )
         }
     }
@@ -113,6 +116,8 @@ data class ServerStats(
     val running: Boolean,
     /** False when Crafty's reply had no "running" field, so [running] is only a guess. */
     val runningReported: Boolean = true,
+    /** True while Crafty is still downloading or importing a new server's files. */
+    val importing: Boolean = false,
     val crashed: Boolean,
     val waitingStart: Boolean,
     val updating: Boolean,
@@ -155,6 +160,7 @@ data class ServerStats(
                 running = o.bool("running") ?: false,
                 runningReported = o.bool("running") != null,
                 crashed = o.bool("crashed") ?: false,
+                importing = o.bool("importing") ?: false,
                 waitingStart = o.bool("waiting_start") ?: false,
                 updating = o.bool("updating") ?: false,
                 cpu = o.num("cpu"),

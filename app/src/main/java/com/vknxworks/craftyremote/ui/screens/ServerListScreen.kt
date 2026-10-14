@@ -52,6 +52,8 @@ import com.vknxworks.craftyremote.ui.ratio
 import com.vknxworks.craftyremote.ui.ChartPlayers
 import com.vknxworks.craftyremote.ui.theme.stateColor
 import com.vknxworks.craftyremote.ui.rememberRefreshMs
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -83,6 +85,7 @@ fun ServerListScreen(
     onOpen: (ServerSummary) -> Unit,
     onSettings: () -> Unit,
     onSignOut: () -> Unit,
+    onCreate: () -> Unit,
 ) {
     val vm: ServerListViewModel = viewModel(factory = viewModelFactory { initializer { ServerListViewModel(api) } })
     // The list asks for every server at once, so it refreshes a little less often than one server.
@@ -95,6 +98,13 @@ fun ServerListScreen(
 
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onCreate,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("New server") },
+            )
+        },
         topBar = {
             LargeTopAppBar(
                 scrollBehavior = scroll,
@@ -150,7 +160,7 @@ fun ServerListScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 vm.error?.let { message ->
