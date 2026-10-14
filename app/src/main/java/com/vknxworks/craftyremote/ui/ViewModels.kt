@@ -534,6 +534,32 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         }
     }
 
+    var deletingServer by mutableStateOf(false)
+        private set
+
+    fun deleteServer(deleteFiles: Boolean, onDeleted: () -> Unit) {
+        if (deletingServer) return
+        viewModelScope.launch {
+            deletingServer = true
+            try {
+                // Stop it first so Crafty isn't removing a server that still has files open.
+                if (stats?.running == true) {
+                    runCatching { api.action(serverId, "stop_server") }
+                    for (attempt in 0 until 30) { // up to a minute
+                        delay(2_000)
+                        if (!runCatching { api.stats(serverId).running }.getOrDefault(false)) break
+                    }
+                }
+                api.deleteServer(serverId, deleteFiles)
+                onDeleted()
+            } catch (e: Exception) {
+                _messages.send(e.userMessage())
+            } finally {
+                deletingServer = false
+            }
+        }
+    }
+
     /** Set when Start was pressed on a Java server whose EULA isn't accepted yet. */
     var eulaNeeded by mutableStateOf(false)
         private set

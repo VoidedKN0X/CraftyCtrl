@@ -111,6 +111,12 @@ import com.vknxworks.craftyremote.ui.theme.stateColor
 import com.vknxworks.craftyremote.data.parseTimestamp
 import com.vknxworks.craftyremote.ui.rememberRefreshMs
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Checkbox
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -162,10 +168,13 @@ fun ServerDetailScreen(
     serverName: String,
     onBack: () -> Unit,
     onOpenFile: (String) -> Unit,
+    onDeleted: () -> Unit,
 ) {
     val vm: ServerDetailViewModel = viewModel(factory = viewModelFactory { initializer { ServerDetailViewModel(api, serverId) } })
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val snackbar = remember { SnackbarHostState() }
+    var overflow by remember { mutableStateOf(false) }
+    var confirmDeleteServer by remember { mutableStateOf(false) }
 
     LaunchedEffect(vm) { vm.messages.collect { snackbar.showSnackbar(it) } }
     val refreshMs = rememberRefreshMs()
@@ -201,8 +210,22 @@ fun ServerDetailScreen(
                 },
                 actions = {
                     StatusPill(vm.stats?.state)
-                    IconButton(onClick = vm::runDiagnostics) {
-                        Icon(Icons.Outlined.BugReport, contentDescription = "Diagnostics")
+                    Box {
+                        IconButton(onClick = { overflow = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "More")
+                        }
+                        DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Diagnostics") },
+                                leadingIcon = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
+                                onClick = { overflow = false; vm.runDiagnostics() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Delete server", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = { Icon(Icons.Filled.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                                onClick = { overflow = false; confirmDeleteServer = true },
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -237,6 +260,78 @@ fun ServerDetailScreen(
     }
 
     vm.diagnostics?.let { report -> DiagnosticsDialog(report, onClose = vm::closeDiagnostics) }
+
+    if (confirmDeleteServer) {
+        DeleteServerDialog(
+            serverName = serverName.ifBlank { vm.info?.name.orEmpty() },
+            running = vm.stats?.running == true,
+            busy = vm.deletingServer,
+            onDismiss = { if (!vm.deletingServer) confirmDeleteServer = false },
+            onConfirm = { files -> vm.deleteServer(files) { confirmDeleteServer = false; onDeleted() } },
+        )
+    }
+}
+
+@Composable
+private fun DeleteServerDialog(
+    serverName: String,
+    running: Boolean,
+    busy: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (deleteFiles: Boolean) -> Unit,
+) {
+    var typed by remember { mutableStateOf("") }
+    var deleteFiles by remember { mutableStateOf(true) }
+    val matches = typed.trim() == serverName.trim() && serverName.isNotBlank()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Filled.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+        title = { Text("Delete $serverName?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    buildString {
+                        append("The server is removed from Crafty")
+                        if (running) append(" (it will be stopped first)")
+                        append(". This can't be undone.")
+                    },
+                )
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !busy) { deleteFiles = !deleteFiles },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = deleteFiles, onCheckedChange = { deleteFiles = it }, enabled = !busy)
+                    Column {
+                        Text("Also delete its files", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            if (deleteFiles) "The server folder (world, configs, server jar) is permanently deleted."
+                            else "Files stay on the Crafty machine; only the server entry is removed.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                OutlinedTextField(
+                    value = typed,
+                    onValueChange = { typed = it },
+                    label = { Text("Type the server name to confirm") },
+                    placeholder = { Text(serverName) },
+                    singleLine = true,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(deleteFiles) }, enabled = matches && !busy) {
+                Text("Delete server", color = if (matches && !busy) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("Cancel") } },
+    )
 }
 
 @Composable
