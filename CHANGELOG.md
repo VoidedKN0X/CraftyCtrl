@@ -3,6 +3,22 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [1.3.0] - 2026-10-14
+
+### New
+- **Server settings.** Every `server.properties` setting for Java and Bedrock, grouped (gameplay, players, world, performance, network, resource packs, RCON/query/management, advanced) with switches, number fields, dropdowns and hidden passwords. Search by name or key. Settings your file has that the app doesn't know show under **Other**, and ones missing from your file show their default. Saving only changes what you edited and keeps comments and order; if the server is running you can restart it straight from the confirmation.
+- **Players & bans.** Whitelist (allowlist on Bedrock), operators, banned players and banned IPs, with a switch to turn the whitelist on or off. While the server runs, changes go through the console and apply at once; while it's stopped, the app edits the list files directly (looking up the player's UUID).
+- **Server options.** Crafty's own settings for a server: name, start with Crafty (and delay), crash detection, memory (min/max), stop command, shutdown timeout, the address and port Crafty checks, status page and player counting, log cleanup, update URL and the full start command.
+- **Restore a backup.** **Restore a backup…** on each backup profile. Pick or type the archive, choose in place or a clean restore, and type RESTORE to confirm. The server is stopped first.
+- **Run a schedule now** with the ▶ button on each schedule.
+- **Extract .zip files** from a file's ⋮ menu in the Files tab.
+- **Update server software** and **Clone server** in the server's ⋮ menu.
+- **Backup alerts.** A notification when a backup finishes or fails (Settings → Server alerts → "A backup finishes or fails", on by default). Backup start isn't notified.
+- Backup profiles show the result of their last run when Crafty reports it.
+
+### Changed
+- The server's Overview tab has a **Manage** section, and the ⋮ menu lists all the management pages.
+
 ## [1.2.1] - 2026-10-14
 
 ### Fixed
