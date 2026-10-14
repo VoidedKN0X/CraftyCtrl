@@ -3,6 +3,11 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [1.3.1] - 2026-10-14
+
+### Changed
+- Alerts now only notify when a server stops or crashes. Player-join and backup alerts are gone, along with their notification categories in Android's settings.
+
 ## [1.3.0] - 2026-10-14
 
 ### New
