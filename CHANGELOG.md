@@ -3,7 +3,13 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [1.4.0] - 2026-10-15
+## [1.4.1] - 2026-10-15
+
+### New
+- **Light mode.** The minimal look now comes in light too: a warm off-white background with near-black text.
+- **Theme setting** in Settings → Appearance: Follow system (the default), Light or Dark. The status and navigation bar icons follow the app's choice.
+
+ - 2026-10-15
 
 ### Changed
 - **New minimal look.** A quiet near-black theme with off-white text, the Geist typeface (Geist Mono for numbers), thin divider lines instead of cards, and underlined text tabs.
