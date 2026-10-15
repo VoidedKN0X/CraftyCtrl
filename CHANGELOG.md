@@ -3,7 +3,15 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [1.6.0] - 2026-10-15
+## [2.0.0] - 2026-10-15
+
+### Changed
+- **New package name: `com.vknxworks.craftyctrl`** (was `com.vknxworks.craftyremote`), to match the CraftyCtrl name.
+
+### Upgrading
+Android sees this as a new app, so it won't update over Crafty Remote or CraftyCtrl 1.x. Uninstall the old app, install this one, then sign in again and set your PIN, theme and alerts again.
+
+ - 2026-10-15
 
 ### Changed
 - **Requires Android 13 or newer** (was Android 8). Code paths that only existed for older Android versions were removed.
