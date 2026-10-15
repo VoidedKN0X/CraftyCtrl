@@ -3,7 +3,20 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [1.4.1] - 2026-10-15
+## [1.5.0] - 2026-10-15
+
+### New
+- **Plugins & mods** (server → Manage): see every plugin and mod, turn them on or off (the jar is renamed to `.jar.disabled`), remove them, and upload new jars.
+- **Logs** (server → Manage): browse the logs folder, open `latest.log` or older logs, search them, filter to warnings or errors, and long-press a line to copy it. Compressed `.gz` logs are listed but can't be opened in the app.
+- **Console upgrades:** search, Warnings/Errors filters, long-press any line to copy it, and online player names offered as you type a command.
+- **Warned restarts and stops:** choose Now, 1, 5 or 10 minutes. Players get chat countdown warnings (with an optional reason), and a banner on the server page lets you cancel. Keep the app open until it finishes.
+- **Broadcast:** the megaphone on the Servers screen sends one chat message to every running server.
+- **Fingerprint / face confirmation** for stopping, restarting, killing, deleting, restoring and updating a server. Your phone's PIN or pattern also works. Phones without a screen lock only get the normal confirmation.
+
+### Changed
+- **More colour:** on Android 12+ the app now uses your wallpaper's Material You palette by default, for buttons, switches, tabs, chips, bars and charts. The fixed accents tint the app in the same way. Running servers always show a green dot.
+
+ - 2026-10-15
 
 ### New
 - **Light mode.** The minimal look now comes in light too: a warm off-white background with near-black text.
