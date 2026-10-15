@@ -103,11 +103,11 @@ fun PillTabs(tabs: List<PillTab>, selected: Int, onSelect: (Int) -> Unit, modifi
             itemsIndexed(tabs) { i, tab ->
                 val isSel = i == selected
                 val fg by animateColorAsState(
-                    if (isSel) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     label = "tabFg",
                 )
                 val line by animateColorAsState(
-                    if (isSel) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                    if (isSel) MaterialTheme.colorScheme.primary else Color.Transparent,
                     label = "tabLine",
                 )
                 Box(

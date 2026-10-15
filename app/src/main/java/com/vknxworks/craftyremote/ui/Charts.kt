@@ -152,13 +152,13 @@ fun UsageBar(label: String, percent: Double?, detail: String?) {
             )
         }
         val p = ((percent ?: 0.0) / 100).toFloat().coerceIn(0f, 1f)
-        HairBar(p, if (p > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+        HairBar(p, if (p > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
     }
 }
 
 /** A 2 dp track with a filled part, used instead of thick progress bars and ring gauges. */
 @Composable
-fun HairBar(fraction: Float, color: Color = MaterialTheme.colorScheme.onSurface, modifier: Modifier = Modifier) {
+fun HairBar(fraction: Float, color: Color = MaterialTheme.colorScheme.primary, modifier: Modifier = Modifier) {
     val track = MaterialTheme.colorScheme.outlineVariant
     Canvas(modifier.fillMaxWidth().height(2.dp)) {
         drawRect(track)
@@ -166,10 +166,10 @@ fun HairBar(fraction: Float, color: Color = MaterialTheme.colorScheme.onSurface,
     }
 }
 
-// CPU and memory draw in the text colour; players use the accent.
+// Each series has its own Material colour role.
 val ChartCpu: Color
-    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurface
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.primary
 val ChartMem: Color
-    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurface
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.tertiary
 val ChartPlayers: Color
     @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.secondary

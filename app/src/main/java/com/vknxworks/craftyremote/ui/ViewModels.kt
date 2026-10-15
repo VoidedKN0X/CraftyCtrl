@@ -185,6 +185,32 @@ class ServerListViewModel(private val api: CraftyApi) : ViewModel() {
         }
     }
 
+    val messages = Channel<String>(Channel.BUFFERED)
+    var broadcasting by mutableStateOf(false)
+        private set
+
+    /** Sends a chat message ("say") to every running server. */
+    fun broadcast(text: String, onDone: () -> Unit) {
+        val msg = text.trim().replace('\n', ' ')
+        if (msg.isEmpty() || broadcasting) return
+        viewModelScope.launch {
+            broadcasting = true
+            val targets = rows.filter { it.stats?.running == true }
+            val failed = targets.map { r ->
+                async { r.summary.name to runCatching { api.sendCommand(r.summary.id, "say $msg") }.isSuccess }
+            }.awaitAll().filter { !it.second }.map { it.first }
+            broadcasting = false
+            onDone()
+            messages.send(
+                when {
+                    targets.isEmpty() -> "No servers are running."
+                    failed.isEmpty() -> "Sent to ${targets.size} server${if (targets.size == 1) "" else "s"}"
+                    else -> "Couldn't send to ${failed.joinToString()}"
+                },
+            )
+        }
+    }
+
     fun refreshNow() {
         viewModelScope.launch {
             refreshing = true
@@ -512,6 +538,11 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         }
     }
 
+    /** Shows a short message in the snackbar. */
+    fun notify(text: String) {
+        viewModelScope.launch { _messages.send(text) }
+    }
+
     fun closeDiagnostics() {
         diagnostics = null
     }
@@ -754,6 +785,21 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 _messages.send(e.userMessage())
             }
         }
+    }
+
+    // ------------------------------------------------------------ warned restarts and stops
+
+    /** Restarts or stops after [seconds], warning players in chat as it counts down. */
+    fun startCountdown(action: PowerAction, seconds: Int, note: String?) {
+        Countdowns.start(api, serverId, action, seconds, note) { err ->
+            viewModelScope.launch { _messages.send(err) }
+        }
+        viewModelScope.launch { _messages.send("Players warned: ${action.label.lowercase()} in ${Countdowns.human(seconds)}") }
+    }
+
+    fun cancelCountdown() {
+        Countdowns.cancel(api, serverId)
+        viewModelScope.launch { _messages.send("Cancelled") }
     }
 
     // ------------------------------------------------------------ run now, unzip, update, clone, restore

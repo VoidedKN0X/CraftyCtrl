@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,7 +40,9 @@ enum class Accent(val key: String, val label: String, val color: Color?, val lig
     WALLPAPER("wallpaper", "Wallpaper", null, null);
 
     companion object {
-        fun of(key: String?) = entries.firstOrNull { it.key == key } ?: GREEN
+        /** Unset means the wallpaper's Material You colours where the phone has them (Android 12+). */
+        fun of(key: String?) = entries.firstOrNull { it.key == key }
+            ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) WALLPAPER else GREEN
     }
 }
 
@@ -104,13 +107,13 @@ private val LMuted = Color(0xFF666864)
 private val LHairline = Color(0xFFE4E5E2)
 
 private fun lightScheme(accent: Color) = lightColorScheme(
-    primary = LInk,
-    onPrimary = LGround,
-    primaryContainer = Color(0xFFE9EAE7),
-    onPrimaryContainer = LInk,
-    secondary = accent,
+    primary = accent,
+    onPrimary = Color.White,
+    primaryContainer = lerp(LGround, accent, 0.18f),
+    onPrimaryContainer = lerp(LInk, accent, 0.35f),
+    secondary = lerp(accent, LInk, 0.35f),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFEDEEEB),
+    secondaryContainer = lerp(LGround, accent, 0.11f),
     onSecondaryContainer = LInk,
     tertiary = Color(0xFF9A6410),
     onTertiary = Color.White,
@@ -124,10 +127,10 @@ private fun lightScheme(accent: Color) = lightColorScheme(
     inverseSurface = LInk,
     inverseOnSurface = LGround,
     surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFF5F5F3),
-    surfaceContainer = Color(0xFFF2F2EF),
-    surfaceContainerHigh = Color(0xFFECEDEA),
-    surfaceContainerHighest = Color(0xFFE4E5E2),
+    surfaceContainerLow = lerp(Color(0xFFF5F5F3), accent, 0.03f),
+    surfaceContainer = lerp(Color(0xFFF2F2EF), accent, 0.05f),
+    surfaceContainerHigh = lerp(Color(0xFFECEDEA), accent, 0.07f),
+    surfaceContainerHighest = lerp(Color(0xFFE4E5E2), accent, 0.09f),
     outline = Color(0xFFC9CBC6),
     outlineVariant = LHairline,
     error = Color(0xFFC0362F),
@@ -137,13 +140,13 @@ private fun lightScheme(accent: Color) = lightColorScheme(
 )
 
 private fun darkScheme(accent: Color) = darkColorScheme(
-    primary = Ink,
+    primary = accent,
     onPrimary = Ground,
-    primaryContainer = Color(0xFF232523),
-    onPrimaryContainer = Ink,
-    secondary = accent,
+    primaryContainer = lerp(Ground, accent, 0.22f),
+    onPrimaryContainer = lerp(Ink, accent, 0.4f),
+    secondary = lerp(accent, Ink, 0.4f),
     onSecondary = Ground,
-    secondaryContainer = Color(0xFF1F211F),
+    secondaryContainer = lerp(Ground, accent, 0.14f),
     onSecondaryContainer = Ink,
     tertiary = Color(0xFFE8B04B),
     onTertiary = Ground,
@@ -157,10 +160,10 @@ private fun darkScheme(accent: Color) = darkColorScheme(
     inverseSurface = Ink,
     inverseOnSurface = Ground,
     surfaceContainerLowest = Color(0xFF0A0B0A),
-    surfaceContainerLow = Color(0xFF121312),
-    surfaceContainer = Color(0xFF151615),
-    surfaceContainerHigh = Color(0xFF1B1C1B),
-    surfaceContainerHighest = Color(0xFF232523),
+    surfaceContainerLow = lerp(Color(0xFF121312), accent, 0.03f),
+    surfaceContainer = lerp(Color(0xFF151615), accent, 0.05f),
+    surfaceContainerHigh = lerp(Color(0xFF1B1C1B), accent, 0.07f),
+    surfaceContainerHighest = lerp(Color(0xFF232523), accent, 0.09f),
     outline = Color(0xFF3A3C39),
     outlineVariant = Hairline,
     error = Color(0xFFF2938F),
@@ -181,8 +184,29 @@ fun CraftyTheme(content: @Composable () -> Unit) {
             else -> dynamicLightColorScheme(context).primary
         }
     if (ThemePrefs.accentColor != accent) ThemePrefs.accentColor = accent
+    val base = if (dark) darkScheme(accent) else lightScheme(accent)
+    val scheme = if (a == Accent.WALLPAPER && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        // The phone's full Material You palette, on the app's own quiet ground.
+        val dyn = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        dyn.copy(
+            background = base.background,
+            surface = base.surface,
+            onSurface = base.onSurface,
+            onBackground = base.onBackground,
+            onSurfaceVariant = base.onSurfaceVariant,
+            surfaceTint = Color.Transparent,
+            surfaceContainerLowest = lerp(base.surfaceContainerLowest, dyn.surfaceContainerLowest, 0.6f),
+            surfaceContainerLow = lerp(base.surfaceContainerLow, dyn.surfaceContainerLow, 0.6f),
+            surfaceContainer = lerp(base.surfaceContainer, dyn.surfaceContainer, 0.6f),
+            surfaceContainerHigh = lerp(base.surfaceContainerHigh, dyn.surfaceContainerHigh, 0.6f),
+            surfaceContainerHighest = lerp(base.surfaceContainerHighest, dyn.surfaceContainerHighest, 0.6f),
+            outlineVariant = base.outlineVariant,
+        )
+    } else {
+        base
+    }
     MaterialTheme(
-        colorScheme = if (dark) darkScheme(accent) else lightScheme(accent),
+        colorScheme = scheme,
         shapes = AppShapes,
         typography = AppTypography,
         content = content,
@@ -231,7 +255,7 @@ private val AppTypography = Typography().run {
 
 /** Status colours read well on both light and dark surfaces. */
 fun stateColor(state: ServerState?): Color = when (state) {
-    ServerState.RUNNING -> ThemePrefs.accentColor
+    ServerState.RUNNING -> Color(0xFF4CC38A)
     ServerState.STARTING, ServerState.UPDATING -> Color(0xFFE8B04B)
     ServerState.CRASHED -> Color(0xFFF2777A)
     ServerState.STOPPED, null -> Color(0xFF8A8C88)

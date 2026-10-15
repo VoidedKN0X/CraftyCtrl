@@ -77,6 +77,13 @@ import com.vknxworks.craftyremote.ui.ServerListViewModel
 import com.vknxworks.craftyremote.ui.ServerRow
 import com.vknxworks.craftyremote.ui.StatusPill
 import java.net.URI
+import androidx.compose.material.icons.outlined.Campaign
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
@@ -107,9 +114,13 @@ fun ServerListScreen(
 
     val host = remember(api.baseUrl) { runCatching { URI(api.baseUrl).host }.getOrNull() ?: api.baseUrl }
     var menuOpen by remember { mutableStateOf(false) }
+    var broadcastOpen by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(vm) { for (m in vm.messages) snackbar.showSnackbar(m) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
             OutlinedButton(
@@ -142,6 +153,9 @@ fun ServerListScreen(
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(host, style = MaterialTheme.typography.labelMedium, fontFamily = GeistMono, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                             Text("Servers", style = MaterialTheme.typography.headlineLarge)
+                        }
+                        IconButton(onClick = { broadcastOpen = true }) {
+                            Icon(Icons.Outlined.Campaign, contentDescription = "Broadcast to all servers")
                         }
                         IconButton(onClick = onSettings) {
                             Icon(Icons.Outlined.Settings, contentDescription = "Settings")
@@ -208,6 +222,38 @@ fun ServerListScreen(
                 }
             }
         }
+    }
+
+    if (broadcastOpen) {
+        var text by remember { mutableStateOf("") }
+        val running = vm.rows.count { it.stats?.running == true }
+        AlertDialog(
+            onDismissRequest = { if (!vm.broadcasting) broadcastOpen = false },
+            icon = { Icon(Icons.Outlined.Campaign, contentDescription = null) },
+            title = { Text("Broadcast") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Sends a chat message to every running server ($running now).",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { text = it },
+                        label = { Text("Message") },
+                        enabled = !vm.broadcasting,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { vm.broadcast(text) { broadcastOpen = false } }, enabled = text.isNotBlank() && !vm.broadcasting && running > 0) {
+                    Text("Send")
+                }
+            },
+            dismissButton = { TextButton(onClick = { broadcastOpen = false }, enabled = !vm.broadcasting) { Text("Cancel") } },
+        )
     }
 }
 
