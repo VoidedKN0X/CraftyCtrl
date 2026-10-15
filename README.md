@@ -1,118 +1,73 @@
 # Crafty Remote
 
-An Android app (Kotlin + Jetpack Compose) for controlling a [Crafty Controller 4](https://craftycontrol.com) panel through its v2 API.
+An Android app for managing a [Crafty Controller 4](https://craftycontrol.com) panel from your phone, built with Kotlin and Jetpack Compose on Crafty's v2 API.
 
 ## Features
 
-- **Server list** with live status, CPU, RAM and player count (refreshes every 5 s, pull to refresh)
-- **Overview** per server: state, uptime, CPU, memory, players online, version, world size, port
-- **Power controls**: start, restart, stop, kill (with confirmation for anything disruptive)
-- **Live console**: log view refreshing every 2 s, warnings/errors coloured, send commands, quick-command chips and recent-command history
-- **Backups**: list backup profiles and trigger a backup
-- **Schedules**: list scheduled tasks and switch them on or off
-- **Sign-in** with an API key, or username + password (+ 2FA code). The token is encrypted with an Android Keystore key; passwords are never stored.
+**Servers**
+- Server list with live status, CPU, memory, players and uptime, plus the host machine's CPU, memory and disk
+- Start, restart, stop and kill. Stopping, restarting and killing ask for your fingerprint, face or screen lock
+- Restarts and stops can warn players first, with a chat countdown you can cancel
+- Broadcast one chat message to every running server
+- Create new Java or Bedrock servers, clone, update the server jar, or delete a server
 
-Polling pauses whenever the app is in the background.
+**Console and logs**
+- Live console with search, warning/error filters, copy on long-press, quick commands and player-name completion
+- Log viewer for `latest.log` and older logs, with search and filters
+- Stats history charts for CPU, memory and players
+
+**Configuration**
+- Server settings: every `server.properties` key for Java and Bedrock, grouped and typed
+- Players & bans: whitelist/allowlist, operators, banned players and IPs
+- Server options: name, memory, auto-start, crash detection, stop command and more
+- Plugins & mods: turn them on or off, add or remove jars
+- File browser with a text editor, upload, create, rename, move, copy, unzip and delete
+
+**Backups and schedules**
+- Backup profiles: run, edit, restore and schedule
+- Scheduled tasks: create, edit, enable, run now and delete
+
+**App**
+- Light and dark mode (or follow the system), Material You colours or a fixed accent
+- App lock with a PIN and fingerprint or face unlock
+- Background alerts when a server stops or crashes
 
 ## Requirements
 
-- Crafty Controller 4.x reachable over **HTTPS with a valid certificate** (e.g. behind a reverse proxy). The app uses Android's normal certificate checks and refuses plain `http://`.
-- Android 8.0 (API 26) or newer.
-
-## Getting the APK
-
-### Option A — GitHub Actions (no local setup)
-
-1. Push this folder to a GitHub repository.
-2. The **Build APK** workflow runs on every push to `main`. Open the run → *Artifacts* → download `crafty-remote-apk`.
-3. **Releases:** the first build of each new version is published under **Releases** as
-   `crafty-remote-<version>.apk`, with that version's notes from `CHANGELOG.md`. To release an update,
-   bump `versionCode` and `versionName` in `app/build.gradle.kts`, add a `## [x.y.z]` section to
-   `CHANGELOG.md`, and push to `main`.
-
-### Option B — Android Studio
-
-Open the folder in Android Studio (Ladybug or newer), let Gradle sync, then *Run* or *Build → Build APK(s)*.
-
-From a terminal with the Android SDK installed: `./gradlew assembleRelease` → `app/build/outputs/apk/release/app-release.apk`.
-
-## Stable signing (recommended)
-
-Without a signing key, CI signs each build with a throwaway debug key, so a new build **won't install over an old one** (you'd have to uninstall first). Create one key and reuse it:
-
-```bash
-keytool -genkeypair -v -keystore crafty-remote.jks -alias crafty \
-  -keyalg RSA -keysize 4096 -validity 10000
-base64 -w0 crafty-remote.jks > keystore.b64   # macOS: base64 -i crafty-remote.jks
-```
-
-Add these repository secrets (*Settings → Secrets and variables → Actions*):
-
-| Secret | Value |
-| --- | --- |
-| `KEYSTORE_BASE64` | contents of `keystore.b64` |
-| `KEYSTORE_PASSWORD` | the keystore password |
-| `KEY_ALIAS` | `crafty` |
-| `KEY_PASSWORD` | the key password |
-
-For local release builds, create `keystore.properties` in the project root (git-ignored):
-
-```properties
-storeFile=/absolute/path/to/crafty-remote.jks
-storePassword=...
-keyAlias=crafty
-keyPassword=...
-```
-
-Keep the `.jks` file and passwords safe — losing them means you can't ship updates that install over the current app.
+- Crafty Controller 4.x reachable over **HTTPS with a valid certificate**, for example behind a reverse proxy. The app refuses plain `http://`.
+- Android 8.0 or newer.
 
 ## First run
 
-1. Enter the panel address, e.g. `https://crafty.example.com` (a pasted dashboard URL is fine; reverse-proxy subpaths like `/crafty` are kept).
-2. **API key**: in Crafty open your profile → *API Keys* → *Generate*, and give it only the servers and permissions the phone needs (Commands for power/console, Logs for the console, Backup, Schedule).
-   **Password**: enter your Crafty username, password and, if enabled, the 2FA code.
-3. Tap **Connect**. The app checks the address and credentials before saving anything.
+1. Enter the panel address, e.g. `https://crafty.example.com`. A pasted dashboard URL works, and reverse-proxy subpaths such as `/crafty` are kept.
+2. Sign in with either:
+   - **API key:** in Crafty open your profile → *API Keys* → *Generate*, and give it only the servers and permissions you need.
+   - **Password:** your Crafty username, password and, if enabled, your 2FA code.
+3. Tap **Connect**. The app checks the address and credentials before saving anything. The token is encrypted with the Android Keystore; passwords are never stored.
 
-## Using your own app icon
+## Building from source
 
-The icon is an adaptive icon made of two layers in `app/src/main/res/drawable/`:
-`ic_launcher_background.xml` (gradient) and `ic_launcher_foreground.xml` (the rack mark).
-To use your own artwork instead:
+Open the project in Android Studio (Ladybug or newer) and run it, or build from a terminal with `./gradlew assembleDebug`.
 
-1. Make a square PNG, 432×432 px, with the artwork centred inside the middle 264×264 px
-   (launchers crop the edges into circles or squircles).
-2. Save it as `app/src/main/res/drawable-nodpi/ic_launcher_foreground.png`.
-3. Delete `app/src/main/res/drawable/ic_launcher_foreground.xml` (two files with the same name won't build).
-4. Optionally change `ic_launcher_background.xml`, or replace it with a solid colour.
-5. Push to `main`; the next build uses the new icon.
+The app uses the [Geist](https://github.com/vercel/geist-font) fonts, which aren't in the repository. Download them into `app/src/main/res/font/` before building:
+
+```bash
+mkdir -p app/src/main/res/font
+curl -fsSL -o app/src/main/res/font/geist.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/geist/Geist%5Bwght%5D.ttf"
+curl -fsSL -o app/src/main/res/font/geist_mono.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/geistmono/GeistMono%5Bwght%5D.ttf"
+```
 
 ## Crafty API endpoints used
 
 | Feature | Endpoint |
 | --- | --- |
-| Login | `POST /api/v2/auth/login` |
-| Server list | `GET /api/v2/servers` |
-| Stats | `GET /api/v2/servers/{id}/stats` |
-| Power / backup | `POST /api/v2/servers/{id}/action/{start_server, stop_server, restart_server, kill_server, backup_server}` |
-| Console log | `GET /api/v2/servers/{id}/logs` |
-| Send command | `POST /api/v2/servers/{id}/stdin` (plain-text body) |
-| Backup profiles | `GET /api/v2/servers/{id}/backups` |
-| Schedules | `GET /api/v2/servers/{id}/tasks`, `PATCH /api/v2/servers/{id}/tasks/{taskId}` |
+| Login | `POST /auth/login` |
+| Servers | `GET /servers`, `POST /servers`, `GET`/`PATCH`/`DELETE /servers/{id}` |
+| Stats and history | `GET /servers/{id}/stats`, `GET /servers/{id}/history`, `GET /crafty/stats` |
+| Power, backup, update, clone | `POST /servers/{id}/action/{action}` |
+| Console | `GET /servers/{id}/logs`, `POST /servers/{id}/stdin` |
+| Files | `POST`/`PATCH`/`DELETE /servers/{id}/files`, `PUT`/`PATCH /servers/{id}/files/create`, `POST /servers/{id}/files/upload/`, `POST /servers/{id}/files/zip` |
+| Backups | `GET /servers/{id}/backups`, `PATCH`/`POST /servers/{id}/backups/backup/{backupId}` |
+| Schedules | `GET`/`POST /servers/{id}/tasks`, `GET`/`PATCH`/`DELETE /servers/{id}/tasks/{taskId}`, `POST /servers/{id}/tasks/{taskId}/run` |
 
-Response parsing is deliberately lenient because field types differ between Crafty releases.
-
-## Project layout
-
-```
-app/src/main/java/com/vknxworks/craftyremote/
-├── MainActivity.kt              navigation + session gate
-├── data/
-│   ├── CraftyApi.kt             OkHttp client for the v2 API
-│   ├── CredentialStore.kt       Keystore-encrypted token storage
-│   └── Models.kt                lenient JSON → model parsing
-└── ui/
-    ├── ViewModels.kt            session, server list, server detail
-    ├── Components.kt            status pills, tiles, banners, polling helper
-    ├── theme/Theme.kt
-    └── screens/                 Login, ServerList, ServerDetail (4 tabs)
-```
+All paths are under `/api/v2`. Responses are parsed leniently, because field types differ between Crafty releases.
