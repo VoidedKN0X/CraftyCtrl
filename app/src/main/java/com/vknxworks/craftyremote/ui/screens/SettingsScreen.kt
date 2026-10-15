@@ -186,7 +186,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     )
                     Spacer(Modifier.height(8.dp))
                     Text("Accent colour", style = MaterialTheme.typography.bodyLarge)
-                    val accents = Accent.entries.filter { it != Accent.WALLPAPER || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S }
+                    val accents = Accent.entries
                     ChoiceChips(
                         options = accents.map { it.ordinal to it.label },
                         selected = ThemePrefs.accent.ordinal,
@@ -226,7 +226,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     checked = alerts,
                     onChange = { on ->
                         if (on) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !MonitorService.canNotify(context)) {
+                            if (!MonitorService.canNotify(context)) {
                                 notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                             } else {
                                 turnAlertsOn()

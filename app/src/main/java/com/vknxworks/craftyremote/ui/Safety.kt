@@ -1,6 +1,5 @@
 package com.vknxworks.craftyremote.ui
 
-import android.os.Build
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -17,7 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Asks for the phone's fingerprint, face or other biometric (or its PIN/pattern, Android 11+)
+ * Asks for the phone's fingerprint, face or other biometric (or its PIN, pattern or password)
  * before something that stops a server. Phones with no screen lock can't verify anyone, so
  * [onSuccess] runs after the normal confirmation dialog alone and [onNoLock] says so.
  */
@@ -32,7 +31,7 @@ fun verifyUser(
         onSuccess()
         return
     }
-    val allowed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) BIOMETRIC_WEAK or DEVICE_CREDENTIAL else BIOMETRIC_WEAK
+    val allowed = BIOMETRIC_WEAK or DEVICE_CREDENTIAL
     if (BiometricManager.from(activity).canAuthenticate(allowed) != BiometricManager.BIOMETRIC_SUCCESS) {
         onNoLock()
         onSuccess()
@@ -43,7 +42,6 @@ fun verifyUser(
         .apply { subtitle?.let { setSubtitle(it) } }
         .setAllowedAuthenticators(allowed)
         .setConfirmationRequired(false)
-        .apply { if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) setNegativeButtonText("Cancel") }
         .build()
     BiometricPrompt(
         activity,

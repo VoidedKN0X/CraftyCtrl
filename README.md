@@ -37,7 +37,7 @@ CraftyCtrl is an unofficial app. It isn't made by or affiliated with the Crafty 
 ## Requirements
 
 - Crafty Controller 4.x reachable over **HTTPS with a valid certificate**, for example behind a reverse proxy. The app refuses plain `http://`.
-- Android 8.0 or newer.
+- Android 13 or newer.
 
 ## First run
 

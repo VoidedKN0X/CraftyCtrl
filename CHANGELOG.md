@@ -3,7 +3,13 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [1.5.1] - 2026-10-15
+## [1.6.0] - 2026-10-15
+
+### Changed
+- **Requires Android 13 or newer** (was Android 8). Code paths that only existed for older Android versions were removed.
+- Confirming a stop, restart or kill now always accepts your phone's PIN, pattern or password as well as fingerprint or face.
+
+ - 2026-10-15
 
 ### Changed
 - **Crafty Remote is now CraftyCtrl.** The new name shows on the home screen, sign-in and lock screens. It installs over earlier versions and keeps your sign-in and settings.
