@@ -193,7 +193,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                         onSelect = { ThemePrefs.save(context, Accent.entries[it]) },
                     )
                     Text(
-                        "Used for running servers and the players chart. Wallpaper follows your phone's Material You colour.",
+                        "Colours buttons, switches, tabs, charts and highlights. Wallpaper uses your phone's Material You palette.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -423,8 +423,8 @@ private fun ChoiceChips(options: List<Pair<Int, String>>, selected: Int, onSelec
                 label = { Text(label) },
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
                 colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.onSurface,
-                    selectedLabelColor = MaterialTheme.colorScheme.surface,
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 ),
             )
         }

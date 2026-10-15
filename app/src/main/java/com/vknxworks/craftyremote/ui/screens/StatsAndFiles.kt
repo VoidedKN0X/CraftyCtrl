@@ -160,8 +160,8 @@ fun StatsTab(vm: ServerDetailViewModel) {
                     Surface(
                         onClick = { range = r },
                         shape = RoundedCornerShape(50),
-                        color = if (sel) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                        contentColor = if (sel) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (sel) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        contentColor = if (sel) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                         border = if (sel) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     ) {
                         Text(

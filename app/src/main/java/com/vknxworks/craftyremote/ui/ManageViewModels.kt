@@ -373,3 +373,182 @@ class OptionsViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
         }
     }
 }
+
+// ---------------------------------------------------------------- plugins & mods
+
+/** A plugin or mod jar; disabled ones are renamed to end in ".disabled" so the server skips them. */
+data class Addon(val fileName: String, val folder: String, val path: String) {
+    val enabled: Boolean get() = !fileName.endsWith(".disabled", ignoreCase = true)
+    val name: String get() = fileName.removeSuffix(".disabled").removeSuffix(".jar")
+}
+
+class AddonsViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serverId) {
+    /** Folder name ("plugins" / "mods") to its jars; only folders that exist are listed. */
+    var folders by mutableStateOf<Map<String, List<Addon>>>(emptyMap())
+        private set
+    var loading by mutableStateOf(true)
+        private set
+    var error by mutableStateOf<String?>(null)
+        private set
+    var busy by mutableStateOf<String?>(null)
+        private set
+    var uploadProgress by mutableStateOf<Float?>(null)
+        private set
+
+    init {
+        load()
+    }
+
+    fun load() {
+        viewModelScope.launch {
+            loading = true
+            error = null
+            try {
+                loadInfo()
+                val found = linkedMapOf<String, List<Addon>>()
+                for (name in listOf("plugins", "mods")) {
+                    val dir = join(folder(), name)
+                    val r = runCatching { api.browse(serverId, dir) }.getOrNull() as? com.vknxworks.craftyremote.data.FileResult.Folder ?: continue
+                    found[name] = r.entries
+                        .filter { !it.isDir && (it.name.endsWith(".jar", true) || it.name.endsWith(".jar.disabled", true)) }
+                        .map { Addon(it.name, dir, it.path) }
+                        .sortedBy { it.name.lowercase() }
+                }
+                folders = found
+            } catch (e: Exception) {
+                error = e.msg()
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    fun setEnabled(a: Addon, on: Boolean) {
+        if (busy != null || a.enabled == on) return
+        val newName = if (on) a.fileName.removeSuffix(".disabled") else a.fileName + ".disabled"
+        viewModelScope.launch {
+            busy = a.path
+            try {
+                api.renameEntry(serverId, a.path, newName)
+                _messages.send("${a.name} ${if (on) "enabled" else "disabled"}. Restart the server to apply.")
+                load()
+            } catch (e: Exception) {
+                _messages.send(e.msg())
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+    fun delete(a: Addon) {
+        if (busy != null) return
+        viewModelScope.launch {
+            busy = a.path
+            try {
+                api.deleteEntry(serverId, a.path)
+                _messages.send("Removed ${a.name}. Restart the server to apply.")
+                load()
+            } catch (e: Exception) {
+                _messages.send(e.msg())
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+    /** Uploads a picked jar into [folderName] ("plugins" or "mods"), creating the folder if needed. */
+    fun upload(folderName: String, resolver: android.content.ContentResolver, uri: android.net.Uri) {
+        if (uploadProgress != null) return
+        viewModelScope.launch {
+            uploadProgress = 0f
+            try {
+                var name = "upload.jar"
+                var size = -1L
+                resolver.query(uri, null, null, null, null)?.use { c ->
+                    if (c.moveToFirst()) {
+                        val n = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        val sz = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                        if (n >= 0) name = c.getString(n) ?: name
+                        if (sz >= 0 && !c.isNull(sz)) size = c.getLong(sz)
+                    }
+                }
+                if (!name.endsWith(".jar", true)) {
+                    _messages.send("Pick a .jar file.")
+                    return@launch
+                }
+                if (size < 0) throw CraftyException(0, "SIZE", "Couldn't read the file size.")
+                if (folderName !in folders) runCatching { api.createEntry(serverId, folder(), folderName, true) }
+                val input = resolver.openInputStream(uri) ?: throw CraftyException(0, "OPEN", "Couldn't open that file.")
+                input.use { stream ->
+                    api.upload(serverId, join(folder(), folderName), name, size, { b, off, len -> stream.read(b, off, len) }) { p ->
+                        uploadProgress = p
+                    }
+                }
+                _messages.send("Added ${name.removeSuffix(".jar")}. Restart the server to load it.")
+                load()
+            } catch (e: Exception) {
+                _messages.send(e.msg())
+            } finally {
+                uploadProgress = null
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------- logs
+
+data class LogFile(val name: String, val path: String) {
+    /** Rotated logs are gzipped; Crafty can't show their contents as text. */
+    val compressed: Boolean get() = name.endsWith(".gz", ignoreCase = true)
+}
+
+class LogsViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serverId) {
+    var files by mutableStateOf(Loadable<List<LogFile>>())
+        private set
+    var open by mutableStateOf<LogFile?>(null)
+        private set
+    var lines by mutableStateOf(Loadable<List<String>>())
+        private set
+
+    init {
+        loadList()
+    }
+
+    fun loadList() {
+        viewModelScope.launch {
+            files = files.copy(loading = true, error = null)
+            files = try {
+                loadInfo()
+                val dir = join(folder(), "logs")
+                val r = api.browse(serverId, dir) as? com.vknxworks.craftyremote.data.FileResult.Folder
+                    ?: throw CraftyException(0, "NO_LOGS", "This server has no logs folder.")
+                // latest.log first, then newest dated files (their names sort by date).
+                val list = r.entries.filter { !it.isDir }.map { LogFile(it.name, it.path) }
+                    .sortedWith(compareBy<LogFile> { it.name != "latest.log" }.thenByDescending { it.name })
+                Loadable(list)
+            } catch (e: Exception) {
+                files.copy(loading = false, error = e.msg())
+            }
+        }
+    }
+
+    fun openFile(f: LogFile?) {
+        open = f
+        if (f == null) return
+        viewModelScope.launch {
+            lines = Loadable(loading = true)
+            lines = try {
+                val text = api.readText(serverId, f.path)
+                    ?: throw CraftyException(0, "READ", "Couldn't read ${f.name}.")
+                // Very long logs are cut to their last lines so the phone stays responsive.
+                Loadable(text.lines().dropLastWhile { it.isEmpty() }.takeLast(MAX_LINES))
+            } catch (e: Exception) {
+                Loadable(error = e.msg())
+            }
+        }
+    }
+
+    companion object {
+        const val MAX_LINES = 20_000
+    }
+}

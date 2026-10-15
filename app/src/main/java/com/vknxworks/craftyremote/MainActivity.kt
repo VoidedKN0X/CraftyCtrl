@@ -39,6 +39,8 @@ import com.vknxworks.craftyremote.ui.screens.CreateServerScreen
 import com.vknxworks.craftyremote.ui.screens.FileEditorScreen
 import com.vknxworks.craftyremote.ui.screens.LoginScreen
 import com.vknxworks.craftyremote.ui.screens.ManagePage
+import com.vknxworks.craftyremote.ui.screens.AddonsScreen
+import com.vknxworks.craftyremote.ui.screens.LogsScreen
 import com.vknxworks.craftyremote.ui.screens.PlayersScreen
 import com.vknxworks.craftyremote.ui.screens.ServerOptionsScreen
 import com.vknxworks.craftyremote.ui.screens.ServerPropertiesScreen
@@ -193,6 +195,8 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
                 when (entry.arguments?.getString("page")) {
                     ManagePage.PROPERTIES.route -> ServerPropertiesScreen(api, serverId, back)
                     ManagePage.PLAYERS.route -> PlayersScreen(api, serverId, back)
+                    ManagePage.ADDONS.route -> AddonsScreen(api, serverId, back)
+                    ManagePage.LOGS.route -> LogsScreen(api, serverId, back)
                     else -> ServerOptionsScreen(api, serverId, back)
                 }
             }

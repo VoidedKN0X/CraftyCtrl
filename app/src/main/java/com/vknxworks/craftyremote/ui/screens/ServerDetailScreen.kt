@@ -110,6 +110,17 @@ import com.vknxworks.craftyremote.ui.ChartCpu
 import com.vknxworks.craftyremote.ui.ChartMem
 import com.vknxworks.craftyremote.ui.ChartPlayers
 import com.vknxworks.craftyremote.ui.theme.stateColor
+import com.vknxworks.craftyremote.ui.Countdown
+import com.vknxworks.craftyremote.ui.Countdowns
+import com.vknxworks.craftyremote.ui.verifyUser
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.fragment.app.FragmentActivity
+import androidx.compose.ui.platform.LocalContext
 import com.vknxworks.craftyremote.ui.theme.GeistMono
 import com.vknxworks.craftyremote.ui.BigMetric
 import com.vknxworks.craftyremote.ui.DetailRow
@@ -188,6 +199,7 @@ fun ServerDetailScreen(
     val snackbar = remember { SnackbarHostState() }
     var overflow by remember { mutableStateOf(false) }
     var confirmDeleteServer by remember { mutableStateOf(false) }
+    val activity = LocalContext.current as? FragmentActivity
     var confirmUpdate by remember { mutableStateOf(false) }
     var confirmClone by remember { mutableStateOf(false) }
 
@@ -314,7 +326,10 @@ fun ServerDetailScreen(
                 if (url == null) {
                     TextButton(onClick = { confirmUpdate = false; onManage(ManagePage.OPTIONS) }) { Text("Open Server options") }
                 } else {
-                    TextButton(onClick = { confirmUpdate = false; vm.updateExecutable() }) { Text("Update") }
+                    TextButton(onClick = {
+                        confirmUpdate = false
+                        verifyUser(activity, "Update ${vm.info?.name ?: "server"}", "The server is stopped first", onSuccess = vm::updateExecutable)
+                    }) { Text("Update") }
                 }
             },
             dismissButton = { TextButton(onClick = { confirmUpdate = false }) { Text("Cancel") } },
@@ -348,7 +363,11 @@ fun ServerDetailScreen(
             running = vm.stats?.running == true,
             busy = vm.deletingServer,
             onDismiss = { if (!vm.deletingServer) confirmDeleteServer = false },
-            onConfirm = { files -> vm.deleteServer(files) { confirmDeleteServer = false; onDeleted() } },
+            onConfirm = { files ->
+                verifyUser(activity, "Delete ${vm.info?.name ?: "server"}", "Confirm it's you", onSuccess = {
+                    vm.deleteServer(files) { confirmDeleteServer = false; onDeleted() }
+                })
+            },
         )
     }
 }
@@ -465,6 +484,7 @@ private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
 @Composable
 private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Unit) {
     val s = vm.stats
+    val activity = LocalContext.current as? FragmentActivity
     var confirm by remember { mutableStateOf<PowerAction?>(null) }
     // "" opens the sheet with a name field; a name opens it for that player.
     var playerSheet by remember { mutableStateOf<String?>(null) }
@@ -482,6 +502,8 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
         }
 
         if (s != null) StatusHero(s)
+
+        Countdowns.active[vm.serverId]?.let { c -> CountdownBanner(c, onCancel = vm::cancelCountdown) }
 
         PowerControls(
             state = s?.state,
@@ -512,7 +534,8 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
                             Surface(
                                 onClick = { playerSheet = name },
                                 shape = RoundedCornerShape(50),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                             ) {
                                 Text(name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
                             }
@@ -601,24 +624,21 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
     }
 
     confirm?.let { action ->
-        AlertDialog(
-            onDismissRequest = { confirm = null },
-            title = { Text("${action.label} server?") },
-            text = { Text(action.confirmText.orEmpty()) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirm = null
-                        vm.runAction(action)
+        PowerDialog(
+            action = action,
+            serverName = vm.info?.name.orEmpty(),
+            onDismiss = { confirm = null },
+            onConfirm = { delaySeconds, note ->
+                confirm = null
+                val title = "${action.label} ${vm.info?.name ?: "server"}"
+                val subtitle = if (delaySeconds > 0) "After a ${Countdowns.human(delaySeconds)} warning" else "Confirm it's you"
+                verifyUser(
+                    activity, title, subtitle,
+                    onSuccess = {
+                        if (delaySeconds > 0) vm.startCountdown(action, delaySeconds, note) else vm.runAction(action)
                     },
-                ) {
-                    Text(
-                        action.label,
-                        color = if (action.dangerous) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                    )
-                }
+                )
             },
-            dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } },
         )
     }
 }
@@ -754,13 +774,19 @@ private fun PowerButton(
 private val presetCommands = listOf("list", "save-all", "say ", "weather clear", "time set day", "whitelist list")
 
 @Composable
-private fun lineColor(line: String): Color = when {
-    "ERROR" in line || "SEVERE" in line || "Exception" in line -> ConsoleError
-    "WARN" in line -> ConsoleWarn
+internal fun lineColor(line: String): Color = when {
+    isError(line) -> ConsoleError
+    isWarn(line) -> ConsoleWarn
     line.startsWith("[Crafty]") || line.startsWith("Crafty") -> ConsoleDim
     else -> ConsoleText
 }
 
+private enum class LogLevel(val label: String) { ALL("All"), WARN("Warnings"), ERROR("Errors") }
+
+internal fun isError(line: String) = "ERROR" in line || "SEVERE" in line || "Exception" in line
+internal fun isWarn(line: String) = "WARN" in line
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ConsoleTab(vm: ServerDetailViewModel) {
     val consoleMs = rememberRefreshMs().coerceAtMost(2_000)
@@ -769,13 +795,25 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
     val listState = rememberLazyListState()
     var follow by rememberSaveable { mutableStateOf(true) }
     var input by rememberSaveable { mutableStateOf("") }
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var level by rememberSaveable { mutableStateOf(LogLevel.ALL) }
+    val clipboard = LocalClipboardManager.current
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+
+    val shown = remember(vm.logs, query, level, searching) {
+        vm.logs.filter { line ->
+            (level == LogLevel.ALL || (level == LogLevel.ERROR && isError(line)) || (level == LogLevel.WARN && (isWarn(line) || isError(line)))) &&
+                (!searching || query.isBlank() || line.contains(query, ignoreCase = true))
+        }
+    }
 
     // Scrolling up to read pauses auto-follow; tap Follow to resume.
     LaunchedEffect(listState.isScrollInProgress) {
         if (listState.isScrollInProgress && listState.canScrollForward) follow = false
     }
-    LaunchedEffect(vm.logs, follow) {
-        if (follow && vm.logs.isNotEmpty()) listState.scrollToItem(vm.logs.lastIndex)
+    LaunchedEffect(shown, follow) {
+        if (follow && shown.isNotEmpty()) listState.scrollToItem(shown.lastIndex)
     }
 
     val send: () -> Unit = {
@@ -784,28 +822,44 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
         }
     }
 
+    // Online player names that complete the word being typed (after the command).
+    val lastWord = input.substringAfterLast(' ')
+    val playerSuggestions = if (' ' in input) {
+        vm.stats?.players.orEmpty().filter { it.startsWith(lastWord, ignoreCase = true) && !it.equals(lastWord, ignoreCase = true) }
+    } else {
+        emptyList()
+    }
+
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            FilterChip(
-                selected = follow,
-                onClick = { follow = !follow },
-                label = { Text("Follow") },
-                leadingIcon = if (follow) {
-                    { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                } else {
-                    null
-                },
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                "${vm.logs.size} lines",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Row(
+                Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                FilterChip(selected = follow, onClick = { follow = !follow }, label = { Text("Follow") })
+                LogLevel.entries.forEach { l ->
+                    FilterChip(selected = level == l, onClick = { level = l }, label = { Text(l.label) })
+                }
+            }
+            IconButton(onClick = { searching = !searching; if (!searching) query = "" }) {
+                Icon(if (searching) Icons.Filled.Close else Icons.Filled.Search, contentDescription = if (searching) "Close search" else "Search")
+            }
+        }
+        if (searching) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text("Search the console") },
+                singleLine = true,
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                supportingText = { Text("${shown.size} of ${vm.logs.size} lines") },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             )
         }
 
@@ -822,28 +876,57 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                 .padding(horizontal = 12.dp),
         ) {
             LazyColumn(state = listState, contentPadding = PaddingValues(12.dp)) {
-                itemsIndexed(vm.logs) { _, line ->
+                itemsIndexed(shown) { _, line ->
                     Text(
                         line,
                         color = lineColor(line),
                         fontFamily = GeistMono,
                         fontSize = 11.5.sp,
                         lineHeight = 15.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .combinedClickable(
+                                onClick = {},
+                                onLongClick = {
+                                    haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                    clipboard.setText(AnnotatedString(line))
+                                    vm.notify("Line copied")
+                                },
+                            ),
                     )
+                }
+                if (shown.isEmpty() && vm.logs.isNotEmpty()) {
+                    item { Text("No lines match.", color = ConsoleDim, fontSize = 12.sp) }
                 }
             }
         }
+        Text(
+            "Long-press a line to copy it.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, top = 6.dp),
+        )
 
         LazyRow(
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            val chips = (vm.recentCommands + presetCommands).distinct()
-            items(chips) { cmd ->
-                SuggestionChip(
-                    onClick = { input = cmd },
-                    label = { Text(cmd.trim(), fontFamily = GeistMono) },
-                )
+            if (playerSuggestions.isNotEmpty()) {
+                items(playerSuggestions) { name ->
+                    SuggestionChip(
+                        onClick = { input = input.substringBeforeLast(' ') + " " + name + " " },
+                        label = { Text(name) },
+                        icon = { Icon(Icons.Filled.Person, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                    )
+                }
+            } else {
+                val chips = (vm.recentCommands + presetCommands).distinct()
+                items(chips) { cmd ->
+                    SuggestionChip(
+                        onClick = { input = cmd },
+                        label = { Text(cmd.trim(), fontFamily = GeistMono) },
+                    )
+                }
             }
         }
 
@@ -888,6 +971,7 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
     var editingTask by remember { mutableStateOf<TaskEdit?>(null) }
     var editingBackup by remember { mutableStateOf<BackupConfig?>(null) }
     var restoring by remember { mutableStateOf<BackupConfig?>(null) }
+    val activity = LocalContext.current as? FragmentActivity
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -951,7 +1035,11 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
             busy = vm.managing,
             running = vm.stats?.running == true,
             onDismiss = { if (!vm.managing) restoring = null },
-            onRestore = { name, inPlace -> vm.restoreBackup(b, name, inPlace) { restoring = null } },
+            onRestore = { name, inPlace ->
+                verifyUser(activity, "Restore $name", "The server is stopped first", onSuccess = {
+                    vm.restoreBackup(b, name, inPlace) { restoring = null }
+                })
+            },
         )
     }
     editingBackup?.let { b ->
@@ -1240,6 +1328,8 @@ enum class ManagePage(val route: String, val title: String, val subtitle: String
     PROPERTIES("properties", "Server settings", "Everything in server.properties", Icons.Filled.Tune),
     PLAYERS("players", "Players & bans", "Whitelist, operators and bans", Icons.Filled.Group),
     OPTIONS("options", "Server options", "Name, memory, auto-start, crash detection", Icons.Filled.Settings),
+    ADDONS("addons", "Plugins & mods", "Turn them on or off, add new ones", Icons.Filled.Extension),
+    LOGS("logs", "Logs", "Browse and search older log files", Icons.Filled.Description),
 }
 
 @Composable
@@ -1341,5 +1431,94 @@ private fun RestoreDialog(
             }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun CountdownBanner(c: Countdown, onCancel: () -> Unit) {
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(c) {
+        while (true) {
+            now = System.currentTimeMillis()
+            kotlinx.coroutines.delay(500)
+        }
+    }
+    val left = ((c.endsAt - now) / 1000).coerceAtLeast(0)
+    Column {
+        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Dot(MaterialTheme.colorScheme.tertiary)
+            Spacer(Modifier.width(10.dp))
+            Text(
+                (if (c.action == PowerAction.RESTART) "Restarting in " else "Stopping in ") + "%d:%02d".format(left / 60, left % 60),
+                style = MaterialTheme.typography.bodyLarge,
+                fontFamily = GeistMono,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onCancel) { Text("Cancel") }
+        }
+        Text(
+            "Players get chat warnings as it counts down. Keep the app open until it's done.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Confirmation for restart, stop and kill; restart and stop can warn players first. */
+@Composable
+private fun PowerDialog(
+    action: PowerAction,
+    serverName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (delaySeconds: Int, note: String?) -> Unit,
+) {
+    val canWarn = action == PowerAction.RESTART || action == PowerAction.STOP
+    var delay by remember { mutableStateOf(0) }
+    var note by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("${action.label} ${serverName.ifBlank { "server" }}?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(action.confirmText.orEmpty())
+                if (canWarn) {
+                    Text("When", style = MaterialTheme.typography.labelLarge)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0 to "Now", 60 to "1 min", 300 to "5 min", 600 to "10 min").forEach { (sec, label) ->
+                            FilterChip(selected = delay == sec, onClick = { delay = sec }, label = { Text(label) })
+                        }
+                    }
+                    if (delay > 0) {
+                        OutlinedTextField(
+                            value = note,
+                            onValueChange = { note = it },
+                            label = { Text("Reason (optional)") },
+                            placeholder = { Text("e.g. Updating plugins") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            "Players are warned in chat at the start and as it counts down.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Text(
+                    "You'll confirm with your fingerprint, face or screen lock.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(delay, note.trim().ifEmpty { null }) }) {
+                Text(
+                    if (delay > 0) "Warn & ${action.label.lowercase()}" else action.label,
+                    color = if (action.dangerous || action == PowerAction.STOP) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                )
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
