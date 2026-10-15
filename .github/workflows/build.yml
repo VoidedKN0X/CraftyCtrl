@@ -58,12 +58,12 @@ jobs:
             done
             exit "$status"
           fi
-          mv app/build/outputs/apk/release/app-release.apk crafty-remote.apk
+          mv app/build/outputs/apk/release/app-release.apk craftyctrl.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: crafty-remote-apk
-          path: crafty-remote.apk
+          name: craftyctrl-apk
+          path: craftyctrl.apk
 
       # Publishes a release for the version in app/build.gradle.kts the first time it's built,
       # with that version's notes from CHANGELOG.md. Pushes that don't bump the version only
@@ -90,9 +90,9 @@ jobs:
             echo "::error::CHANGELOG.md has no section for [$version]"
             exit 1
           fi
-          cp crafty-remote.apk "crafty-remote-$version.apk"
-          gh release create "$tag" "crafty-remote-$version.apk" \
+          cp craftyctrl.apk "craftyctrl-$version.apk"
+          gh release create "$tag" "craftyctrl-$version.apk" \
             --target "$GITHUB_SHA" \
-            --title "Crafty Remote $version" \
+            --title "CraftyCtrl $version" \
             --notes-file notes.md \
             --latest

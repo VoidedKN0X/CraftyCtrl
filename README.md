@@ -1,6 +1,8 @@
-# Crafty Remote
+# CraftyCtrl
 
 An Android app for managing a [Crafty Controller 4](https://craftycontrol.com) panel from your phone, built with Kotlin and Jetpack Compose on Crafty's v2 API.
+
+CraftyCtrl is an unofficial app. It isn't made by or affiliated with the Crafty Controller team.
 
 ## Features
 

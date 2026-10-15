@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CraftyRemote"
+rootProject.name = "CraftyCtrl"
 include(":app")

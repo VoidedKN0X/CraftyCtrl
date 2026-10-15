@@ -179,7 +179,7 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
 
     val askBiometric: () -> Unit = {
         if (canBio && activity != null) {
-            runCatching { showBiometricPrompt(activity, "Unlock Crafty Remote") { vm.unlock() } }
+            runCatching { showBiometricPrompt(activity, "Unlock CraftyCtrl") { vm.unlock() } }
         }
     }
     LaunchedEffect(Unit) {
@@ -209,7 +209,7 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
         ) {
             Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
             Spacer(Modifier.height(16.dp))
-            Text("Crafty Remote is locked", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text("CraftyCtrl is locked", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))
             val sub = when {
                 vm.lockoutRemaining > 0 -> "Too many tries. Try again in ${(vm.lockoutRemaining + 999) / 1000}s"
