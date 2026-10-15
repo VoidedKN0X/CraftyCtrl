@@ -3,7 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [2.0.0] - 2026-10-15
+## [2.0.1] - 2026-10-15
+
+### Changed
+- **New icon:** the server rack in a blocky pixel style with a small pixel pickaxe. Android's themed (monochrome) icons use the same mark.
+
+ - 2026-10-15
 
 ### Changed
 - **New package name: `com.vknxworks.craftyctrl`** (was `com.vknxworks.craftyremote`), to match the CraftyCtrl name.
