@@ -3,7 +3,16 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [1.3.1] - 2026-10-14
+## [1.4.0] - 2026-10-15
+
+### Changed
+- **New minimal look.** A quiet near-black theme with off-white text, the Geist typeface (Geist Mono for numbers), thin divider lines instead of cards, and underlined text tabs.
+- **Servers screen:** host CPU, memory and disk as large numbers with thin bars; each server is one line with a status dot, version and port, player count, and CPU, RAM and uptime while it runs.
+- **Server overview:** status and uptime, CPU, memory and world size as large numbers, a single Start button when stopped (Restart / Stop / Kill when running), online players as small chips, and a short details list above the Manage pages.
+- **Stats:** each chart is a single thin line with min, average and max underneath.
+- **Accent colour** in Settings → Appearance: green, blue, amber, purple, or your wallpaper's colour (Android 12+). Colour is only used for server status and the players chart.
+
+ - 2026-10-14
 
 ### Changed
 - Alerts now only notify when a server stops or crashes. Player-join and backup alerts are gone, along with their notification categories in Android's settings.
