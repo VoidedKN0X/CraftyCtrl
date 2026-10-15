@@ -110,6 +110,11 @@ import com.vknxworks.craftyremote.ui.ChartCpu
 import com.vknxworks.craftyremote.ui.ChartMem
 import com.vknxworks.craftyremote.ui.ChartPlayers
 import com.vknxworks.craftyremote.ui.theme.stateColor
+import com.vknxworks.craftyremote.ui.theme.GeistMono
+import com.vknxworks.craftyremote.ui.BigMetric
+import com.vknxworks.craftyremote.ui.DetailRow
+import com.vknxworks.craftyremote.ui.Dot
+import androidx.compose.material3.Button
 import com.vknxworks.craftyremote.data.parseTimestamp
 import com.vknxworks.craftyremote.ui.rememberRefreshMs
 import androidx.compose.ui.platform.LocalUriHandler
@@ -219,7 +224,6 @@ fun ServerDetailScreen(
                     }
                 },
                 actions = {
-                    StatusPill(vm.stats?.state)
                     Box {
                         IconButton(onClick = { overflow = true }) {
                             Icon(Icons.Filled.MoreVert, contentDescription = "More")
@@ -433,7 +437,7 @@ private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
                     Text(
                         report,
                         color = ConsoleText,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = GeistMono,
                         fontSize = 11.sp,
                         lineHeight = 14.sp,
                         modifier = Modifier
@@ -469,8 +473,8 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(30.dp),
     ) {
         vm.statsError?.let { ErrorBanner(it) }
         if (s == null && vm.statsError == null) {
@@ -479,7 +483,6 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
 
         if (s != null) StatusHero(s)
 
-        SectionLabel("Power")
         PowerControls(
             state = s?.state,
             pending = vm.pendingAction,
@@ -487,77 +490,84 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
         )
 
         if (s != null) {
-            SectionLabel("Details")
-            // Only facts Crafty actually reported; unknown ones are left out rather than shown as "—".
-            val facts = listOfNotNull(
-                s.mem?.let { Triple("Memory", it, Icons.Filled.Memory) },
-                s.worldSize?.let { Triple("World size", it, Icons.Filled.SdStorage) },
-                vm.version?.let { Triple("Version", it, Icons.Filled.Tag) },
-                s.port?.let { Triple("Port", it.toString(), Icons.Filled.Public) },
-            )
-            facts.chunked(2).forEach { pair ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    pair.forEach { (label, value, icon) -> FactChip(label, value, icon, Modifier.weight(1f)) }
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
-
-            SectionLabel("Players")
-            if (s.players.isNotEmpty()) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    s.players.forEach { name ->
-                        SuggestionChip(
-                            onClick = { playerSheet = name },
-                            label = { Text(name) },
-                            icon = { Icon(Icons.Filled.Person, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            // Players: names as small chips, tap one for actions.
+            if (s.running) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row {
+                        SectionLabel("Online", Modifier.weight(1f))
+                        if (s.playersKnown) {
+                            Text(
+                                playersText(s.online, s.max),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = GeistMono,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        s.players.forEach { name ->
+                            Surface(
+                                onClick = { playerSheet = name },
+                                shape = RoundedCornerShape(50),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            ) {
+                                Text(name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+                            }
+                        }
+                        Surface(
+                            onClick = { playerSheet = "" },
+                            shape = RoundedCornerShape(50),
+                            color = Color.Transparent,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        ) {
+                            Text(
+                                if (s.players.isEmpty()) "Manage a player…" else "By name…",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            )
+                        }
+                    }
+                    if (s.players.isEmpty() && (s.online ?: 0) > 0) {
+                        Text(
+                            "This server doesn't share player names with Crafty.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
-                Text(
-                    "Tap a player for actions.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else if ((s.online ?: 0) > 0) {
-                Text(
-                    "${s.online} online. This server doesn't share player names with Crafty, so type a name to manage someone.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
-            OutlinedButton(
-                onClick = { playerSheet = "" },
-                enabled = s.running,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Filled.ManageAccounts, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Manage a player by name…")
+
+            // Only facts Crafty actually reported; unknown ones are left out rather than shown as "—".
+            Column {
+                listOfNotNull(
+                    vm.version?.let { "Version" to it },
+                    s.port?.let { "Port" to it.toString() },
+                    s.worldName?.let { name -> "World" to listOfNotNull(name, s.worldSize).joinToString(" · ") },
+                ).forEach { (k, v) -> DetailRow(k, v) }
             }
         }
 
-        SectionLabel("Manage")
-        ManagePage.entries.forEach { page ->
-            Card(
-                onClick = { onManage(page) },
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-            ) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(page.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(page.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Text(page.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column {
+            ManagePage.entries.forEach { page ->
+                Column(Modifier.fillMaxWidth().clickable { onManage(page) }) {
+                    Row(Modifier.padding(vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(page.title, style = MaterialTheme.typography.bodyLarge)
+                            Text(page.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp),
+                        )
                     }
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
     }
 
     if (vm.eulaNeeded) {
@@ -615,50 +625,36 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
 
 @Composable
 private fun StatusHero(s: ServerStats) {
-    AccentCard(accent = stateColor(s.state), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(s.state.label, style = MaterialTheme.typography.headlineMedium)
+    Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Dot(stateColor(s.state))
+                Spacer(Modifier.width(10.dp))
+                Text(s.state.label, style = MaterialTheme.typography.bodyLarge)
                 val detail = when (s.state) {
-                    ServerState.RUNNING -> s.started?.let { uptimeText(it) }
-                    ServerState.CRASHED -> "Crafty detected a crash."
-                    ServerState.STARTING -> "Waiting for the server to come up…"
-                    ServerState.UPDATING -> "Updating the server executable…"
-                    ServerState.STOPPED -> "Not running."
+                    ServerState.RUNNING -> s.started?.let { uptimeShort(it) }?.let { " · up $it" }
+                    ServerState.CRASHED -> " · Crafty detected a crash"
+                    ServerState.STARTING -> " · coming up…"
+                    ServerState.UPDATING -> " · updating the jar…"
+                    ServerState.STOPPED -> null
                 }
-                detail?.let {
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                s.description?.let {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                detail?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                RingGauge(
-                    fraction = s.cpu?.let { (it / 100).toFloat() },
-                    value = s.cpu?.let { "%.0f%%".format(it) } ?: "—",
-                    label = "CPU",
-                    color = ChartCpu,
+            s.description?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (s.running || s.state == ServerState.STARTING) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                BigMetric("CPU", s.cpu?.let { "%.0f%%".format(it) } ?: "—", "of host", Modifier.weight(1f))
+                BigMetric(
+                    "Memory", s.mem?.replace(" ", "") ?: "—",
+                    s.memPercent?.let { "%.0f%% of max".format(it) }, Modifier.weight(1f),
                 )
-                RingGauge(
-                    fraction = s.memPercent?.let { (it / 100).toFloat() },
-                    value = s.memPercent?.let { "%.0f%%".format(it) } ?: "—",
-                    label = "Memory",
-                    color = ChartMem,
-                )
-                if (s.playersKnown) {
-                    RingGauge(
-                        fraction = ratio(s.online, s.max),
-                        value = s.online?.toString() ?: "—",
-                        label = s.max?.takeIf { it > 0 }?.let { "of $it players" } ?: "Players",
-                        color = ChartPlayers,
-                    )
+                if (s.worldSize != null) {
+                    BigMetric("World", s.worldSize.replace(" ", ""), "on disk", Modifier.weight(1f))
+                } else if (s.playersKnown) {
+                    BigMetric("Players", s.online?.toString() ?: "—", s.max?.let { "of $it" }, Modifier.weight(1f))
                 }
             }
         }
@@ -699,17 +695,25 @@ private fun memoryText(s: ServerStats): String {
 @Composable
 private fun PowerControls(state: ServerState?, pending: PowerAction?, onAction: (PowerAction) -> Unit) {
     val live = state == ServerState.RUNNING || state == ServerState.STARTING
-    val stopped = state == ServerState.STOPPED || state == ServerState.CRASHED
     val idle = pending == null
-
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PowerButton(PowerAction.START, Icons.Filled.PlayArrow, stopped && idle, pending, Modifier.weight(1f), onAction)
-            PowerButton(PowerAction.RESTART, Icons.Filled.RestartAlt, live && idle, pending, Modifier.weight(1f), onAction)
+    when {
+        live -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PowerButton(PowerAction.RESTART, idle, pending, Modifier.weight(1f), onAction)
+            PowerButton(PowerAction.STOP, idle, pending, Modifier.weight(1f), onAction)
+            PowerButton(PowerAction.KILL, idle, pending, Modifier.weight(1f), onAction)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PowerButton(PowerAction.STOP, Icons.Filled.Stop, live && idle, pending, Modifier.weight(1f), onAction)
-            PowerButton(PowerAction.KILL, Icons.Filled.Dangerous, (live || state == ServerState.UPDATING) && idle, pending, Modifier.weight(1f), onAction)
+        state == ServerState.UPDATING -> PowerButton(PowerAction.KILL, idle, pending, Modifier.fillMaxWidth(), onAction)
+        else -> Button(
+            onClick = { onAction(PowerAction.START) },
+            enabled = idle && state != null,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+        ) {
+            if (pending == PowerAction.START) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                Spacer(Modifier.width(8.dp))
+            }
+            Text("Start server")
         }
     }
 }
@@ -717,34 +721,31 @@ private fun PowerControls(state: ServerState?, pending: PowerAction?, onAction: 
 @Composable
 private fun PowerButton(
     action: PowerAction,
-    icon: ImageVector,
     enabled: Boolean,
     pending: PowerAction?,
     modifier: Modifier,
     onAction: (PowerAction) -> Unit,
 ) {
-    val content: @Composable () -> Unit = {
+    val danger = action.dangerous
+    OutlinedButton(
+        onClick = { onAction(action) },
+        enabled = enabled,
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (danger) MaterialTheme.colorScheme.error.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outline,
+        ),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+        ),
+        contentPadding = PaddingValues(horizontal = 8.dp),
+        modifier = modifier.height(46.dp),
+    ) {
         if (pending == action) {
-            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-        } else {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+            Spacer(Modifier.width(6.dp))
         }
-        Spacer(Modifier.width(8.dp))
-        Text(action.label)
-    }
-    if (action.dangerous) {
-        OutlinedButton(
-            onClick = { onAction(action) },
-            enabled = enabled,
-            modifier = modifier.height(48.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-        ) { content() }
-    } else {
-        FilledTonalButton(
-            onClick = { onAction(action) },
-            enabled = enabled,
-            modifier = modifier.height(48.dp),
-        ) { content() }
+        Text(action.label, maxLines = 1)
     }
 }
 
@@ -825,7 +826,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                     Text(
                         line,
                         color = lineColor(line),
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = GeistMono,
                         fontSize = 11.5.sp,
                         lineHeight = 15.sp,
                     )
@@ -841,7 +842,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
             items(chips) { cmd ->
                 SuggestionChip(
                     onClick = { input = cmd },
-                    label = { Text(cmd.trim(), fontFamily = FontFamily.Monospace) },
+                    label = { Text(cmd.trim(), fontFamily = GeistMono) },
                 )
             }
         }
@@ -857,7 +858,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                 onValueChange = { input = it },
                 placeholder = { Text("Command, without /") },
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = GeistMono),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send, autoCorrectEnabled = false),
                 keyboardActions = KeyboardActions(onSend = { send() }),
                 modifier = Modifier.weight(1f),
@@ -1186,7 +1187,7 @@ private fun TaskCard(t: ScheduledTask, onClick: () -> Unit, onRun: () -> Unit, o
                 Text(
                     what,
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = if (t.command != null) FontFamily.Monospace else FontFamily.Default,
+                    fontFamily = if (t.command != null) GeistMono else FontFamily.Default,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

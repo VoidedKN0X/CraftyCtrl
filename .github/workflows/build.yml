@@ -33,6 +33,13 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "CRAFTY_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
+      # Geist and Geist Mono (SIL Open Font License) from the Google Fonts repository.
+      - name: Fetch fonts
+        run: |
+          mkdir -p app/src/main/res/font
+          curl -fsSL --retry 3 -o app/src/main/res/font/geist.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/geist/Geist%5Bwght%5D.ttf"
+          curl -fsSL --retry 3 -o app/src/main/res/font/geist_mono.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/geistmono/GeistMono%5Bwght%5D.ttf"
+
       - name: Build release APK
         env:
           CRAFTY_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}

@@ -77,6 +77,19 @@ import com.vknxworks.craftyremote.ui.ServerListViewModel
 import com.vknxworks.craftyremote.ui.ServerRow
 import com.vknxworks.craftyremote.ui.StatusPill
 import java.net.URI
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
+import com.vknxworks.craftyremote.data.parseTimestamp
+import com.vknxworks.craftyremote.ui.Caption
+import com.vknxworks.craftyremote.ui.Dot
+import com.vknxworks.craftyremote.ui.HairBar
+import com.vknxworks.craftyremote.ui.theme.GeistMono
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,61 +107,23 @@ fun ServerListScreen(
 
     val host = remember(api.baseUrl) { runCatching { URI(api.baseUrl).host }.getOrNull() ?: api.baseUrl }
     var menuOpen by remember { mutableStateOf(false) }
-    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.background,
+        floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            OutlinedButton(
                 onClick = onCreate,
-                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text("New server") },
-            )
-        },
-        topBar = {
-            LargeTopAppBar(
-                scrollBehavior = scroll,
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                ),
-                title = {
-                    Column {
-                        Text("Servers", fontWeight = FontWeight.Bold)
-                        Text(
-                            host,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                        )
-                    }
-                },
-                actions = {
-                    Box {
-                        IconButton(onClick = { menuOpen = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = "More")
-                        }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Settings") },
-                                leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                                onClick = {
-                                    menuOpen = false
-                                    onSettings()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Sign out") },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
-                                onClick = {
-                                    menuOpen = false
-                                    onSignOut()
-                                },
-                            )
-                        }
-                    }
-                },
-            )
+                shape = RoundedCornerShape(50),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.background),
+                contentPadding = PaddingValues(horizontal = 22.dp),
+                modifier = Modifier.height(48.dp),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("New server", style = MaterialTheme.typography.bodyLarge)
+            }
         },
     ) { padding ->
         PullToRefreshBox(
@@ -160,33 +135,52 @@ fun ServerListScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 112.dp),
             ) {
+                item(key = "header") {
+                    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(bottom = 28.dp)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(host, style = MaterialTheme.typography.labelMedium, fontFamily = GeistMono, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                            Text("Servers", style = MaterialTheme.typography.headlineLarge)
+                        }
+                        IconButton(onClick = onSettings) {
+                            Icon(Icons.Outlined.Settings, contentDescription = "Settings")
+                        }
+                        Box {
+                            IconButton(onClick = { menuOpen = true }) {
+                                Icon(Icons.Filled.MoreVert, contentDescription = "More")
+                            }
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Sign out") },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
+                                    onClick = {
+                                        menuOpen = false
+                                        onSignOut()
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
                 vm.error?.let { message ->
-                    item(key = "error") { ErrorBanner(message, onRetry = vm::refreshNow) }
+                    item(key = "error") { ErrorBanner(message, Modifier.padding(bottom = 16.dp), onRetry = vm::refreshNow) }
                 }
                 vm.host?.let { h ->
-                    item(key = "host") { HostCard(h, vm.hostCpuSamples, vm.hostMemSamples) }
+                    item(key = "host") { HostRow(h, Modifier.padding(bottom = 32.dp)) }
                 }
                 when {
                     vm.loading && vm.rows.isEmpty() -> item(key = "loading") {
                         Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                            CircularProgressIndicator(strokeWidth = 2.dp)
                         }
                     }
 
                     vm.rows.isEmpty() && vm.error == null -> item(key = "empty") {
                         Column(
                             Modifier.fillMaxWidth().padding(vertical = 64.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Icon(
-                                Icons.Filled.Dns, contentDescription = null,
-                                modifier = Modifier.size(40.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
                             Text("No servers yet", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 "This account can't see any servers. Check its role in Crafty.",
@@ -196,8 +190,20 @@ fun ServerListScreen(
                         }
                     }
 
-                    else -> items(vm.rows, key = { it.summary.id }) { row ->
-                        ServerCard(row, onClick = { onOpen(row.summary) })
+                    else -> {
+                        item(key = "list-head") {
+                            val running = vm.rows.count { it.stats?.running == true }
+                            Column {
+                                Row(Modifier.padding(bottom = 12.dp)) {
+                                    Caption("$running of ${vm.rows.size} running", Modifier.weight(1f))
+                                    Caption("Players")
+                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            }
+                        }
+                        items(vm.rows, key = { it.summary.id }) { row ->
+                            ServerLine(row, onClick = { onOpen(row.summary) })
+                        }
                     }
                 }
             }
@@ -206,62 +212,64 @@ fun ServerListScreen(
 }
 
 @Composable
-private fun ServerCard(row: ServerRow, onClick: () -> Unit) {
+private fun ServerLine(row: ServerRow, onClick: () -> Unit) {
     val s = row.stats
     val live = s != null && (s.state == ServerState.RUNNING || s.state == ServerState.STARTING)
-    AccentCard(accent = stateColor(s?.state), onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
+        Column(Modifier.padding(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(44.dp)
-                        .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(14.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        if (row.summary.isBedrock) Icons.Filled.PhoneAndroid else Icons.Filled.Dns,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                }
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        row.summary.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    val subtitle = listOfNotNull(prettyType(row.summary.type), s?.version).joinToString(" · ")
-                    if (subtitle.isNotEmpty()) {
-                        Text(
-                            subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                Dot(stateColor(s?.state))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(row.summary.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    val meta = listOfNotNull(
+                        s?.version ?: prettyType(row.summary.type),
+                        if (live) row.summary.port?.let { ":$it" } else s?.state?.label,
+                    ).joinToString(" · ")
+                    if (meta.isNotEmpty()) {
+                        Text(meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                Spacer(Modifier.width(8.dp))
-                StatusPill(s?.state)
-            }
-
-            when {
-                s == null -> Text(
-                    "Stats unavailable",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    if (live && s?.playersKnown == true) playersText(s.online, s.max).replace(" ", "") else "—",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = GeistMono,
                 )
-                live -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    RingGauge(s.cpu?.let { (it / 100).toFloat() }, s.cpu?.let { "%.0f%%".format(it) } ?: "—", "CPU", ChartCpu, size = 64.dp, stroke = 7.dp)
-                    RingGauge(s.memPercent?.let { (it / 100).toFloat() }, s.memPercent?.let { "%.0f%%".format(it) } ?: "—", s.mem ?: "Memory", ChartMem, size = 64.dp, stroke = 7.dp)
-                    if (s.playersKnown) {
-                        RingGauge(ratio(s.online, s.max), s.online?.toString() ?: "—", "Players", ChartPlayers, size = 64.dp, stroke = 7.dp)
+            }
+            if (live && s != null) {
+                Row(Modifier.padding(start = 20.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    listOfNotNull(
+                        s.cpu?.let { "CPU %.0f%%".format(it) },
+                        s.mem?.let { "RAM $it" },
+                        s.started?.let { uptimeShort(it) }?.let { "Up $it" },
+                    ).forEach {
+                        Text(it, style = MaterialTheme.typography.labelSmall, fontFamily = GeistMono, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+            } else if (s == null) {
+                Text("Stats unavailable", Modifier.padding(start = 20.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}
+
+/** "2d 4h", "6h 12m", "8m" since [started], or null if it can't be read. */
+internal fun uptimeShort(started: String): String? {
+    val t = parseTimestamp(started) ?: return null
+    val mins = ((System.currentTimeMillis() - t) / 60_000).coerceAtLeast(0)
+    val d = mins / 1440
+    val h = (mins % 1440) / 60
+    val m = mins % 60
+    return when {
+        d > 0 -> "${d}d ${h}h"
+        h > 0 -> "${h}h ${m}m"
+        else -> "${m}m"
     }
 }
 
@@ -279,57 +287,29 @@ internal fun prettyType(type: String): String? = when (type) {
 }
 
 @Composable
-private fun HostCard(h: HostStats, cpu: List<Float>, mem: List<Float>) {
-    Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Computer, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(10.dp))
-                Text("Host machine", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                val cpuInfo = listOfNotNull(h.cpuCores?.let { "$it cores" }, h.cpuFreq).joinToString(" · ")
-                if (cpuInfo.isNotEmpty()) {
-                    Text(cpuInfo, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                HostMetric(
-                    "CPU", h.cpuPercent?.let { "%.0f%%".format(it) } ?: "—", cpu, ChartCpu,
-                    null, Modifier.weight(1f),
-                )
-                HostMetric(
-                    "RAM", h.memPercent?.let { "%.0f%%".format(it) } ?: "—", mem, ChartMem,
-                    listOfNotNull(h.memUsed, h.memTotal).joinToString(" / ").ifEmpty { null }, Modifier.weight(1f),
-                )
-            }
-            h.disks.take(4).forEach { d ->
-                UsageBar(d.mount, d.percent, listOfNotNull(d.used, d.total).joinToString(" / ").ifEmpty { null })
-            }
+private fun HostRow(h: HostStats, modifier: Modifier = Modifier) {
+    // The root filesystem if Crafty lists it, otherwise the first disk.
+    val disk = h.disks.firstOrNull { it.mount == "/" } ?: h.disks.firstOrNull()
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        HostMetric("CPU", h.cpuPercent, h.cpuCores?.let { "$it cores" }, Modifier.weight(1f))
+        HostMetric("Memory", h.memPercent, listOfNotNull(h.memUsed, h.memTotal).joinToString(" / ").ifEmpty { null }, Modifier.weight(1f))
+        if (disk != null) {
+            HostMetric("Disk", disk.percent, listOfNotNull(disk.used, disk.total).joinToString(" / ").ifEmpty { null }, Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun HostMetric(
-    label: String,
-    value: String,
-    samples: List<Float>,
-    color: androidx.compose.ui.graphics.Color,
-    detail: String?,
-    modifier: Modifier,
-) {
-    Column(
-        modifier
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(20.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+private fun HostMetric(label: String, percent: Double?, sub: String?, modifier: Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Caption(label)
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-            Text(value, style = MaterialTheme.typography.titleMedium, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)
+            Text(percent?.let { "%.0f".format(it) } ?: "—", style = MaterialTheme.typography.headlineSmall, fontFamily = GeistMono)
+            if (percent != null) {
+                Text("%", style = MaterialTheme.typography.bodyMedium, fontFamily = GeistMono, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 3.dp))
+            }
         }
-        LineChart(samples.map { it }, color, maxY = 100f, height = 44.dp, gridLines = 0)
-        detail?.let {
-            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-        }
+        HairBar(((percent ?: 0.0) / 100).toFloat())
+        sub?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
     }
 }

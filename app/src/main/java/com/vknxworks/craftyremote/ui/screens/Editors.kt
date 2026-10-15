@@ -2,6 +2,7 @@
 
 package com.vknxworks.craftyremote.ui.screens
 
+import com.vknxworks.craftyremote.ui.theme.GeistMono
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -169,7 +170,7 @@ fun TaskEditorSheet(
                 TaskAction.COMMAND -> OutlinedTextField(
                     value = command, onValueChange = { command = it.replace("\n", " ") },
                     label = { Text("Command, without /") }, singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = GeistMono),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 TaskAction.BACKUP -> if (backups.size > 1) {
@@ -222,7 +223,7 @@ fun TaskEditorSheet(
                 Timing.CRON -> OutlinedTextField(
                     value = cron, onValueChange = { cron = it.take(64) },
                     label = { Text("Cron (minute hour day month weekday)") }, singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = GeistMono),
                     supportingText = { Text("Example: 0 3 * * * runs at 03:00 every day") },
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -320,13 +321,13 @@ fun BackupEditorSheet(
             OutlinedTextField(
                 value = before, onValueChange = { before = it.replace("\n", " ") },
                 label = { Text("Console command before backup") }, singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = GeistMono),
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = after, onValueChange = { after = it.replace("\n", " ") },
                 label = { Text("Console command after backup") }, singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = GeistMono),
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(

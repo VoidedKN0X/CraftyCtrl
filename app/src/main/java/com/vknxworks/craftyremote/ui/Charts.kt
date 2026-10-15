@@ -28,6 +28,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.material3.HorizontalDivider
+import com.vknxworks.craftyremote.ui.theme.GeistMono
 
 /** One line series. Null values leave a gap. [maxY] fixes the top of the scale (e.g. 100 for %). */
 @Composable
@@ -36,15 +39,17 @@ fun LineChart(
     color: Color,
     modifier: Modifier = Modifier,
     maxY: Float? = null,
-    height: Dp = 120.dp,
-    fill: Boolean = true,
-    gridLines: Int = 3,
+    height: Dp = 72.dp,
+    fill: Boolean = false,
+    gridLines: Int = 0,
 ) {
     val grid = MaterialTheme.colorScheme.outlineVariant
     Canvas(modifier.fillMaxWidth().height(height)) {
         val present = values.filterNotNull()
         if (values.size < 2 || present.isEmpty()) return@Canvas
         val top = (maxY ?: (present.max() * 1.15f)).coerceAtLeast(1f)
+        // Baseline hairline.
+        drawLine(grid, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), strokeWidth = 1f)
         val stepX = size.width / (values.size - 1)
         fun y(v: Float) = size.height - (v / top).coerceIn(0f, 1f) * size.height
 
@@ -86,11 +91,12 @@ fun LineChart(
             areas.forEach { drawPath(it, brush) }
         }
         lines.forEach {
-            drawPath(it, color, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(it, color, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }
 }
 
+/** A flat chart block: label and current value, a thin line, then min / avg / max, over a hairline. */
 @Composable
 fun ChartCard(
     title: String,
@@ -99,29 +105,36 @@ fun ChartCard(
     color: Color,
     maxY: Float?,
     footer: String? = null,
+    format: (Float) -> String = { "%.0f".format(it) },
 ) {
-    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(current, style = MaterialTheme.typography.titleMedium, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)
-            }
-            if (values.count { it != null } >= 2) {
-                LineChart(values, color, maxY = maxY)
-            } else {
-                Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                    Text("Collecting data…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                title.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            Text(current, style = MaterialTheme.typography.titleLarge, fontFamily = GeistMono)
+        }
+        val present = values.filterNotNull()
+        if (present.size >= 2) {
+            LineChart(values, color, maxY = maxY)
+            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                listOf("min" to present.min(), "avg" to present.average().toFloat(), "max" to present.max()).forEach { (k, v) ->
+                    Text("$k ${format(v)}", style = MaterialTheme.typography.labelSmall, fontFamily = GeistMono, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            footer?.let {
-                Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
+                Text("Collecting data…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        footer?.let {
+            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        HorizontalDivider(Modifier.padding(top = 10.dp), color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 
@@ -134,25 +147,29 @@ fun UsageBar(label: String, percent: Double?, detail: String?) {
             Text(
                 listOfNotNull(detail, percent?.let { "%.0f%%".format(it) }).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = GeistMono,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         val p = ((percent ?: 0.0) / 100).toFloat().coerceIn(0f, 1f)
-        LinearProgressIndicator(
-            progress = { p },
-            modifier = Modifier.fillMaxWidth().height(6.dp),
-            color = if (p > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            drawStopIndicator = {},
-        )
+        HairBar(p, if (p > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
     }
 }
 
-// Series colours follow the theme's accent roles.
+/** A 2 dp track with a filled part, used instead of thick progress bars and ring gauges. */
+@Composable
+fun HairBar(fraction: Float, color: Color = MaterialTheme.colorScheme.onSurface, modifier: Modifier = Modifier) {
+    val track = MaterialTheme.colorScheme.outlineVariant
+    Canvas(modifier.fillMaxWidth().height(2.dp)) {
+        drawRect(track)
+        drawRect(color, size = size.copy(width = size.width * fraction.coerceIn(0f, 1f)))
+    }
+}
+
+// CPU and memory draw in the text colour; players use the accent.
 val ChartCpu: Color
-    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.primary
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurface
 val ChartMem: Color
-    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.tertiary
+    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurface
 val ChartPlayers: Color
     @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.secondary

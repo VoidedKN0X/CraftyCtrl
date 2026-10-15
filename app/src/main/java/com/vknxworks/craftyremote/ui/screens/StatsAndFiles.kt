@@ -2,6 +2,9 @@
 
 package com.vknxworks.craftyremote.ui.screens
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.vknxworks.craftyremote.ui.theme.GeistMono
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -139,8 +142,8 @@ fun StatsTab(vm: ServerDetailViewModel) {
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(22.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             SectionLabel(if (useHistory) "History from Crafty" else "Live, since you opened this server", Modifier.weight(1f))
@@ -153,7 +156,21 @@ fun StatsTab(vm: ServerDetailViewModel) {
         if (useHistory) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Range.entries.forEach { r ->
-                    FilterChip(selected = range == r, onClick = { range = r }, label = { Text(r.label) })
+                    val sel = range == r
+                    Surface(
+                        onClick = { range = r },
+                        shape = RoundedCornerShape(50),
+                        color = if (sel) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                        contentColor = if (sel) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurfaceVariant,
+                        border = if (sel) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    ) {
+                        Text(
+                            r.label.replace(" ", ""),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontFamily = GeistMono,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                        )
+                    }
                 }
             }
         } else if (vm.history.error != null) {
@@ -172,6 +189,7 @@ fun StatsTab(vm: ServerDetailViewModel) {
             color = ChartCpu,
             maxY = null,
             footer = span,
+            format = { "%.0f%%".format(it) },
         )
         ChartCard(
             title = "Memory",
@@ -180,6 +198,7 @@ fun StatsTab(vm: ServerDetailViewModel) {
             color = ChartMem,
             maxY = 100f,
             footer = span,
+            format = { "%.0f%%".format(it) },
         )
         if (vm.stats?.playersKnown != false) ChartCard(
             title = "Players",
@@ -189,18 +208,6 @@ fun StatsTab(vm: ServerDetailViewModel) {
             maxY = maxPlayers,
             footer = span,
         )
-        if (points.isNotEmpty()) {
-            val peakCpu = points.mapNotNull { it.cpu }.maxOrNull()
-            val peakPlayers = points.mapNotNull { it.players }.maxOrNull()
-            val avgCpu = points.mapNotNull { it.cpu }.takeIf { it.isNotEmpty() }?.average()
-            Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SummaryRow("Average CPU", avgCpu?.let { "%.1f%%".format(it) })
-                    SummaryRow("Peak CPU", peakCpu?.let { "%.1f%%".format(it) })
-                    if (vm.stats?.playersKnown != false) SummaryRow("Most players at once", peakPlayers?.toString())
-                }
-            }
-        }
     }
 }
 
@@ -208,7 +215,7 @@ fun StatsTab(vm: ServerDetailViewModel) {
 private fun SummaryRow(label: String, value: String?) {
     Row {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-        Text(value ?: "—", style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
+        Text(value ?: "—", style = MaterialTheme.typography.bodyMedium, fontFamily = GeistMono)
     }
 }
 
@@ -263,7 +270,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
             Text(
                 relativeLabel(vm.filePath, vm.rootPath),
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = GeistMono,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -594,7 +601,7 @@ fun FileEditorScreen(api: CraftyApi, serverId: String, path: String, onBack: () 
                 vm.loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 vm.error != null -> ErrorBanner(vm.error!!, Modifier.padding(16.dp), onRetry = vm::load)
                 else -> Surface(color = ConsoleBackground, modifier = Modifier.fillMaxSize()) {
-                    val textStyle = TextStyle(color = ConsoleText, fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 18.sp)
+                    val textStyle = TextStyle(color = ConsoleText, fontFamily = GeistMono, fontSize = 13.sp, lineHeight = 18.sp)
                     val vScroll = rememberScrollState()
                     val hScroll = rememberScrollState()
                     val base = Modifier.fillMaxSize().verticalScroll(vScroll)
