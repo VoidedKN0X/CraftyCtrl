@@ -236,7 +236,7 @@ class MonitorService : Service() {
     private fun updateWakeLock(keepAwake: Boolean) {
         if (keepAwake && wakeLock?.isHeld != true) {
             val pm = getSystemService(POWER_SERVICE) as PowerManager
-            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "CraftyRemote:monitor").apply {
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "CraftyCtrl:monitor").apply {
                 setReferenceCounted(false)
                 acquire()
             }

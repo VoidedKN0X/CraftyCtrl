@@ -190,7 +190,7 @@ fun newPlayerEntry(list: PlayerList, bedrock: Boolean, name: String, id: String?
                     put("name", name)
                 }
                 put("created", banDate.format(Date()))
-                put("source", "Crafty Remote")
+                put("source", "CraftyCtrl")
                 put("expires", "forever")
                 put("reason", reason?.takeIf { it.isNotBlank() } ?: "Banned by an operator.")
             }

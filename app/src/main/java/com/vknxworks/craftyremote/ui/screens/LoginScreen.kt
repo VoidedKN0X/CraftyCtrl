@@ -102,7 +102,7 @@ fun LoginScreen(vm: SessionViewModel) {
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    "Crafty Remote",
+                    "CraftyCtrl",
                     style = MaterialTheme.typography.displaySmall,
                 )
                 Text(

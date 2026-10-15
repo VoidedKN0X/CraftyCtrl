@@ -3,7 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [1.5.0] - 2026-10-15
+## [1.5.1] - 2026-10-15
+
+### Changed
+- **Crafty Remote is now CraftyCtrl.** The new name shows on the home screen, sign-in and lock screens. It installs over earlier versions and keeps your sign-in and settings.
+
+ - 2026-10-15
 
 ### New
 - **Plugins & mods** (server → Manage): see every plugin and mod, turn them on or off (the jar is renamed to `.jar.disabled`), remove them, and upload new jars.
