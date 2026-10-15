@@ -3,6 +3,7 @@ package com.vknxworks.craftyremote
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -45,12 +46,18 @@ import com.vknxworks.craftyremote.ui.screens.ServerDetailScreen
 import com.vknxworks.craftyremote.ui.screens.ServerListScreen
 import com.vknxworks.craftyremote.ui.screens.SettingsScreen
 import com.vknxworks.craftyremote.ui.theme.CraftyTheme
+import com.vknxworks.craftyremote.ui.theme.ThemePrefs
 
 // FragmentActivity (still a ComponentActivity) is needed for the biometric prompt.
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        ThemePrefs.load(this)
+        // The app is always dark, so keep the system bar icons light.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         setContent {
             CraftyTheme { AppRoot() }
         }

@@ -2,6 +2,7 @@
 
 package com.vknxworks.craftyremote.ui.screens
 
+import com.vknxworks.craftyremote.ui.theme.GeistMono
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -208,13 +209,13 @@ private fun PropertyRow(def: PropDef, value: String, inFile: Boolean, changed: B
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(def.label, style = MaterialTheme.typography.bodyLarge)
-                        Text(caption, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(caption, style = MaterialTheme.typography.labelSmall, fontFamily = GeistMono, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(checked = value.trim().equals("true", true), onCheckedChange = { onChange(it.toString()) })
                 }
             } else {
                 Text(def.label, style = MaterialTheme.typography.bodyLarge)
-                Text(caption, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(caption, style = MaterialTheme.typography.labelSmall, fontFamily = GeistMono, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 when (def.kind) {
                     PropKind.CHOICE -> ChoiceField(def, value, onChange)
                     PropKind.INT -> {
@@ -610,7 +611,7 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
                 command = edited
                 memoryOf(edited).let { (lo, hi) -> minMem = lo?.toString().orEmpty(); maxMem = hi?.toString().orEmpty() }
             },
-            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = GeistMono),
             supportingText = { Text("Advanced. Crafty may only let admins change this.") },
             modifier = Modifier.fillMaxWidth(),
         )

@@ -40,6 +40,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.HorizontalDivider
+import com.vknxworks.craftyremote.ui.theme.GeistMono
 
 /**
  * Ring gauge with the value in the middle. [fraction] is 0..1 (null draws an empty track).
@@ -83,42 +89,49 @@ fun RingGauge(
 
 data class PillTab(val title: String, val icon: ImageVector)
 
-/** Horizontally scrolling pill tabs; the selected pill fills with the primary container colour. */
+/** Text tabs with an underline under the selected one, over a hairline; scrolls sideways. */
 @Composable
 fun PillTabs(tabs: List<PillTab>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     val state = rememberLazyListState()
     LaunchedEffect(selected) { state.animateScrollToItem((selected - 1).coerceAtLeast(0)) }
-    LazyRow(
-        modifier = modifier.fillMaxWidth(),
-        state = state,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        itemsIndexed(tabs) { i, tab ->
-            val isSel = i == selected
-            val bg by animateColorAsState(
-                if (isSel) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                label = "pillBg",
-            )
-            val fg by animateColorAsState(
-                if (isSel) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                label = "pillFg",
-            )
-            Surface(onClick = { onSelect(i) }, shape = CircleShape, color = bg, contentColor = fg) {
-                Row(
-                    Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+    Box(modifier.fillMaxWidth()) {
+        HorizontalDivider(Modifier.align(Alignment.BottomStart), color = MaterialTheme.colorScheme.outlineVariant)
+        LazyRow(
+            state = state,
+            contentPadding = PaddingValues(horizontal = 12.dp),
+        ) {
+            itemsIndexed(tabs) { i, tab ->
+                val isSel = i == selected
+                val fg by animateColorAsState(
+                    if (isSel) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    label = "tabFg",
+                )
+                val line by animateColorAsState(
+                    if (isSel) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                    label = "tabLine",
+                )
+                Box(
+                    Modifier
+                        .clickable { onSelect(i) }
+                        .padding(horizontal = 12.dp),
                 ) {
-                    Icon(tab.icon, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(tab.title, style = MaterialTheme.typography.labelLarge, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium)
+                    Column(Modifier.width(IntrinsicSize.Max)) {
+                        Text(
+                            tab.title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = fg,
+                            maxLines = 1,
+                            modifier = Modifier.padding(top = 14.dp, bottom = 12.dp),
+                        )
+                        Box(Modifier.fillMaxWidth().height(2.dp).background(line))
+                    }
                 }
             }
         }
     }
 }
 
-/** Large rounded card washed with [accent] from the top-left corner. */
+/** A flat block; [accent] is kept for call sites but only status dots carry colour now. */
 @Composable
 fun AccentCard(
     accent: Color,
@@ -126,38 +139,58 @@ fun AccentCard(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    val base = MaterialTheme.colorScheme.surfaceContainer
-    val wash = Brush.linearGradient(listOf(accent.copy(alpha = 0.22f), accent.copy(alpha = 0.04f), Color.Transparent))
-    val body: @Composable () -> Unit = {
-        Box(Modifier.background(wash)) { content() }
-    }
     if (onClick != null) {
-        Surface(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(28.dp), color = base, content = body)
+        Surface(onClick = onClick, modifier = modifier, color = Color.Transparent, content = content)
     } else {
-        Surface(modifier = modifier, shape = RoundedCornerShape(28.dp), color = base, content = body)
+        Surface(modifier = modifier, color = Color.Transparent, content = content)
     }
 }
 
-/** Small rounded label+value chip used for secondary facts (version, port, world size). */
+/** A small status dot. */
+@Composable
+fun Dot(color: Color, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 8.dp) {
+    Box(modifier.size(size).background(color, CircleShape))
+}
+
+/** Uppercase caption used for labels over numbers and section headings. */
+@Composable
+fun Caption(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        letterSpacing = 1.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier,
+    )
+}
+
+/** Caption, a big monospaced value and an optional line under it. */
+@Composable
+fun BigMetric(label: String, value: String, sub: String? = null, modifier: Modifier = Modifier, bar: Float? = null) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Caption(label)
+        Text(value, style = MaterialTheme.typography.headlineSmall, fontFamily = GeistMono, maxLines = 1)
+        bar?.let { HairBar(it) }
+        sub?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
+    }
+}
+
+/** Label on the left, monospaced value on the right, over a hairline. */
+@Composable
+fun DetailRow(label: String, value: String) {
+    Column {
+        Row(Modifier.fillMaxWidth().padding(vertical = 11.dp)) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            Text(value, style = MaterialTheme.typography.bodyMedium, fontFamily = GeistMono, maxLines = 1)
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}
+
+/** Kept for older call sites: now a plain label/value pair. */
 @Composable
 fun FactChip(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(32.dp)
-                    .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
-            }
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            }
-        }
-    }
+    BigMetric(label, value, modifier = modifier)
 }
 
 /** Fraction helper for "x / max" style gauges. */

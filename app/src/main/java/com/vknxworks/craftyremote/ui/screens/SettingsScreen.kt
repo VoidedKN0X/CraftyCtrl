@@ -2,6 +2,8 @@
 
 package com.vknxworks.craftyremote.ui.screens
 
+import com.vknxworks.craftyremote.ui.theme.Accent
+import com.vknxworks.craftyremote.ui.theme.ThemePrefs
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -172,6 +174,24 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
 
             // ------------------------------------------------ alerts
+            SectionLabel("Appearance")
+            SettingsCard {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Accent colour", style = MaterialTheme.typography.bodyLarge)
+                    val accents = Accent.entries.filter { it != Accent.WALLPAPER || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S }
+                    ChoiceChips(
+                        options = accents.map { it.ordinal to it.label },
+                        selected = ThemePrefs.accent.ordinal,
+                        onSelect = { ThemePrefs.save(context, Accent.entries[it]) },
+                    )
+                    Text(
+                        "Used for running servers and the players chart. Wallpaper follows your phone's Material You colour.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
             SectionLabel("Live stats")
             SettingsCard {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -389,7 +409,16 @@ private fun CheckRow(title: String, checked: Boolean, onChange: (Boolean) -> Uni
 private fun ChoiceChips(options: List<Pair<Int, String>>, selected: Int, onSelect: (Int) -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { (value, label) ->
-            FilterChip(selected = selected == value, onClick = { onSelect(value) }, label = { Text(label) })
+            FilterChip(
+                selected = selected == value,
+                onClick = { onSelect(value) },
+                label = { Text(label) },
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.onSurface,
+                    selectedLabelColor = MaterialTheme.colorScheme.surface,
+                ),
+            )
         }
     }
 }

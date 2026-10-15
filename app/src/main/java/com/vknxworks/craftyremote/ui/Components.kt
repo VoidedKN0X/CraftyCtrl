@@ -1,5 +1,6 @@
 package com.vknxworks.craftyremote.ui
 
+import com.vknxworks.craftyremote.ui.theme.GeistMono
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -80,24 +82,18 @@ fun StatusDot(state: ServerState?, modifier: Modifier = Modifier) {
 
 @Composable
 fun StatusPill(state: ServerState?) {
-    val color = stateColor(state)
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = color.copy(alpha = 0.16f),
-        contentColor = color,
+    // Just a dot and a word: the colour carries the state, the text stays quiet.
+    Row(
+        Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            StatusDot(state, Modifier.size(7.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(
-                state?.label ?: "Unknown",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        StatusDot(state, Modifier.size(7.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(
+            state?.label ?: "Unknown",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -130,7 +126,7 @@ fun MetricTile(
             Text(
                 value,
                 style = MaterialTheme.typography.titleMedium,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = GeistMono,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -170,8 +166,8 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text.uppercase(),
         modifier = modifier,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.labelSmall,
+        letterSpacing = 1.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
