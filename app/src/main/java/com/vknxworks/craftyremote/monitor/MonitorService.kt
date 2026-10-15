@@ -258,7 +258,6 @@ class MonitorService : Service() {
         private val nextId = AtomicInteger(2000)
 
         fun canNotify(context: Context): Boolean =
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
                 ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
 

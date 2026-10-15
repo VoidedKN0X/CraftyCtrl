@@ -40,9 +40,8 @@ enum class Accent(val key: String, val label: String, val color: Color?, val lig
     WALLPAPER("wallpaper", "Wallpaper", null, null);
 
     companion object {
-        /** Unset means the wallpaper's Material You colours where the phone has them (Android 12+). */
-        fun of(key: String?) = entries.firstOrNull { it.key == key }
-            ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) WALLPAPER else GREEN
+        /** Unset means the wallpaper's Material You colours. */
+        fun of(key: String?) = entries.firstOrNull { it.key == key } ?: WALLPAPER
     }
 }
 
@@ -179,13 +178,12 @@ fun CraftyTheme(content: @Composable () -> Unit) {
     val a = ThemePrefs.accent
     val accent = (if (dark) a.color else a.lightColor)
         ?: when {
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> if (dark) Accent.GREEN.color!! else Accent.GREEN.lightColor!!
             dark -> dynamicDarkColorScheme(context).primary
             else -> dynamicLightColorScheme(context).primary
         }
     if (ThemePrefs.accentColor != accent) ThemePrefs.accentColor = accent
     val base = if (dark) darkScheme(accent) else lightScheme(accent)
-    val scheme = if (a == Accent.WALLPAPER && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val scheme = if (a == Accent.WALLPAPER) {
         // The phone's full Material You palette, on the app's own quiet ground.
         val dyn = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         dyn.copy(
