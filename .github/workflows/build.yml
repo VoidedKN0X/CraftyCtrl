@@ -53,7 +53,9 @@ jobs:
       - name: Build release APK
         env:
           CRAFTY_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          CRAFTY_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          # The alias isn't secret: keep it as a repository *variable* so it isn't masked
+          # (as ***) in logs. Falls back to the old KEY_ALIAS secret if no variable is set.
+          CRAFTY_KEY_ALIAS: ${{ vars.KEY_ALIAS || secrets.KEY_ALIAS }}
           CRAFTY_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x gradlew
