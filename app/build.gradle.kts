@@ -19,15 +19,15 @@ fun signingValue(env: String, prop: String): String? =
 val releaseStorePath = signingValue("CRAFTY_KEYSTORE_PATH", "storeFile")
 
 android {
-    namespace = "com.vknxworks.craftyremote"
+    namespace = "com.vknxworks.craftyctrl"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.vknxworks.craftyremote"
+        applicationId = "com.vknxworks.craftyctrl"
         minSdk = 33
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.6.0"
+        versionCode = 13
+        versionName = "2.0.0"
     }
 
     signingConfigs {
