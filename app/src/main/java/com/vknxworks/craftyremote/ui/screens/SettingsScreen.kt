@@ -4,6 +4,7 @@ package com.vknxworks.craftyremote.ui.screens
 
 import com.vknxworks.craftyremote.ui.theme.Accent
 import com.vknxworks.craftyremote.ui.theme.ThemePrefs
+import com.vknxworks.craftyremote.ui.theme.ThemeMode
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -177,6 +178,13 @@ fun SettingsScreen(onBack: () -> Unit) {
             SectionLabel("Appearance")
             SettingsCard {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Theme", style = MaterialTheme.typography.bodyLarge)
+                    ChoiceChips(
+                        options = ThemeMode.entries.map { it.ordinal to it.label },
+                        selected = ThemePrefs.mode.ordinal,
+                        onSelect = { ThemePrefs.saveMode(context, ThemeMode.entries[it]) },
+                    )
+                    Spacer(Modifier.height(8.dp))
                     Text("Accent colour", style = MaterialTheme.typography.bodyLarge)
                     val accents = Accent.entries.filter { it != Accent.WALLPAPER || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S }
                     ChoiceChips(

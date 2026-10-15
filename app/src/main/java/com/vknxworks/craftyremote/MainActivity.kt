@@ -53,12 +53,15 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ThemePrefs.load(this)
-        // The app is always dark, so keep the system bar icons light.
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
-        )
+        enableEdgeToEdge()
         setContent {
+            // System bar icons follow the app's own light/dark choice, not just the phone's.
+            val dark = ThemePrefs.isDark()
+            LaunchedEffect(dark) {
+                val clear = android.graphics.Color.TRANSPARENT
+                val style = if (dark) SystemBarStyle.dark(clear) else SystemBarStyle.light(clear, clear)
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+            }
             CraftyTheme { AppRoot() }
         }
     }

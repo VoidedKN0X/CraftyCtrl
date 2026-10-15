@@ -2,6 +2,9 @@ package com.vknxworks.craftyremote.ui.theme
 
 import android.os.Build
 import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -28,15 +31,26 @@ import androidx.compose.ui.text.font.FontVariation
 import com.vknxworks.craftyremote.R
 
 /** Accent choices; "wallpaper" takes the phone's Material You colour (Android 12+). */
-enum class Accent(val key: String, val label: String, val color: Color?) {
-    GREEN("green", "Green", Color(0xFF7BD88F)),
-    BLUE("blue", "Blue", Color(0xFF8AB4F8)),
-    AMBER("amber", "Amber", Color(0xFFE8B04B)),
-    PURPLE("purple", "Purple", Color(0xFFC9A7F5)),
-    WALLPAPER("wallpaper", "Wallpaper", null);
+enum class Accent(val key: String, val label: String, val color: Color?, val lightColor: Color?) {
+    GREEN("green", "Green", Color(0xFF7BD88F), Color(0xFF2F9E55)),
+    BLUE("blue", "Blue", Color(0xFF8AB4F8), Color(0xFF2F6FDB)),
+    AMBER("amber", "Amber", Color(0xFFE8B04B), Color(0xFFB7791F)),
+    PURPLE("purple", "Purple", Color(0xFFC9A7F5), Color(0xFF8A5CD0)),
+    WALLPAPER("wallpaper", "Wallpaper", null, null);
 
     companion object {
         fun of(key: String?) = entries.firstOrNull { it.key == key } ?: GREEN
+    }
+}
+
+/** Light or dark: follow the phone, or always one of them. */
+enum class ThemeMode(val key: String, val label: String) {
+    SYSTEM("system", "Follow system"),
+    LIGHT("light", "Light"),
+    DARK("dark", "Dark");
+
+    companion object {
+        fun of(key: String?) = entries.firstOrNull { it.key == key } ?: SYSTEM
     }
 }
 
@@ -47,8 +61,25 @@ object ThemePrefs {
     var accentColor by mutableStateOf(Color(0xFF7BD88F))
         internal set
 
+    var mode by mutableStateOf(ThemeMode.SYSTEM)
+
     fun load(context: Context) {
-        accent = Accent.of(context.getSharedPreferences("app_settings", Context.MODE_PRIVATE).getString(KEY, null))
+        val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        accent = Accent.of(prefs.getString(KEY, null))
+        mode = ThemeMode.of(prefs.getString(KEY_MODE, null))
+    }
+
+    fun saveMode(context: Context, m: ThemeMode) {
+        mode = m
+        context.getSharedPreferences("app_settings", Context.MODE_PRIVATE).edit().putString(KEY_MODE, m.key).apply()
+    }
+
+    /** Whether the app should be dark right now. */
+    @Composable
+    fun isDark(): Boolean = when (mode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
     }
 
     fun save(context: Context, a: Accent) {
@@ -57,15 +88,55 @@ object ThemePrefs {
     }
 
     private const val KEY = "accent"
+    private const val KEY_MODE = "theme_mode"
 }
 
 // Quiet, near-black ground with off-white text; colour is kept for status and the accent.
-val Ground = Color(0xFF0E0F0E)
-val Ink = Color(0xFFEDEDEA)
-val Muted = Color(0xFF8A8C88)
-val Hairline = Color(0xFF232523)
+private val Ground = Color(0xFF0E0F0E)
+private val Ink = Color(0xFFEDEDEA)
+private val Muted = Color(0xFF8A8C88)
+private val Hairline = Color(0xFF232523)
 
-private fun scheme(accent: Color) = darkColorScheme(
+// The same idea inverted: warm off-white ground, near-black text.
+private val LGround = Color(0xFFFAFAF8)
+private val LInk = Color(0xFF141514)
+private val LMuted = Color(0xFF666864)
+private val LHairline = Color(0xFFE4E5E2)
+
+private fun lightScheme(accent: Color) = lightColorScheme(
+    primary = LInk,
+    onPrimary = LGround,
+    primaryContainer = Color(0xFFE9EAE7),
+    onPrimaryContainer = LInk,
+    secondary = accent,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFEDEEEB),
+    onSecondaryContainer = LInk,
+    tertiary = Color(0xFF9A6410),
+    onTertiary = Color.White,
+    background = LGround,
+    onBackground = LInk,
+    surface = LGround,
+    onSurface = LInk,
+    surfaceVariant = Color(0xFFEFF0ED),
+    onSurfaceVariant = LMuted,
+    surfaceTint = Color.Transparent,
+    inverseSurface = LInk,
+    inverseOnSurface = LGround,
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Color(0xFFF5F5F3),
+    surfaceContainer = Color(0xFFF2F2EF),
+    surfaceContainerHigh = Color(0xFFECEDEA),
+    surfaceContainerHighest = Color(0xFFE4E5E2),
+    outline = Color(0xFFC9CBC6),
+    outlineVariant = LHairline,
+    error = Color(0xFFC0362F),
+    onError = Color.White,
+    errorContainer = Color(0xFFFBE3E1),
+    onErrorContainer = Color(0xFF5C1210),
+)
+
+private fun darkScheme(accent: Color) = darkColorScheme(
     primary = Ink,
     onPrimary = Ground,
     primaryContainer = Color(0xFF232523),
@@ -101,10 +172,21 @@ private fun scheme(accent: Color) = darkColorScheme(
 @Composable
 fun CraftyTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
-    val accent = ThemePrefs.accent.color
-        ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) dynamicDarkColorScheme(context).primary else Accent.GREEN.color!!
+    val dark = ThemePrefs.isDark()
+    val a = ThemePrefs.accent
+    val accent = (if (dark) a.color else a.lightColor)
+        ?: when {
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> if (dark) Accent.GREEN.color!! else Accent.GREEN.lightColor!!
+            dark -> dynamicDarkColorScheme(context).primary
+            else -> dynamicLightColorScheme(context).primary
+        }
     if (ThemePrefs.accentColor != accent) ThemePrefs.accentColor = accent
-    MaterialTheme(colorScheme = scheme(accent), shapes = AppShapes, typography = AppTypography, content = content)
+    MaterialTheme(
+        colorScheme = if (dark) darkScheme(accent) else lightScheme(accent),
+        shapes = AppShapes,
+        typography = AppTypography,
+        content = content,
+    )
 }
 
 @OptIn(ExperimentalTextApi::class)
@@ -152,7 +234,7 @@ fun stateColor(state: ServerState?): Color = when (state) {
     ServerState.RUNNING -> ThemePrefs.accentColor
     ServerState.STARTING, ServerState.UPDATING -> Color(0xFFE8B04B)
     ServerState.CRASHED -> Color(0xFFF2777A)
-    ServerState.STOPPED, null -> Color(0xFF5A5C58)
+    ServerState.STOPPED, null -> Color(0xFF8A8C88)
 }
 
 // Console and editor colours come from the active theme.
