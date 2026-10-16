@@ -3,7 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [2.3.1] - 2026-10-16
+## [2.3.2] - 2026-10-16
+
+### Changed
+- The Servers header has a single ⋮ button, styled like the other tonal buttons, holding Broadcast, Settings and Sign out.
+
+ - 2026-10-16
 
 ### Fixed
 - Text and icons on the Servers and Host tabs (including the ⋮ menu button) were black in dark mode. They now follow the theme: light in dark mode, dark in light mode.

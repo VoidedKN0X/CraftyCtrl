@@ -199,11 +199,20 @@ private fun ServersTab(
                     ).joinToString(" · "),
                     modifier = Modifier.padding(bottom = 4.dp),
                 ) {
-                    FilledTonalIconButton(onClick = onBroadcast) { Icon(Icons.Outlined.Campaign, "Broadcast to all servers") }
-                    FilledTonalIconButton(onClick = onSettings) { Icon(Icons.Outlined.Settings, "Settings") }
                     Box {
-                        IconButton(onClick = { menuOpen = true }) { Icon(Icons.Outlined.MoreVert, "More") }
+                        FilledTonalIconButton(onClick = { menuOpen = true }) { Icon(Icons.Outlined.MoreVert, "More") }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Broadcast") },
+                                leadingIcon = { Icon(Icons.Outlined.Campaign, contentDescription = null) },
+                                onClick = { menuOpen = false; onBroadcast() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Settings") },
+                                leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
+                                onClick = { menuOpen = false; onSettings() },
+                            )
+                            HorizontalDivider()
                             DropdownMenuItem(
                                 text = { Text("Sign out") },
                                 leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null) },
