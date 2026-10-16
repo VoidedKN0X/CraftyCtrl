@@ -113,6 +113,14 @@ import com.vknxworks.craftyctrl.ui.theme.stateColor
 import com.vknxworks.craftyctrl.ui.Countdown
 import com.vknxworks.craftyctrl.ui.Countdowns
 import com.vknxworks.craftyctrl.ui.verifyUser
+import com.vknxworks.craftyctrl.ui.IslandTab
+import com.vknxworks.craftyctrl.ui.TabIsland
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
 import com.vknxworks.craftyctrl.ui.CtrlCard
 import com.vknxworks.craftyctrl.ui.StatRow
 import com.vknxworks.craftyctrl.ui.BigStat
@@ -216,7 +224,7 @@ fun ServerDetailScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
-        snackbarHost = { SnackbarHost(snackbar) },
+        snackbarHost = { SnackbarHost(snackbar, Modifier.padding(bottom = 78.dp)) },
         topBar = {
             TopAppBar(
                 title = {
@@ -285,29 +293,41 @@ fun ServerDetailScreen(
             )
         },
     ) { padding ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            PillTabs(
-                tabs = remember { DetailTab.entries.map { PillTab(it.title, it.icon) } },
-                selected = tab,
-                onSelect = { tab = it },
-            )
-            AnimatedContent(
-                targetState = DetailTab.entries[tab],
-                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-                label = "tab",
-            ) { current ->
-                when (current) {
-                    DetailTab.OVERVIEW -> OverviewTab(vm, onManage)
-                    DetailTab.CONSOLE -> ConsoleTab(vm)
-                    DetailTab.STATS -> StatsTab(vm)
-                    DetailTab.FILES -> FilesTab(vm, onOpenFile)
-                    DetailTab.BACKUPS -> BackupsTab(vm)
-                    DetailTab.SCHEDULES -> SchedulesTab(vm)
+        // The tabs float at the bottom as a frosted island, the same as on the home screen.
+        // It steps aside while the keyboard is open so the console's command field stays visible.
+        val haze = remember { HazeState() }
+        val imeVisible = WindowInsets.isImeVisible
+        val islandSpace = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 78.dp
+        Box(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .hazeSource(haze)
+                    .then(if (imeVisible) Modifier.imePadding() else Modifier.padding(bottom = islandSpace)),
+            ) {
+                AnimatedContent(
+                    targetState = DetailTab.entries[tab],
+                    transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                    label = "tab",
+                ) { current ->
+                    when (current) {
+                        DetailTab.OVERVIEW -> OverviewTab(vm, onManage)
+                        DetailTab.CONSOLE -> ConsoleTab(vm)
+                        DetailTab.STATS -> StatsTab(vm)
+                        DetailTab.FILES -> FilesTab(vm, onOpenFile)
+                        DetailTab.BACKUPS -> BackupsTab(vm)
+                        DetailTab.SCHEDULES -> SchedulesTab(vm)
+                    }
                 }
+            }
+            if (!imeVisible) {
+                TabIsland(
+                    tabs = DetailTab.entries.mapIndexed { i, t -> IslandTab(i, t.icon, t.title) },
+                    selected = tab,
+                    hazeState = haze,
+                    onSelect = { tab = it },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
             }
         }
     }

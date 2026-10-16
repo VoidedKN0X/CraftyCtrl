@@ -3,7 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [2.3.2] - 2026-10-16
+## [2.4.0] - 2026-10-16
+
+### Changed
+- **Server pages use the tab island too:** Overview, Console, Stats, Files, Backups and Schedules are now in the same floating frosted-glass island as the home screen, at the bottom instead of a tab row at the top. It steps aside while the keyboard is open, so the console's command field stays in view.
+
+ - 2026-10-16
 
 ### Changed
 - The Servers header has a single ⋮ button, styled like the other tonal buttons, holding Broadcast, Settings and Sign out.

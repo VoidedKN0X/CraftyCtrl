@@ -26,8 +26,8 @@ android {
         applicationId = "com.vknxworks.craftyctrl"
         minSdk = 33
         targetSdk = 35
-        versionCode = 19
-        versionName = "2.3.2"
+        versionCode = 20
+        versionName = "2.4.0"
     }
 
     signingConfigs {
