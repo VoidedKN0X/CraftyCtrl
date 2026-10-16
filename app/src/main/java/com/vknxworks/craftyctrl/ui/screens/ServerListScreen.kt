@@ -56,6 +56,10 @@ import com.vknxworks.craftyctrl.ui.StatRow
 import com.vknxworks.craftyctrl.ui.rememberRefreshMs
 import com.vknxworks.craftyctrl.ui.theme.stateColor
 import java.net.URI
+import com.vknxworks.craftyctrl.ui.IslandTab
+import com.vknxworks.craftyctrl.ui.TabIsland
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 
 /** Home: Servers and Host as bottom tabs, like the other Ctrl apps. */
 @Composable
@@ -79,47 +83,45 @@ fun ServerListScreen(
     // Back on the Host tab returns to Servers first.
     if (tab != 0) BackHandler { tab = 0 }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(snackbar) },
-        floatingActionButton = {
-            if (tab == 0) {
-                ExtendedFloatingActionButton(
-                    onClick = onCreate,
-                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    text = { Text("New server") },
-                )
-            }
-        },
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                NavigationBarItem(
-                    selected = tab == 0, onClick = { tab = 0 },
-                    icon = { Icon(if (tab == 0) Icons.Filled.Dns else Icons.Outlined.Dns, null) },
-                    label = { Text("Servers") },
-                )
-                NavigationBarItem(
-                    selected = tab == 1, onClick = { tab = 1 },
-                    icon = { Icon(if (tab == 1) Icons.Filled.Memory else Icons.Outlined.Memory, null) },
-                    label = { Text("Host") },
-                )
-            }
-        },
-    ) { pad ->
-        AnimatedContent(
-            targetState = tab,
-            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-            label = "homeTab",
-        ) { t ->
-            when (t) {
-                0 -> ServersTab(
-                    vm, host, pad.calculateBottomPadding(), onOpen,
-                    onBroadcast = { broadcastOpen = true }, onSettings = onSettings, onSignOut = onSignOut,
-                )
-                else -> HostTab(vm, host, pad.calculateBottomPadding())
+    // Content runs edge to edge under the floating island, which blurs it.
+    val haze = remember { HazeState() }
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val islandSpace = navBottom + 78.dp
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Box(Modifier.fillMaxSize().hazeSource(haze)) {
+            AnimatedContent(
+                targetState = tab,
+                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                label = "homeTab",
+            ) { t ->
+                when (t) {
+                    0 -> ServersTab(
+                        vm, host, islandSpace, onOpen,
+                        onBroadcast = { broadcastOpen = true }, onSettings = onSettings, onSignOut = onSignOut,
+                    )
+                    else -> HostTab(vm, host, islandSpace)
+                }
             }
         }
+        if (tab == 0) {
+            ExtendedFloatingActionButton(
+                onClick = onCreate,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("New server") },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = islandSpace + 12.dp),
+            )
+        }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = islandSpace))
+        TabIsland(
+            tabs = listOf(
+                IslandTab(0, if (tab == 0) Icons.Filled.Dns else Icons.Outlined.Dns, "Servers"),
+                IslandTab(1, if (tab == 1) Icons.Filled.Memory else Icons.Outlined.Memory, "Host"),
+            ),
+            selected = tab,
+            hazeState = haze,
+            onSelect = { tab = it },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 
     if (broadcastOpen) {
@@ -179,7 +181,7 @@ private fun ServersTab(
             contentPadding = PaddingValues(
                 start = 16.dp, end = 16.dp,
                 top = bars.calculateTopPadding() + 8.dp,
-                bottom = bottomPadding + 96.dp,
+                bottom = bottomPadding + 88.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
