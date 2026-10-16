@@ -3,7 +3,18 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [2.1.0] - 2026-10-16
+## [2.2.0] - 2026-10-16
+
+### Changed
+- **Same layout as the other Ctrl apps.**
+  - The home screen has bottom tabs: **Servers** and the new **Host** tab, which shows CPU, memory and disk meters plus servers running and players online.
+  - Compact headers with an icon tile, plus quick buttons for broadcast and settings.
+  - Servers show as rounded cards with CPU, memory and players.
+  - The server page groups status and power, players, details and the Manage pages into cards, and uses standard Material tabs.
+  - Stats charts sit in cards.
+  - Settings has a large collapsing title, and its options are rows with icons, switches and segmented buttons.
+
+ - 2026-10-16
 
 ### Changed
 - **Matches the other Ctrl apps' theme:** Material You colours by default, with CraftyCtrl's blue as the fallback; System / Light / Dark; the system font; and the same rounded shapes.
