@@ -91,12 +91,12 @@ fun LineChart(
             areas.forEach { drawPath(it, brush) }
         }
         lines.forEach {
-            drawPath(it, color, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(it, color, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }
 }
 
-/** A flat chart block: label and current value, a thin line, then min / avg / max, over a hairline. */
+/** A chart card: label and current value, the line, then min / avg / max. */
 @Composable
 fun ChartCard(
     title: String,
@@ -107,34 +107,33 @@ fun ChartCard(
     footer: String? = null,
     format: (Float) -> String = { "%.0f".format(it) },
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(verticalAlignment = Alignment.Bottom) {
+    CtrlCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                title.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                letterSpacing = 1.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
-            Text(current, style = MaterialTheme.typography.titleLarge, fontFamily = Mono)
+            Text(current, style = MaterialTheme.typography.titleMedium, fontFamily = Mono)
         }
         val present = values.filterNotNull()
         if (present.size >= 2) {
-            LineChart(values, color, maxY = maxY)
+            LineChart(values, color, maxY = maxY, height = 110.dp, fill = true, gridLines = 3)
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                 listOf("min" to present.min(), "avg" to present.average().toFloat(), "max" to present.max()).forEach { (k, v) ->
                     Text("$k ${format(v)}", style = MaterialTheme.typography.labelSmall, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
-            Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.Center) {
                 Text("Collecting data…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         footer?.let {
             Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        HorizontalDivider(Modifier.padding(top = 10.dp), color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 

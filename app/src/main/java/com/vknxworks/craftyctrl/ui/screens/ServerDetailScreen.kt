@@ -113,6 +113,13 @@ import com.vknxworks.craftyctrl.ui.theme.stateColor
 import com.vknxworks.craftyctrl.ui.Countdown
 import com.vknxworks.craftyctrl.ui.Countdowns
 import com.vknxworks.craftyctrl.ui.verifyUser
+import com.vknxworks.craftyctrl.ui.CtrlCard
+import com.vknxworks.craftyctrl.ui.StatRow
+import com.vknxworks.craftyctrl.ui.BigStat
+import com.vknxworks.craftyctrl.ui.ItemDivider
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.foundation.combinedClickable
@@ -493,102 +500,90 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(30.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         vm.statsError?.let { ErrorBanner(it) }
         if (s == null && vm.statsError == null) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
         }
 
-        if (s != null) StatusHero(s)
+        CtrlCard {
+            if (s != null) StatusHero(s)
+            Countdowns.active[vm.serverId]?.let { c -> CountdownBanner(c, onCancel = vm::cancelCountdown) }
+            PowerControls(
+                state = s?.state,
+                pending = vm.pendingAction,
+                onAction = { a -> if (a.confirmText != null) confirm = a else vm.runAction(a) },
+            )
+        }
 
-        Countdowns.active[vm.serverId]?.let { c -> CountdownBanner(c, onCancel = vm::cancelCountdown) }
-
-        PowerControls(
-            state = s?.state,
-            pending = vm.pendingAction,
-            onAction = { a -> if (a.confirmText != null) confirm = a else vm.runAction(a) },
-        )
-
-        if (s != null) {
-            // Players: names as small chips, tap one for actions.
-            if (s.running) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row {
-                        SectionLabel("Online", Modifier.weight(1f))
-                        if (s.playersKnown) {
-                            Text(
-                                playersText(s.online, s.max),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontFamily = Mono,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
+        if (s != null && s.running) {
+            CtrlCard("Players") {
+                if (s.playersKnown) StatRow("Online", playersText(s.online, s.max))
+                if (s.players.isNotEmpty()) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         s.players.forEach { name ->
-                            Surface(
+                            AssistChip(
                                 onClick = { playerSheet = name },
-                                shape = RoundedCornerShape(50),
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            ) {
-                                Text(name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
-                            }
-                        }
-                        Surface(
-                            onClick = { playerSheet = "" },
-                            shape = RoundedCornerShape(50),
-                            color = Color.Transparent,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                        ) {
-                            Text(
-                                if (s.players.isEmpty()) "Manage a player…" else "By name…",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                label = { Text(name) },
+                                leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null, modifier = Modifier.size(18.dp)) },
                             )
                         }
                     }
-                    if (s.players.isEmpty() && (s.online ?: 0) > 0) {
-                        Text(
-                            "This server doesn't share player names with Crafty.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                } else if ((s.online ?: 0) > 0) {
+                    Text(
+                        "This server doesn't share player names with Crafty.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-            }
-
-            // Only facts Crafty actually reported; unknown ones are left out rather than shown as "—".
-            Column {
-                listOfNotNull(
-                    vm.version?.let { "Version" to it },
-                    s.port?.let { "Port" to it.toString() },
-                    s.worldName?.let { name -> "World" to listOfNotNull(name, s.worldSize).joinToString(" · ") },
-                ).forEach { (k, v) -> DetailRow(k, v) }
+                OutlinedButton(onClick = { playerSheet = "" }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.ManageAccounts, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Manage a player by name…")
+                }
             }
         }
 
-        Column {
-            ManagePage.entries.forEach { page ->
-                Column(Modifier.fillMaxWidth().clickable { onManage(page) }) {
-                    Row(Modifier.padding(vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(page.title, style = MaterialTheme.typography.bodyLarge)
-                            Text(page.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp),
-                        )
-                    }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                }
+        if (s != null) {
+            // Only facts Crafty actually reported; unknown ones are left out rather than shown as "—".
+            val facts = listOfNotNull(
+                vm.version?.let { "Version" to it },
+                s.port?.let { "Port" to it.toString() },
+                s.worldName?.let { "World" to it },
+                s.worldSize?.let { "World size" to it },
+                s.mem?.let { "Memory" to it },
+            )
+            if (facts.isNotEmpty()) {
+                CtrlCard("Details") { facts.forEach { (k, v) -> StatRow(k, v) } }
+            }
+        }
+
+        Text(
+            "Manage",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 16.dp, top = 6.dp),
+        )
+        Card(
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            ManagePage.entries.forEachIndexed { idx, page ->
+                if (idx > 0) ItemDivider()
+                ListItem(
+                    leadingContent = { Icon(page.icon, contentDescription = null) },
+                    headlineContent = { Text(page.title) },
+                    supportingContent = { Text(page.subtitle) },
+                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    modifier = Modifier.clickable { onManage(page) },
+                )
             }
         }
     }
@@ -645,37 +640,30 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
 
 @Composable
 private fun StatusHero(s: ServerStats) {
-    Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Dot(stateColor(s.state))
-                Spacer(Modifier.width(10.dp))
-                Text(s.state.label, style = MaterialTheme.typography.bodyLarge)
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Dot(stateColor(s.state), size = 10.dp)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(s.state.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 val detail = when (s.state) {
-                    ServerState.RUNNING -> s.started?.let { uptimeShort(it) }?.let { " · up $it" }
-                    ServerState.CRASHED -> " · Crafty detected a crash"
-                    ServerState.STARTING -> " · coming up…"
-                    ServerState.UPDATING -> " · updating the jar…"
-                    ServerState.STOPPED -> null
+                    ServerState.RUNNING -> s.started?.let { uptimeShort(it) }?.let { "Up $it" }
+                    ServerState.CRASHED -> "Crafty detected a crash"
+                    ServerState.STARTING -> "Coming up…"
+                    ServerState.UPDATING -> "Updating the server jar…"
+                    ServerState.STOPPED -> "Not running"
                 }
-                detail?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            }
-            s.description?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
+        s.description?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
         if (s.running || s.state == ServerState.STARTING) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                BigMetric("CPU", s.cpu?.let { "%.0f%%".format(it) } ?: "—", "of host", Modifier.weight(1f))
-                BigMetric(
-                    "Memory", s.mem?.replace(" ", "") ?: "—",
-                    s.memPercent?.let { "%.0f%% of max".format(it) }, Modifier.weight(1f),
-                )
-                if (s.worldSize != null) {
-                    BigMetric("World", s.worldSize.replace(" ", ""), "on disk", Modifier.weight(1f))
-                } else if (s.playersKnown) {
-                    BigMetric("Players", s.online?.toString() ?: "—", s.max?.let { "of $it" }, Modifier.weight(1f))
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                BigStat("CPU", s.cpu?.let { "%.0f%%".format(it) } ?: "—", Modifier.weight(1f))
+                BigStat("Memory", s.memPercent?.let { "%.0f%%".format(it) } ?: s.mem?.replace(" ", "") ?: "—", Modifier.weight(1f))
+                if (s.playersKnown) BigStat("Players", playersText(s.online, s.max).replace(" ", ""), Modifier.weight(1f))
             }
         }
     }
@@ -718,21 +706,22 @@ private fun PowerControls(state: ServerState?, pending: PowerAction?, onAction: 
     val idle = pending == null
     when {
         live -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PowerButton(PowerAction.RESTART, idle, pending, Modifier.weight(1f), onAction)
-            PowerButton(PowerAction.STOP, idle, pending, Modifier.weight(1f), onAction)
-            PowerButton(PowerAction.KILL, idle, pending, Modifier.weight(1f), onAction)
+            PowerButton(PowerAction.RESTART, Icons.Filled.RestartAlt, idle, pending, Modifier.weight(1f), onAction)
+            PowerButton(PowerAction.STOP, Icons.Filled.Stop, idle, pending, Modifier.weight(1f), onAction)
+            PowerButton(PowerAction.KILL, Icons.Filled.Dangerous, idle, pending, Modifier.weight(1f), onAction)
         }
-        state == ServerState.UPDATING -> PowerButton(PowerAction.KILL, idle, pending, Modifier.fillMaxWidth(), onAction)
+        state == ServerState.UPDATING -> PowerButton(PowerAction.KILL, Icons.Filled.Dangerous, idle, pending, Modifier.fillMaxWidth(), onAction)
         else -> Button(
             onClick = { onAction(PowerAction.START) },
             enabled = idle && state != null,
-            shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth().height(48.dp),
         ) {
             if (pending == PowerAction.START) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                Spacer(Modifier.width(8.dp))
+            } else {
+                Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
             }
+            Spacer(Modifier.width(8.dp))
             Text("Start server")
         }
     }
@@ -741,31 +730,36 @@ private fun PowerControls(state: ServerState?, pending: PowerAction?, onAction: 
 @Composable
 private fun PowerButton(
     action: PowerAction,
+    icon: ImageVector,
     enabled: Boolean,
     pending: PowerAction?,
     modifier: Modifier,
     onAction: (PowerAction) -> Unit,
 ) {
-    val danger = action.dangerous
-    OutlinedButton(
-        onClick = { onAction(action) },
-        enabled = enabled,
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (danger) MaterialTheme.colorScheme.error.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outline,
-        ),
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-        ),
-        contentPadding = PaddingValues(horizontal = 8.dp),
-        modifier = modifier.height(46.dp),
-    ) {
+    val content: @Composable () -> Unit = {
         if (pending == action) {
             CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-            Spacer(Modifier.width(6.dp))
+        } else {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
         }
+        Spacer(Modifier.width(6.dp))
         Text(action.label, maxLines = 1)
+    }
+    if (action.dangerous) {
+        OutlinedButton(
+            onClick = { onAction(action) },
+            enabled = enabled,
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            modifier = modifier.height(48.dp),
+        ) { content() }
+    } else {
+        FilledTonalButton(
+            onClick = { onAction(action) },
+            enabled = enabled,
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            modifier = modifier.height(48.dp),
+        ) { content() }
     }
 }
 
@@ -1068,8 +1062,8 @@ private fun BackupCard(
     onRun: () -> Unit,
 ) {
     Card(
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1259,8 +1253,8 @@ private fun TaskEditor(vm: ServerDetailViewModel, e: TaskEdit, close: () -> Unit
 private fun TaskCard(t: ScheduledTask, onClick: () -> Unit, onRun: () -> Unit, onToggle: (Boolean) -> Unit) {
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -1310,7 +1304,7 @@ private fun EmptyCard(
     busy: Boolean = false,
     onAction: () -> Unit = {},
 ) {
-    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

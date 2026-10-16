@@ -476,7 +476,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+        Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
             Column(Modifier.padding(vertical = 6.dp)) {
                 Row(
                     Modifier
