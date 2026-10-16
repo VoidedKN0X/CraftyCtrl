@@ -1,6 +1,6 @@
 package com.vknxworks.craftyctrl.ui
 
-import com.vknxworks.craftyctrl.ui.theme.GeistMono
+import com.vknxworks.craftyctrl.ui.theme.Mono
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -126,7 +126,7 @@ fun MetricTile(
             Text(
                 value,
                 style = MaterialTheme.typography.titleMedium,
-                fontFamily = GeistMono,
+                fontFamily = Mono,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

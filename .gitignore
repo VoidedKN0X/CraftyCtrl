@@ -15,5 +15,3 @@
 *.keystore
 keystore.properties
 
-# Fonts are fetched by CI (see .github/workflows/build.yml)
-app/src/main/res/font/*.ttf

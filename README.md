@@ -30,7 +30,7 @@ CraftyCtrl is an unofficial app. It isn't made by or affiliated with the Crafty 
 - Scheduled tasks: create, edit, enable, run now and delete
 
 **App**
-- Light and dark mode (or follow the system), Material You colours or a fixed accent
+- Light and dark mode (or follow the system), Material You colours and an optional pure black mode
 - App lock with a PIN and fingerprint or face unlock
 - Background alerts when a server stops or crashes
 
@@ -50,14 +50,6 @@ CraftyCtrl is an unofficial app. It isn't made by or affiliated with the Crafty 
 ## Building from source
 
 Open the project in Android Studio (Ladybug or newer) and run it, or build from a terminal with `./gradlew assembleDebug`.
-
-The app uses the [Geist](https://github.com/vercel/geist-font) fonts, which aren't in the repository. Download them into `app/src/main/res/font/` before building:
-
-```bash
-mkdir -p app/src/main/res/font
-curl -fsSL -o app/src/main/res/font/geist.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/geist/Geist%5Bwght%5D.ttf"
-curl -fsSL -o app/src/main/res/font/geist_mono.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/geistmono/GeistMono%5Bwght%5D.ttf"
-```
 
 ## Crafty API endpoints used
 

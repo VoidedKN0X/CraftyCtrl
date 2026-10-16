@@ -44,7 +44,7 @@ import com.vknxworks.craftyctrl.ui.ErrorBanner
 import com.vknxworks.craftyctrl.ui.LogsViewModel
 import com.vknxworks.craftyctrl.ui.theme.ConsoleBackground
 import com.vknxworks.craftyctrl.ui.theme.ConsoleDim
-import com.vknxworks.craftyctrl.ui.theme.GeistMono
+import com.vknxworks.craftyctrl.ui.theme.Mono
 
 // ================================================================ plugins & mods
 
@@ -150,7 +150,7 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                                 Text(
                                     if (a.enabled) a.fileName else "Off · ${a.fileName}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontFamily = GeistMono,
+                                    fontFamily = Mono,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -245,7 +245,7 @@ private fun LogList(vm: LogsViewModel) {
                         Text(
                             f.name,
                             style = MaterialTheme.typography.bodyLarge,
-                            fontFamily = GeistMono,
+                            fontFamily = Mono,
                             color = if (f.compressed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
@@ -333,7 +333,7 @@ private fun LogViewer(vm: LogsViewModel) {
                         Text(
                             line,
                             color = lineColor(line),
-                            fontFamily = GeistMono,
+                            fontFamily = Mono,
                             fontSize = 11.5.sp,
                             lineHeight = 15.sp,
                             modifier = Modifier

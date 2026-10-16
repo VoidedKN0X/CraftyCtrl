@@ -2,7 +2,6 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
-import com.vknxworks.craftyctrl.ui.theme.Accent
 import com.vknxworks.craftyctrl.ui.theme.ThemePrefs
 import com.vknxworks.craftyctrl.ui.theme.ThemeMode
 import android.Manifest
@@ -177,27 +176,32 @@ fun SettingsScreen(onBack: () -> Unit) {
             // ------------------------------------------------ alerts
             SectionLabel("Appearance")
             SettingsCard {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Theme", style = MaterialTheme.typography.bodyLarge)
-                    ChoiceChips(
-                        options = ThemeMode.entries.map { it.ordinal to it.label },
-                        selected = ThemePrefs.mode.ordinal,
-                        onSelect = { ThemePrefs.saveMode(context, ThemeMode.entries[it]) },
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text("Accent colour", style = MaterialTheme.typography.bodyLarge)
-                    val accents = Accent.entries
-                    ChoiceChips(
-                        options = accents.map { it.ordinal to it.label },
-                        selected = ThemePrefs.accent.ordinal,
-                        onSelect = { ThemePrefs.save(context, Accent.entries[it]) },
-                    )
-                    Text(
-                        "Colours buttons, switches, tabs, charts and highlights. Wallpaper uses your phone's Material You palette.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        ThemeMode.entries.forEachIndexed { i, m ->
+                            androidx.compose.material3.SegmentedButton(
+                                selected = ThemePrefs.mode == m,
+                                onClick = { ThemePrefs.saveMode(context, m) },
+                                shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, ThemeMode.entries.size),
+                            ) { Text(m.label, maxLines = 1) }
+                        }
+                    }
                 }
+                HorizontalDivider()
+                SwitchRow(
+                    title = "Material You colours",
+                    body = "Match the app to your wallpaper",
+                    checked = ThemePrefs.dynamicColor,
+                    onChange = { ThemePrefs.saveDynamic(context, it) },
+                )
+                HorizontalDivider()
+                SwitchRow(
+                    title = "Pure black",
+                    body = "True black backgrounds in dark mode",
+                    checked = ThemePrefs.pureBlack,
+                    onChange = { ThemePrefs.savePureBlack(context, it) },
+                )
             }
 
             SectionLabel("Live stats")

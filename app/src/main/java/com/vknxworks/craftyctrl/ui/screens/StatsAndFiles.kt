@@ -4,7 +4,7 @@ package com.vknxworks.craftyctrl.ui.screens
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
-import com.vknxworks.craftyctrl.ui.theme.GeistMono
+import com.vknxworks.craftyctrl.ui.theme.Mono
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -167,7 +167,7 @@ fun StatsTab(vm: ServerDetailViewModel) {
                         Text(
                             r.label.replace(" ", ""),
                             style = MaterialTheme.typography.labelMedium,
-                            fontFamily = GeistMono,
+                            fontFamily = Mono,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
                         )
                     }
@@ -215,7 +215,7 @@ fun StatsTab(vm: ServerDetailViewModel) {
 private fun SummaryRow(label: String, value: String?) {
     Row {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-        Text(value ?: "—", style = MaterialTheme.typography.bodyMedium, fontFamily = GeistMono)
+        Text(value ?: "—", style = MaterialTheme.typography.bodyMedium, fontFamily = Mono)
     }
 }
 
@@ -270,7 +270,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
             Text(
                 relativeLabel(vm.filePath, vm.rootPath),
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = GeistMono,
+                fontFamily = Mono,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -601,7 +601,7 @@ fun FileEditorScreen(api: CraftyApi, serverId: String, path: String, onBack: () 
                 vm.loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 vm.error != null -> ErrorBanner(vm.error!!, Modifier.padding(16.dp), onRetry = vm::load)
                 else -> Surface(color = ConsoleBackground, modifier = Modifier.fillMaxSize()) {
-                    val textStyle = TextStyle(color = ConsoleText, fontFamily = GeistMono, fontSize = 13.sp, lineHeight = 18.sp)
+                    val textStyle = TextStyle(color = ConsoleText, fontFamily = Mono, fontSize = 13.sp, lineHeight = 18.sp)
                     val vScroll = rememberScrollState()
                     val hScroll = rememberScrollState()
                     val base = Modifier.fillMaxSize().verticalScroll(vScroll)

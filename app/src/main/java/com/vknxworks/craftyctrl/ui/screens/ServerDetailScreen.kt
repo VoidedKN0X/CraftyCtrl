@@ -121,7 +121,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.fragment.app.FragmentActivity
 import androidx.compose.ui.platform.LocalContext
-import com.vknxworks.craftyctrl.ui.theme.GeistMono
+import com.vknxworks.craftyctrl.ui.theme.Mono
 import com.vknxworks.craftyctrl.ui.BigMetric
 import com.vknxworks.craftyctrl.ui.DetailRow
 import com.vknxworks.craftyctrl.ui.Dot
@@ -456,7 +456,7 @@ private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
                     Text(
                         report,
                         color = ConsoleText,
-                        fontFamily = GeistMono,
+                        fontFamily = Mono,
                         fontSize = 11.sp,
                         lineHeight = 14.sp,
                         modifier = Modifier
@@ -521,7 +521,7 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
                             Text(
                                 playersText(s.online, s.max),
                                 style = MaterialTheme.typography.labelSmall,
-                                fontFamily = GeistMono,
+                                fontFamily = Mono,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -880,7 +880,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                     Text(
                         line,
                         color = lineColor(line),
-                        fontFamily = GeistMono,
+                        fontFamily = Mono,
                         fontSize = 11.5.sp,
                         lineHeight = 15.sp,
                         modifier = Modifier
@@ -924,7 +924,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                 items(chips) { cmd ->
                     SuggestionChip(
                         onClick = { input = cmd },
-                        label = { Text(cmd.trim(), fontFamily = GeistMono) },
+                        label = { Text(cmd.trim(), fontFamily = Mono) },
                     )
                 }
             }
@@ -941,7 +941,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                 onValueChange = { input = it },
                 placeholder = { Text("Command, without /") },
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = GeistMono),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = Mono),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send, autoCorrectEnabled = false),
                 keyboardActions = KeyboardActions(onSend = { send() }),
                 modifier = Modifier.weight(1f),
@@ -1275,7 +1275,7 @@ private fun TaskCard(t: ScheduledTask, onClick: () -> Unit, onRun: () -> Unit, o
                 Text(
                     what,
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = if (t.command != null) GeistMono else FontFamily.Default,
+                    fontFamily = if (t.command != null) Mono else FontFamily.Default,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -1451,7 +1451,7 @@ private fun CountdownBanner(c: Countdown, onCancel: () -> Unit) {
             Text(
                 (if (c.action == PowerAction.RESTART) "Restarting in " else "Stopping in ") + "%d:%02d".format(left / 60, left % 60),
                 style = MaterialTheme.typography.bodyLarge,
-                fontFamily = GeistMono,
+                fontFamily = Mono,
                 modifier = Modifier.weight(1f),
             )
             TextButton(onClick = onCancel) { Text("Cancel") }

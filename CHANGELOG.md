@@ -3,7 +3,14 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [2.0.1] - 2026-10-15
+## [2.1.0] - 2026-10-16
+
+### Changed
+- **Matches the other Ctrl apps' theme:** Material You colours by default, with CraftyCtrl's blue as the fallback; System / Light / Dark; the system font; and the same rounded shapes.
+- **Settings → Appearance** now has Theme, **Material You colours** and **Pure black** (true black backgrounds in dark mode). The accent colour picker is gone.
+- Server status colours (running, starting, crashed, stopped) are tuned separately for light and dark mode.
+
+ - 2026-10-15
 
 ### Changed
 - **New icon:** the server rack in a blocky pixel style with a small pixel pickaxe. Android's themed (monochrome) icons use the same mark.
