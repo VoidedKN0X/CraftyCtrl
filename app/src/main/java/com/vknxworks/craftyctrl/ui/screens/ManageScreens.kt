@@ -103,7 +103,7 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
         },
         bottomBar = {
             if (vm.dirty) {
-                Surface(tonalElevation = 3.dp, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Surface(tonalElevation = 3.dp, color = MaterialTheme.colorScheme.surfaceContainerLow) {
                     Row(
                         Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -343,7 +343,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                 }
                 if (current == PlayerList.WHITELIST) {
                     item(key = "toggle") {
-                        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
                             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text(if (vm.isBedrock) "Allowlist on" else "Whitelist on", style = MaterialTheme.typography.bodyLarge)
@@ -367,7 +367,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                     }
                 }
                 itemsIndexed(entries.orEmpty(), key = { i, e -> "$i:${e.raw}" }) { _, e ->
-                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
                         Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 if (current == PlayerList.BANNED_IPS) Icons.Filled.Public else if (current == PlayerList.OPS) Icons.Filled.Shield else Icons.Filled.Person,

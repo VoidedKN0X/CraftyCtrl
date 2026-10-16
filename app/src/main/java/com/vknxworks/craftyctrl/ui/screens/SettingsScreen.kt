@@ -2,6 +2,15 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.BatteryChargingFull
+import com.vknxworks.craftyctrl.ui.ItemDivider
 import com.vknxworks.craftyctrl.ui.theme.ThemePrefs
 import com.vknxworks.craftyctrl.ui.theme.ThemeMode
 import android.Manifest
@@ -113,13 +122,16 @@ fun SettingsScreen(onBack: () -> Unit) {
         if (granted) turnAlertsOn()
     }
 
+    val scroll = androidx.compose.material3.TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
+        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            androidx.compose.material3.LargeTopAppBar(
                 title = { Text("Settings", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
+                scrollBehavior = scroll,
             )
         },
     ) { padding ->
@@ -136,14 +148,16 @@ fun SettingsScreen(onBack: () -> Unit) {
             SettingsCard {
                 SwitchRow(
                     title = "Require a PIN",
+                    icon = Icons.Outlined.Lock,
                     body = "Ask for a PIN when opening the app.",
                     checked = pinSet,
                     onChange = { on -> pinDialog = if (on) PinDialog.NEW else PinDialog.DISABLE },
                 )
                 if (pinSet) {
-                    HorizontalDivider()
+                    ItemDivider()
                     SwitchRow(
                         title = "Unlock with fingerprint or face",
+                        icon = Icons.Outlined.Fingerprint,
                         body = if (bioAvailable) "Your PIN still works as a backup." else "No fingerprint or face unlock is set up on this phone.",
                         checked = bio,
                         enabled = bioAvailable,
@@ -160,7 +174,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                             }
                         },
                     )
-                    HorizontalDivider()
+                    ItemDivider()
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Lock again after leaving the app", style = MaterialTheme.typography.bodyLarge)
                         ChoiceChips(
@@ -169,7 +183,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                             onSelect = { settings.lockAfterSeconds = it; lockAfter = it },
                         )
                     }
-                    HorizontalDivider()
+                    ItemDivider()
                     TextButton(onClick = { pinDialog = PinDialog.CHANGE }, modifier = Modifier.padding(horizontal = 8.dp)) {
                         Text("Change PIN")
                     }
@@ -191,16 +205,18 @@ fun SettingsScreen(onBack: () -> Unit) {
                         }
                     }
                 }
-                HorizontalDivider()
+                ItemDivider()
                 SwitchRow(
                     title = "Material You colours",
+                    icon = Icons.Outlined.Palette,
                     body = "Match the app to your wallpaper",
                     checked = ThemePrefs.dynamicColor,
                     onChange = { ThemePrefs.saveDynamic(context, it) },
                 )
-                HorizontalDivider()
+                ItemDivider()
                 SwitchRow(
                     title = "Pure black",
+                    icon = Icons.Outlined.DarkMode,
                     body = "True black backgrounds in dark mode",
                     checked = ThemePrefs.pureBlack,
                     onChange = { ThemePrefs.savePureBlack(context, it) },
@@ -229,6 +245,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             SettingsCard {
                 SwitchRow(
                     title = "Server alerts",
+                    icon = Icons.Outlined.NotificationsActive,
                     body = "Get notified when a server stops or crashes, even with the app closed. Shows a quiet ongoing notification while on.",
                     checked = alerts,
                     onChange = { on ->
@@ -253,7 +270,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
                 }
-                HorizontalDivider()
+                ItemDivider()
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Check every", style = MaterialTheme.typography.bodyLarge)
                     ChoiceChips(
@@ -262,9 +279,10 @@ fun SettingsScreen(onBack: () -> Unit) {
                         onSelect = { settings.alertIntervalSeconds = it; interval = it },
                     )
                 }
-                HorizontalDivider()
+                ItemDivider()
                 SwitchRow(
                     title = "Keep checking while the screen is off",
+                    icon = Icons.Outlined.BatteryChargingFull,
                     body = "Without this, Android may pause checks while the phone sleeps, so alerts can arrive late. Uses more battery.",
                     checked = keepAwake,
                     onChange = { on ->
@@ -387,9 +405,11 @@ private fun PinField(label: String, value: String, onChange: (String) -> Unit) {
 
 @Composable
 private fun SettingsCard(content: @Composable () -> Unit) {
-    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.fillMaxWidth()) { content() }
-    }
+    androidx.compose.material3.Card(
+        shape = MaterialTheme.shapes.large,
+        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth(),
+    ) { Column { content() } }
 }
 
 @Composable
@@ -398,18 +418,17 @@ private fun SwitchRow(
     body: String?,
     checked: Boolean,
     enabled: Boolean = true,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     onChange: (Boolean) -> Unit,
 ) {
-    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            body?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Spacer(Modifier.width(12.dp))
-        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
-    }
+    androidx.compose.material3.ListItem(
+        leadingContent = icon?.let { { Icon(it, contentDescription = null) } },
+        headlineContent = { Text(title) },
+        supportingContent = body?.let { { Text(it) } },
+        trailingContent = { Switch(checked = checked, onCheckedChange = onChange, enabled = enabled) },
+        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.clickable(enabled = enabled) { onChange(!checked) },
+    )
 }
 
 @Composable
@@ -422,18 +441,13 @@ private fun CheckRow(title: String, checked: Boolean, onChange: (Boolean) -> Uni
 
 @Composable
 private fun ChoiceChips(options: List<Pair<Int, String>>, selected: Int, onSelect: (Int) -> Unit) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        options.forEach { (value, label) ->
-            FilterChip(
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        options.forEachIndexed { i, (value, label) ->
+            SegmentedButton(
                 selected = selected == value,
                 onClick = { onSelect(value) },
-                label = { Text(label) },
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
-                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ),
-            )
+                shape = SegmentedButtonDefaults.itemShape(i, options.size),
+            ) { Text(label, maxLines = 1) }
         }
     }
 }

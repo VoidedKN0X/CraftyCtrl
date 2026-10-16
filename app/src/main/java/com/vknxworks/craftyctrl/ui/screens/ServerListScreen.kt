@@ -2,103 +2,62 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Computer
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.material3.LargeTopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.material3.Surface
-import androidx.compose.foundation.background
-import androidx.compose.material.icons.filled.PhoneAndroid
-import com.vknxworks.craftyctrl.ui.AccentCard
-import com.vknxworks.craftyctrl.ui.RingGauge
-import com.vknxworks.craftyctrl.ui.ratio
-import com.vknxworks.craftyctrl.ui.ChartPlayers
-import com.vknxworks.craftyctrl.ui.theme.stateColor
-import com.vknxworks.craftyctrl.ui.rememberRefreshMs
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.outlined.Campaign
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.vknxworks.craftyctrl.data.CraftyApi
 import com.vknxworks.craftyctrl.data.HostStats
-import com.vknxworks.craftyctrl.ui.ChartCpu
-import com.vknxworks.craftyctrl.ui.ChartMem
-import com.vknxworks.craftyctrl.ui.LineChart
-import com.vknxworks.craftyctrl.ui.UsageBar
 import com.vknxworks.craftyctrl.data.ServerState
 import com.vknxworks.craftyctrl.data.ServerSummary
+import com.vknxworks.craftyctrl.data.parseTimestamp
+import com.vknxworks.craftyctrl.ui.BigStat
+import com.vknxworks.craftyctrl.ui.CtrlCard
+import com.vknxworks.craftyctrl.ui.CtrlHeader
+import com.vknxworks.craftyctrl.ui.Dot
+import com.vknxworks.craftyctrl.ui.EmptyState
 import com.vknxworks.craftyctrl.ui.ErrorBanner
+import com.vknxworks.craftyctrl.ui.Meter
 import com.vknxworks.craftyctrl.ui.PollWhileVisible
 import com.vknxworks.craftyctrl.ui.ServerListViewModel
 import com.vknxworks.craftyctrl.ui.ServerRow
-import com.vknxworks.craftyctrl.ui.StatusPill
+import com.vknxworks.craftyctrl.ui.StatRow
+import com.vknxworks.craftyctrl.ui.rememberRefreshMs
+import com.vknxworks.craftyctrl.ui.theme.stateColor
 import java.net.URI
-import androidx.compose.material.icons.outlined.Campaign
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedButton
-import com.vknxworks.craftyctrl.data.parseTimestamp
-import com.vknxworks.craftyctrl.ui.Caption
-import com.vknxworks.craftyctrl.ui.Dot
-import com.vknxworks.craftyctrl.ui.HairBar
-import com.vknxworks.craftyctrl.ui.theme.Mono
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Home: Servers and Host as bottom tabs, like the other Ctrl apps. */
 @Composable
 fun ServerListScreen(
     api: CraftyApi,
@@ -113,113 +72,52 @@ fun ServerListScreen(
     PollWhileVisible(api to refreshMs, refreshMs) { vm.refresh() }
 
     val host = remember(api.baseUrl) { runCatching { URI(api.baseUrl).host }.getOrNull() ?: api.baseUrl }
-    var menuOpen by remember { mutableStateOf(false) }
+    var tab by rememberSaveable { mutableIntStateOf(0) }
     var broadcastOpen by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(vm) { for (m in vm.messages) snackbar.showSnackbar(m) }
+    // Back on the Host tab returns to Servers first.
+    if (tab != 0) BackHandler { tab = 0 }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbar) },
-        floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
-            OutlinedButton(
-                onClick = onCreate,
-                shape = RoundedCornerShape(50),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.background),
-                contentPadding = PaddingValues(horizontal = 22.dp),
-                modifier = Modifier.height(48.dp),
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("New server", style = MaterialTheme.typography.bodyLarge)
+            if (tab == 0) {
+                ExtendedFloatingActionButton(
+                    onClick = onCreate,
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    text = { Text("New server") },
+                )
             }
         },
-    ) { padding ->
-        PullToRefreshBox(
-            isRefreshing = vm.refreshing,
-            onRefresh = vm::refreshNow,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 112.dp),
-            ) {
-                item(key = "header") {
-                    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(bottom = 28.dp)) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(host, style = MaterialTheme.typography.labelMedium, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                            Text("Servers", style = MaterialTheme.typography.headlineLarge)
-                        }
-                        IconButton(onClick = { broadcastOpen = true }) {
-                            Icon(Icons.Outlined.Campaign, contentDescription = "Broadcast to all servers")
-                        }
-                        IconButton(onClick = onSettings) {
-                            Icon(Icons.Outlined.Settings, contentDescription = "Settings")
-                        }
-                        Box {
-                            IconButton(onClick = { menuOpen = true }) {
-                                Icon(Icons.Filled.MoreVert, contentDescription = "More")
-                            }
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("Sign out") },
-                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
-                                    onClick = {
-                                        menuOpen = false
-                                        onSignOut()
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-                vm.error?.let { message ->
-                    item(key = "error") { ErrorBanner(message, Modifier.padding(bottom = 16.dp), onRetry = vm::refreshNow) }
-                }
-                vm.host?.let { h ->
-                    item(key = "host") { HostRow(h, Modifier.padding(bottom = 32.dp)) }
-                }
-                when {
-                    vm.loading && vm.rows.isEmpty() -> item(key = "loading") {
-                        Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(strokeWidth = 2.dp)
-                        }
-                    }
-
-                    vm.rows.isEmpty() && vm.error == null -> item(key = "empty") {
-                        Column(
-                            Modifier.fillMaxWidth().padding(vertical = 64.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text("No servers yet", style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "This account can't see any servers. Check its role in Crafty.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-
-                    else -> {
-                        item(key = "list-head") {
-                            val running = vm.rows.count { it.stats?.running == true }
-                            Column {
-                                Row(Modifier.padding(bottom = 12.dp)) {
-                                    Caption("$running of ${vm.rows.size} running", Modifier.weight(1f))
-                                    Caption("Players")
-                                }
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                            }
-                        }
-                        items(vm.rows, key = { it.summary.id }) { row ->
-                            ServerLine(row, onClick = { onOpen(row.summary) })
-                        }
-                    }
-                }
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                NavigationBarItem(
+                    selected = tab == 0, onClick = { tab = 0 },
+                    icon = { Icon(if (tab == 0) Icons.Filled.Dns else Icons.Outlined.Dns, null) },
+                    label = { Text("Servers") },
+                )
+                NavigationBarItem(
+                    selected = tab == 1, onClick = { tab = 1 },
+                    icon = { Icon(if (tab == 1) Icons.Filled.Memory else Icons.Outlined.Memory, null) },
+                    label = { Text("Host") },
+                )
+            }
+        },
+    ) { pad ->
+        AnimatedContent(
+            targetState = tab,
+            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+            label = "homeTab",
+        ) { t ->
+            when (t) {
+                0 -> ServersTab(
+                    vm, host, pad.calculateBottomPadding(), onOpen,
+                    onBroadcast = { broadcastOpen = true }, onSettings = onSettings, onSignOut = onSignOut,
+                )
+                else -> HostTab(vm, host, pad.calculateBottomPadding())
             }
         }
     }
@@ -258,64 +156,188 @@ fun ServerListScreen(
 }
 
 @Composable
-private fun ServerLine(row: ServerRow, onClick: () -> Unit) {
-    val s = row.stats
-    val live = s != null && (s.state == ServerState.RUNNING || s.state == ServerState.STARTING)
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+private fun ServersTab(
+    vm: ServerListViewModel,
+    host: String,
+    bottomPadding: Dp,
+    onOpen: (ServerSummary) -> Unit,
+    onBroadcast: () -> Unit,
+    onSettings: () -> Unit,
+    onSignOut: () -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val bars = WindowInsets.statusBars.asPaddingValues()
+    val running = vm.rows.count { it.stats?.running == true }
+
+    PullToRefreshBox(
+        isRefreshing = vm.refreshing,
+        onRefresh = vm::refreshNow,
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
     ) {
-        Column(Modifier.padding(vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Dot(stateColor(s?.state))
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(row.summary.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    val meta = listOfNotNull(
-                        s?.version ?: prettyType(row.summary.type),
-                        if (live) row.summary.port?.let { ":$it" } else s?.state?.label,
-                    ).joinToString(" · ")
-                    if (meta.isNotEmpty()) {
-                        Text(meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp, end = 16.dp,
+                top = bars.calculateTopPadding() + 8.dp,
+                bottom = bottomPadding + 96.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item(key = "header") {
+                CtrlHeader(
+                    icon = Icons.Outlined.Dns,
+                    title = "Servers",
+                    subtitle = listOfNotNull(
+                        host,
+                        vm.rows.takeIf { it.isNotEmpty() }?.let { "${it.size} servers" },
+                        vm.rows.takeIf { it.isNotEmpty() }?.let { "$running running" },
+                    ).joinToString(" · "),
+                    modifier = Modifier.padding(bottom = 4.dp),
+                ) {
+                    FilledTonalIconButton(onClick = onBroadcast) { Icon(Icons.Outlined.Campaign, "Broadcast to all servers") }
+                    FilledTonalIconButton(onClick = onSettings) { Icon(Icons.Outlined.Settings, "Settings") }
+                    Box {
+                        IconButton(onClick = { menuOpen = true }) { Icon(Icons.Outlined.MoreVert, "More") }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Sign out") },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null) },
+                                onClick = { menuOpen = false; onSignOut() },
+                            )
+                        }
                     }
                 }
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    if (live && s?.playersKnown == true) playersText(s.online, s.max).replace(" ", "") else "—",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontFamily = Mono,
-                )
             }
-            if (live && s != null) {
-                Row(Modifier.padding(start = 20.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    listOfNotNull(
-                        s.cpu?.let { "CPU %.0f%%".format(it) },
-                        s.mem?.let { "RAM $it" },
-                        s.started?.let { uptimeShort(it) }?.let { "Up $it" },
-                    ).forEach {
-                        Text(it, style = MaterialTheme.typography.labelSmall, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            when {
+                vm.error != null && vm.rows.isEmpty() -> item(key = "error") {
+                    EmptyState("Can't reach Crafty", vm.error!!, "Retry", onAction = vm::refreshNow)
+                }
+                vm.loading && vm.rows.isEmpty() -> item(key = "loading") {
+                    Box(Modifier.fillMaxWidth().height(320.dp), Alignment.Center) { CircularProgressIndicator() }
+                }
+                vm.rows.isEmpty() -> item(key = "empty") {
+                    EmptyState("No servers yet", "This account can't see any servers. Check its role in Crafty, or create one.", icon = Icons.Outlined.Dns)
+                }
+                else -> {
+                    vm.error?.let { message -> item(key = "error-banner") { ErrorBanner(message, onRetry = vm::refreshNow) } }
+                    items(vm.rows, key = { it.summary.id }) { row ->
+                        ServerCard(row, Modifier.animateItem()) { onOpen(row.summary) }
                     }
                 }
-            } else if (s == null) {
-                Text("Stats unavailable", Modifier.padding(start = 20.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 
-/** "2d 4h", "6h 12m", "8m" since [started], or null if it can't be read. */
-internal fun uptimeShort(started: String): String? {
-    val t = parseTimestamp(started) ?: return null
-    val mins = ((System.currentTimeMillis() - t) / 60_000).coerceAtLeast(0)
-    val d = mins / 1440
-    val h = (mins % 1440) / 60
-    val m = mins % 60
-    return when {
-        d > 0 -> "${d}d ${h}h"
-        h > 0 -> "${h}h ${m}m"
-        else -> "${m}m"
+@Composable
+private fun ServerCard(row: ServerRow, modifier: Modifier, onClick: () -> Unit) {
+    val s = row.stats
+    val live = s != null && (s.state == ServerState.RUNNING || s.state == ServerState.STARTING)
+    CtrlCard(modifier = modifier, onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    row.summary.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val meta = listOfNotNull(s?.version ?: prettyType(row.summary.type), row.summary.port?.let { ":$it" }).joinToString(" · ")
+                if (meta.isNotEmpty()) {
+                    Text(meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Dot(stateColor(s?.state))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    s?.state?.label ?: "Unknown",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        when {
+            s == null -> Text("Stats unavailable", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            live -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                BigStat("CPU", s.cpu?.let { "%.0f%%".format(it) } ?: "—", Modifier.weight(1f))
+                BigStat("Memory", s.mem?.replace(" ", "") ?: "—", Modifier.weight(1f))
+                BigStat(
+                    if (s.playersKnown) "Players" else "Uptime",
+                    if (s.playersKnown) playersText(s.online, s.max).replace(" ", "") else s.started?.let { uptimeShort(it) } ?: "—",
+                    Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HostTab(vm: ServerListViewModel, host: String, bottomPadding: Dp) {
+    val h = vm.host
+    val cs = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxSize().background(cs.background)) {
+        CtrlHeader(
+            icon = Icons.Outlined.Memory,
+            title = "Host",
+            subtitle = when {
+                vm.hostError != null && h != null -> "Offline · showing last data"
+                h == null && vm.hostError != null -> host
+                h == null -> "Loading…"
+                else -> listOfNotNull(host, h.cpuCores?.let { "$it cores" }, "live").joinToString(" · ")
+            },
+            subtitleColor = if (vm.hostError != null && h != null) cs.error else cs.onSurfaceVariant,
+            modifier = Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+        )
+        if (h == null) {
+            Box(Modifier.fillMaxSize().padding(bottom = bottomPadding), Alignment.Center) {
+                if (vm.hostError != null) EmptyState("Host stats unavailable", vm.hostError!!, icon = Icons.Outlined.Memory)
+                else CircularProgressIndicator()
+            }
+            return@Column
+        }
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp).padding(top = 4.dp, bottom = bottomPadding + 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            HostOverview(vm, h)
+            CtrlCard("System") {
+                Meter("CPU", h.cpuPercent, h.cpuPercent?.let { "%.0f %%".format(it) + (h.cpuFreq?.let { f -> " · $f" } ?: "") })
+                Meter("Memory", h.memPercent, listOfNotNull(h.memUsed, h.memTotal).joinToString(" of ").ifEmpty { null })
+            }
+            if (h.disks.isNotEmpty()) {
+                CtrlCard("Storage") {
+                    h.disks.forEach { d ->
+                        Meter(d.mount, d.percent, listOfNotNull(d.used, d.total).joinToString(" of ").ifEmpty { null })
+                    }
+                }
+            }
+            h.bootTime?.let { boot ->
+                CtrlCard("Machine") {
+                    StatRow("Up since", boot.substringBefore('.'))
+                    parseTimestamp(boot)?.let { t ->
+                        val days = (System.currentTimeMillis() - t) / 86_400_000
+                        StatRow("Uptime", if (days > 0) "$days days" else "under a day")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HostOverview(vm: ServerListViewModel, h: HostStats) {
+    val running = vm.rows.count { it.stats?.running == true }
+    val players = vm.rows.sumOf { r -> r.stats?.takeIf { it.running }?.online ?: 0 }
+    CtrlCard {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            BigStat("Servers running", "$running/${vm.rows.size}", Modifier.weight(1f))
+            BigStat("Players online", "$players", Modifier.weight(1f))
+            BigStat("CPU", h.cpuPercent?.let { "%.0f%%".format(it) } ?: "—", Modifier.weight(1f))
+        }
     }
 }
 
@@ -332,30 +354,16 @@ internal fun prettyType(type: String): String? = when (type) {
     else -> type.replace('-', ' ').replaceFirstChar { it.uppercase() }
 }
 
-@Composable
-private fun HostRow(h: HostStats, modifier: Modifier = Modifier) {
-    // The root filesystem if Crafty lists it, otherwise the first disk.
-    val disk = h.disks.firstOrNull { it.mount == "/" } ?: h.disks.firstOrNull()
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        HostMetric("CPU", h.cpuPercent, h.cpuCores?.let { "$it cores" }, Modifier.weight(1f))
-        HostMetric("Memory", h.memPercent, listOfNotNull(h.memUsed, h.memTotal).joinToString(" / ").ifEmpty { null }, Modifier.weight(1f))
-        if (disk != null) {
-            HostMetric("Disk", disk.percent, listOfNotNull(disk.used, disk.total).joinToString(" / ").ifEmpty { null }, Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun HostMetric(label: String, percent: Double?, sub: String?, modifier: Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Caption(label)
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(percent?.let { "%.0f".format(it) } ?: "—", style = MaterialTheme.typography.headlineSmall, fontFamily = Mono)
-            if (percent != null) {
-                Text("%", style = MaterialTheme.typography.bodyMedium, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 3.dp))
-            }
-        }
-        HairBar(((percent ?: 0.0) / 100).toFloat())
-        sub?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+/** "2d 4h", "6h 12m", "8m" since [started], or null if it can't be read. */
+internal fun uptimeShort(started: String): String? {
+    val t = parseTimestamp(started) ?: return null
+    val mins = ((System.currentTimeMillis() - t) / 60_000).coerceAtLeast(0)
+    val d = mins / 1440
+    val h = (mins % 1440) / 60
+    val m = mins % 60
+    return when {
+        d > 0 -> "${d}d ${h}h"
+        h > 0 -> "${h}h ${m}m"
+        else -> "${m}m"
     }
 }

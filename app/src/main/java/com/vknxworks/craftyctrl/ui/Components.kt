@@ -164,10 +164,9 @@ fun ErrorBanner(
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
-        text.uppercase(),
-        modifier = modifier,
-        style = MaterialTheme.typography.labelSmall,
-        letterSpacing = 1.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        text,
+        modifier = modifier.padding(start = 4.dp),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
     )
 }

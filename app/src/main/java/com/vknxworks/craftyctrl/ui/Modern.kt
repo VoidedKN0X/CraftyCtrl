@@ -89,44 +89,23 @@ fun RingGauge(
 
 data class PillTab(val title: String, val icon: ImageVector)
 
-/** Text tabs with an underline under the selected one, over a hairline; scrolls sideways. */
+/** Material scrollable tabs, as in the other Ctrl apps. */
 @Composable
 fun PillTabs(tabs: List<PillTab>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
-    val state = rememberLazyListState()
-    LaunchedEffect(selected) { state.animateScrollToItem((selected - 1).coerceAtLeast(0)) }
-    Box(modifier.fillMaxWidth()) {
-        HorizontalDivider(Modifier.align(Alignment.BottomStart), color = MaterialTheme.colorScheme.outlineVariant)
-        LazyRow(
-            state = state,
-            contentPadding = PaddingValues(horizontal = 12.dp),
-        ) {
-            itemsIndexed(tabs) { i, tab ->
-                val isSel = i == selected
-                val fg by animateColorAsState(
-                    if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    label = "tabFg",
-                )
-                val line by animateColorAsState(
-                    if (isSel) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    label = "tabLine",
-                )
-                Box(
-                    Modifier
-                        .clickable { onSelect(i) }
-                        .padding(horizontal = 12.dp),
-                ) {
-                    Column(Modifier.width(IntrinsicSize.Max)) {
-                        Text(
-                            tab.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = fg,
-                            maxLines = 1,
-                            modifier = Modifier.padding(top = 14.dp, bottom = 12.dp),
-                        )
-                        Box(Modifier.fillMaxWidth().height(2.dp).background(line))
-                    }
-                }
-            }
+    androidx.compose.material3.ScrollableTabRow(
+        selectedTabIndex = selected,
+        edgePadding = 8.dp,
+        containerColor = MaterialTheme.colorScheme.surface,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        tabs.forEachIndexed { i, tab ->
+            androidx.compose.material3.Tab(
+                selected = i == selected,
+                onClick = { onSelect(i) },
+                text = { Text(tab.title, maxLines = 1) },
+                icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
