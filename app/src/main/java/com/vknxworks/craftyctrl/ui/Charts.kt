@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.HorizontalDivider
-import com.vknxworks.craftyctrl.ui.theme.GeistMono
+import com.vknxworks.craftyctrl.ui.theme.Mono
 
 /** One line series. Null values leave a gap. [maxY] fixes the top of the scale (e.g. 100 for %). */
 @Composable
@@ -116,14 +116,14 @@ fun ChartCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
-            Text(current, style = MaterialTheme.typography.titleLarge, fontFamily = GeistMono)
+            Text(current, style = MaterialTheme.typography.titleLarge, fontFamily = Mono)
         }
         val present = values.filterNotNull()
         if (present.size >= 2) {
             LineChart(values, color, maxY = maxY)
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                 listOf("min" to present.min(), "avg" to present.average().toFloat(), "max" to present.max()).forEach { (k, v) ->
-                    Text("$k ${format(v)}", style = MaterialTheme.typography.labelSmall, fontFamily = GeistMono, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("$k ${format(v)}", style = MaterialTheme.typography.labelSmall, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
@@ -147,7 +147,7 @@ fun UsageBar(label: String, percent: Double?, detail: String?) {
             Text(
                 listOfNotNull(detail, percent?.let { "%.0f%%".format(it) }).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = GeistMono,
+                fontFamily = Mono,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

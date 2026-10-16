@@ -96,7 +96,7 @@ import com.vknxworks.craftyctrl.data.parseTimestamp
 import com.vknxworks.craftyctrl.ui.Caption
 import com.vknxworks.craftyctrl.ui.Dot
 import com.vknxworks.craftyctrl.ui.HairBar
-import com.vknxworks.craftyctrl.ui.theme.GeistMono
+import com.vknxworks.craftyctrl.ui.theme.Mono
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,7 +151,7 @@ fun ServerListScreen(
                 item(key = "header") {
                     Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(bottom = 28.dp)) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(host, style = MaterialTheme.typography.labelMedium, fontFamily = GeistMono, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                            Text(host, style = MaterialTheme.typography.labelMedium, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                             Text("Servers", style = MaterialTheme.typography.headlineLarge)
                         }
                         IconButton(onClick = { broadcastOpen = true }) {
@@ -284,7 +284,7 @@ private fun ServerLine(row: ServerRow, onClick: () -> Unit) {
                 Text(
                     if (live && s?.playersKnown == true) playersText(s.online, s.max).replace(" ", "") else "—",
                     style = MaterialTheme.typography.titleMedium,
-                    fontFamily = GeistMono,
+                    fontFamily = Mono,
                 )
             }
             if (live && s != null) {
@@ -294,7 +294,7 @@ private fun ServerLine(row: ServerRow, onClick: () -> Unit) {
                         s.mem?.let { "RAM $it" },
                         s.started?.let { uptimeShort(it) }?.let { "Up $it" },
                     ).forEach {
-                        Text(it, style = MaterialTheme.typography.labelSmall, fontFamily = GeistMono, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(it, style = MaterialTheme.typography.labelSmall, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else if (s == null) {
@@ -350,9 +350,9 @@ private fun HostMetric(label: String, percent: Double?, sub: String?, modifier: 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Caption(label)
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(percent?.let { "%.0f".format(it) } ?: "—", style = MaterialTheme.typography.headlineSmall, fontFamily = GeistMono)
+            Text(percent?.let { "%.0f".format(it) } ?: "—", style = MaterialTheme.typography.headlineSmall, fontFamily = Mono)
             if (percent != null) {
-                Text("%", style = MaterialTheme.typography.bodyMedium, fontFamily = GeistMono, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 3.dp))
+                Text("%", style = MaterialTheme.typography.bodyMedium, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 3.dp))
             }
         }
         HairBar(((percent ?: 0.0) / 100).toFloat())

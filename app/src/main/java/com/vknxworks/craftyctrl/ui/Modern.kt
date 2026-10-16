@@ -45,7 +45,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.HorizontalDivider
-import com.vknxworks.craftyctrl.ui.theme.GeistMono
+import com.vknxworks.craftyctrl.ui.theme.Mono
 
 /**
  * Ring gauge with the value in the middle. [fraction] is 0..1 (null draws an empty track).
@@ -169,7 +169,7 @@ fun Caption(text: String, modifier: Modifier = Modifier) {
 fun BigMetric(label: String, value: String, sub: String? = null, modifier: Modifier = Modifier, bar: Float? = null) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Caption(label)
-        Text(value, style = MaterialTheme.typography.headlineSmall, fontFamily = GeistMono, maxLines = 1)
+        Text(value, style = MaterialTheme.typography.headlineSmall, fontFamily = Mono, maxLines = 1)
         bar?.let { HairBar(it) }
         sub?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
     }
@@ -181,7 +181,7 @@ fun DetailRow(label: String, value: String) {
     Column {
         Row(Modifier.fillMaxWidth().padding(vertical = 11.dp)) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-            Text(value, style = MaterialTheme.typography.bodyMedium, fontFamily = GeistMono, maxLines = 1)
+            Text(value, style = MaterialTheme.typography.bodyMedium, fontFamily = Mono, maxLines = 1)
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
