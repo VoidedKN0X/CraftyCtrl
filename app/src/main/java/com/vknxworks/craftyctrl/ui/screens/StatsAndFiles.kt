@@ -537,6 +537,8 @@ class FileEditorViewModel(private val api: CraftyApi, private val serverId: Stri
 
 @Composable
 fun FileEditorScreen(api: CraftyApi, serverId: String, path: String, onBack: () -> Unit) {
+    // Config files often hold passwords and tokens (server.properties RCON, plugin configs).
+    com.vknxworks.craftyctrl.ui.SecureScreen()
     val vm: FileEditorViewModel = viewModel(factory = viewModelFactory { initializer { FileEditorViewModel(api, serverId, path) } })
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

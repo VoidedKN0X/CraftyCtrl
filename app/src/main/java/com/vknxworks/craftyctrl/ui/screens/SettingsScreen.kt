@@ -84,6 +84,9 @@ import com.vknxworks.craftyctrl.ui.lock.PIN_MAX
 import com.vknxworks.craftyctrl.ui.lock.PIN_MIN
 import com.vknxworks.craftyctrl.ui.lock.biometricAvailable
 import com.vknxworks.craftyctrl.ui.lock.showBiometricPrompt
+import com.vknxworks.craftyctrl.ui.lock.resetBiometricKey
+import com.vknxworks.craftyctrl.ui.ScreenPrivacy
+import androidx.compose.material.icons.outlined.VisibilityOff
 
 private enum class PinDialog { NEW, CHANGE, DISABLE }
 
@@ -164,6 +167,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                         onChange = { on ->
                             val activity = context as? FragmentActivity
                             if (on && activity != null) {
+                                // A fresh key each time, bound to the fingerprints and faces enrolled now.
+                                resetBiometricKey()
                                 showBiometricPrompt(activity, "Confirm to turn on") {
                                     settings.biometricEnabled = true
                                     bio = true
@@ -171,6 +176,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                             } else {
                                 settings.biometricEnabled = false
                                 bio = false
+                                resetBiometricKey()
                             }
                         },
                     )
@@ -188,6 +194,18 @@ fun SettingsScreen(onBack: () -> Unit) {
                         Text("Change PIN")
                     }
                 }
+            }
+
+            SectionLabel("Privacy")
+            SettingsCard {
+                SwitchRow(
+                    title = "Hide content in screenshots & recents",
+                    icon = Icons.Outlined.VisibilityOff,
+                    body = "Blocks screenshots and screen recording, and blanks the app in Recents. " +
+                        "Sign-in and the file editor are always hidden.",
+                    checked = ScreenPrivacy.hideContent,
+                    onChange = { ScreenPrivacy.saveHideContent(context, it) },
+                )
             }
 
             // ------------------------------------------------ alerts

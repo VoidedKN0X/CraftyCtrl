@@ -26,10 +26,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -272,7 +270,7 @@ private fun LogList(vm: LogsViewModel) {
 private fun LogViewer(vm: LogsViewModel) {
     var query by rememberSaveable { mutableStateOf("") }
     var level by rememberSaveable { mutableStateOf(Level.ALL) }
-    val clipboard = LocalClipboardManager.current
+    val clipboard = com.vknxworks.craftyctrl.ui.rememberSensitiveClipboard()
     val haptics = LocalHapticFeedback.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -342,7 +340,7 @@ private fun LogViewer(vm: LogsViewModel) {
                                     onClick = {},
                                     onLongClick = {
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        clipboard.setText(AnnotatedString(line))
+                                        clipboard.copy(line)
                                         scope.launch { snackbar.showSnackbar("Line copied") }
                                     },
                                 ),

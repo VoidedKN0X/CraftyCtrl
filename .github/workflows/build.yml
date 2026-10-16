@@ -14,6 +14,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      release_signed: ${{ steps.signature.outputs.release_signed }}
     steps:
       # Third-party actions are pinned to exact commits (the comment shows the version).
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -27,20 +29,26 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
-      # Optional: a stable signing key so new builds install over old ones.
-      # Without these secrets the APK is signed with a throwaway debug key.
+      # The stable signing key, so new builds install over old ones. Pushes fail without it
+      # (Gradle also refuses to debug-sign on CI); only pull requests, which never publish,
+      # may build with a throwaway debug key.
       # The secret is only given to this step, not to the whole job.
       - name: Restore signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             umask 077
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
             echo "CRAFTY_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
             echo "RELEASE_SIGNED=1" >> "$GITHUB_ENV"
+          elif [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "::warning title=Unsigned build::No signing secrets for this pull request - APK is signed with the debug key and won't be published"
+            echo "CRAFTY_ALLOW_DEBUG_SIGNING=true" >> "$GITHUB_ENV"
           else
-            echo "::warning title=Unsigned build::No signing secrets set - APK is signed with the debug key"
+            echo "::error title=Signing key missing::KEYSTORE_BASE64 secret is not set - refusing to build a debug-signed release"
+            exit 1
           fi
 
       - name: Build release APK
@@ -74,6 +82,7 @@ jobs:
           echo "CRAFTY_KEYSTORE_PATH=" >> "$GITHUB_ENV"
 
       - name: Check signature
+        id: signature
         run: |
           APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
           CERT=$("$APKSIGNER" verify --print-certs craftyctrl.apk | grep -m1 "certificate DN" | sed 's/^[^:]*: //')
@@ -82,6 +91,9 @@ jobs:
           if [ "$RELEASE_SIGNED" = "1" ] && echo "$CERT" | grep -q "Android Debug"; then
             echo "::error title=Signing failed::Secrets are set but the APK is debug-signed - check the key alias and passwords"
             exit 1
+          fi
+          if [ "$RELEASE_SIGNED" = "1" ] && ! echo "$CERT" | grep -q "Android Debug"; then
+            echo "release_signed=1" >> "$GITHUB_OUTPUT"
           fi
           echo "::notice title=Signed APK::craftyctrl.apk signed by $CERT (SHA-256 $SHA)"
 
@@ -97,7 +109,8 @@ jobs:
   # Runs as a separate job with no access to the signing secrets; it only gets the finished APK.
   release:
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    # Only release-signed APKs are ever published.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && needs.build.outputs.release_signed == '1'
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -1,7 +1,7 @@
 package com.vknxworks.craftyctrl.ui
 
 import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.mutableStateMapOf
@@ -31,7 +31,7 @@ fun verifyUser(
         onSuccess()
         return
     }
-    val allowed = BIOMETRIC_WEAK or DEVICE_CREDENTIAL
+    val allowed = BIOMETRIC_STRONG or DEVICE_CREDENTIAL
     if (BiometricManager.from(activity).canAuthenticate(allowed) != BiometricManager.BIOMETRIC_SUCCESS) {
         onNoLock()
         onSuccess()
