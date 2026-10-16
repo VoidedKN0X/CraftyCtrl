@@ -24,6 +24,11 @@ class AppSettings(context: Context) {
         get() = prefs.getInt(KEY_LOCK_AFTER, 30)
         set(v) = prefs.edit().putInt(KEY_LOCK_AFTER, v).apply()
 
+    /** FLAG_SECURE for the whole app: blank screenshots and Recents thumbnail. On by default. */
+    var hideContent: Boolean
+        get() = prefs.getBoolean(KEY_HIDE_CONTENT, true)
+        set(v) = prefs.edit().putBoolean(KEY_HIDE_CONTENT, v).apply()
+
     fun setPin(pin: String) {
         val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
         prefs.edit()
@@ -100,6 +105,7 @@ class AppSettings(context: Context) {
         const val KEY_PIN_LENGTH = "pin_length"
         const val KEY_BIOMETRIC = "biometric"
         const val KEY_LOCK_AFTER = "lock_after"
+        const val KEY_HIDE_CONTENT = "hide_content"
         const val KEY_FAILED = "pin_failed"
         const val KEY_LOCKOUT_UNTIL = "pin_lockout_until"
         const val KEY_LIVE_REFRESH = "live_refresh"

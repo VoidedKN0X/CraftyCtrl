@@ -2,6 +2,7 @@ package com.vknxworks.craftyctrl
 
 import android.net.Uri
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -32,6 +33,7 @@ import androidx.navigation.navArgument
 import com.vknxworks.craftyctrl.data.CraftyApi
 import com.vknxworks.craftyctrl.data.Session
 import com.vknxworks.craftyctrl.monitor.MonitorService
+import com.vknxworks.craftyctrl.ui.ScreenPrivacy
 import com.vknxworks.craftyctrl.ui.SessionViewModel
 import com.vknxworks.craftyctrl.ui.lock.AppLockViewModel
 import com.vknxworks.craftyctrl.ui.lock.LockScreen
@@ -54,9 +56,21 @@ import com.vknxworks.craftyctrl.ui.theme.ThemePrefs
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Recents shows a blank card instead of a snapshot of the console or files.
+        setRecentsScreenshotEnabled(false)
         ThemePrefs.load(this)
+        ScreenPrivacy.load(this)
         enableEdgeToEdge()
         setContent {
+            // FLAG_SECURE follows the privacy setting, and is forced on by sign-in and the file editor.
+            val secure = ScreenPrivacy.secure
+            LaunchedEffect(secure) {
+                if (secure) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                }
+            }
             // System bar icons follow the app's own light/dark choice, not just the phone's.
             val dark = ThemePrefs.isDark()
             LaunchedEffect(dark) {

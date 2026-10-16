@@ -158,8 +158,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -463,7 +461,7 @@ private fun DeleteServerDialog(
 
 @Composable
 private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = com.vknxworks.craftyctrl.ui.rememberSensitiveClipboard()
     var copied by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onClose,
@@ -496,7 +494,7 @@ private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
         confirmButton = {
             TextButton(
                 onClick = {
-                    clipboard.setText(AnnotatedString(report))
+                    clipboard.copy(report, "CraftyCtrl diagnostics")
                     copied = true
                 },
             ) { Text(if (copied) "Copied" else "Copy") }
@@ -812,7 +810,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
     var searching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var level by rememberSaveable { mutableStateOf(LogLevel.ALL) }
-    val clipboard = LocalClipboardManager.current
+    val clipboard = com.vknxworks.craftyctrl.ui.rememberSensitiveClipboard()
     val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     val shown = remember(vm.logs, query, level, searching) {
@@ -903,7 +901,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                                 onClick = {},
                                 onLongClick = {
                                     haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                    clipboard.setText(AnnotatedString(line))
+                                    clipboard.copy(line)
                                     vm.notify("Line copied")
                                 },
                             ),

@@ -7,7 +7,8 @@ plugins {
 }
 
 // Release signing comes from environment variables (CI) or keystore.properties (local).
-// Without either, release builds fall back to the debug key so they still install.
+// Without either, local release builds fall back to the debug key so they still install;
+// on CI a missing key fails the build instead of publishing a debug-signed APK.
 val keystoreProps = Properties().apply {
     val f = rootProject.file("keystore.properties")
     if (f.exists()) f.inputStream().use { load(it) }
@@ -17,6 +18,9 @@ fun signingValue(env: String, prop: String): String? =
     System.getenv(env)?.takeIf { it.isNotBlank() } ?: keystoreProps.getProperty(prop)
 
 val releaseStorePath = signingValue("CRAFTY_KEYSTORE_PATH", "storeFile")
+val onCi = System.getenv("CI") == "true" || System.getenv("GITHUB_ACTIONS") == "true"
+// Set by the workflow for pull requests only, which build but never publish.
+val allowDebugSigning = System.getenv("CRAFTY_ALLOW_DEBUG_SIGNING") == "true"
 
 android {
     namespace = "com.vknxworks.craftyctrl"
@@ -26,8 +30,8 @@ android {
         applicationId = "com.vknxworks.craftyctrl"
         minSdk = 33
         targetSdk = 35
-        versionCode = 20
-        versionName = "2.4.0"
+        versionCode = 21
+        versionName = "2.4.1"
     }
 
     signingConfigs {
@@ -51,6 +55,11 @@ android {
             )
             signingConfig = if (releaseStorePath != null) {
                 signingConfigs.getByName("release")
+            } else if (onCi && !allowDebugSigning) {
+                throw GradleException(
+                    "Release signing key is missing on CI (CRAFTY_KEYSTORE_PATH). " +
+                        "Set the KEYSTORE_BASE64, KEYSTORE_PASSWORD and KEY_PASSWORD secrets.",
+                )
             } else {
                 signingConfigs.getByName("debug")
             }
@@ -88,7 +97,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.navigation:navigation-compose:2.8.4")
     implementation("androidx.fragment:fragment-ktx:1.8.6")
-    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")

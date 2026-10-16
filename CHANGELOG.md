@@ -3,6 +3,16 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.4.1] - 2026-10-16
+
+### Security
+- **Hide content in screenshots & recents** (Settings → Privacy, on by default) blocks screenshots and screen recording. Sign-in and the file editor are always hidden, and the Recents card never shows a snapshot of the app.
+- Fingerprint/face unlock now needs a strong (class 3) biometric and is backed by a Keystore key that only works after a real match. If fingerprints or faces change, unlock with your PIN and turn it on again.
+- New PINs need at least 6 digits. Existing shorter PINs keep working until you change them.
+- Copied diagnostics and console lines are marked as sensitive, so Android hides them from clipboard previews.
+- Nothing is included in cloud backups or device-to-device transfers.
+- Builds are never published signed with the debug key.
+
 ## [2.4.0] - 2026-10-16
 
 ### Changed

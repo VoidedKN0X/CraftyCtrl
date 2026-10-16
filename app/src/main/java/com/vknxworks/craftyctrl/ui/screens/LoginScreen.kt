@@ -52,11 +52,14 @@ import androidx.compose.ui.unit.dp
 import com.vknxworks.craftyctrl.R
 import com.vknxworks.craftyctrl.data.AuthMode
 import com.vknxworks.craftyctrl.ui.ErrorBanner
+import com.vknxworks.craftyctrl.ui.SecureScreen
 import com.vknxworks.craftyctrl.ui.SessionViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(vm: SessionViewModel) {
+    // The API key and password are typed here: never allow screenshots or a Recents snapshot.
+    SecureScreen()
     var url by rememberSaveable { mutableStateOf(vm.lastUrl) }
     var mode by rememberSaveable { mutableStateOf(AuthMode.API_KEY) }
     var apiKey by rememberSaveable { mutableStateOf("") }
