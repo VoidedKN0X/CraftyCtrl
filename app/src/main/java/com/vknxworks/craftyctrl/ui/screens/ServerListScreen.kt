@@ -87,7 +87,9 @@ fun ServerListScreen(
     val haze = remember { HazeState() }
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val islandSpace = navBottom + 78.dp
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    // A Surface gives text and icons the theme's content colour (light text in dark mode, dark in light).
+    Surface(color = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.onBackground) {
+    Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().hazeSource(haze)) {
             AnimatedContent(
                 targetState = tab,
@@ -122,6 +124,7 @@ fun ServerListScreen(
             onSelect = { tab = it },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
+    }
     }
 
     if (broadcastOpen) {
