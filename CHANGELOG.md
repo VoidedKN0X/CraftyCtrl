@@ -3,7 +3,13 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [2.2.0] - 2026-10-16
+## [2.3.0] - 2026-10-16
+
+### Changed
+- **Floating tab island:** the home screen's Servers / Host tabs are now a frosted-glass island floating above the content, like in SeerrCtrl and JellyCtrl. The list scrolls underneath it and blurs, and a selection bubble springs between tabs.
+- Updated to the same Kotlin and Jetpack Compose versions as the other Ctrl apps.
+
+ - 2026-10-16
 
 ### Changed
 - **Same layout as the other Ctrl apps.**
