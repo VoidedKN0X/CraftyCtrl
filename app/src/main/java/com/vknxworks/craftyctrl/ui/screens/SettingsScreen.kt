@@ -35,6 +35,9 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -178,12 +181,12 @@ fun SettingsScreen(onBack: () -> Unit) {
             SettingsCard {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Theme", style = MaterialTheme.typography.bodyLarge)
-                    androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                         ThemeMode.entries.forEachIndexed { i, m ->
-                            androidx.compose.material3.SegmentedButton(
+                            SegmentedButton(
                                 selected = ThemePrefs.mode == m,
                                 onClick = { ThemePrefs.saveMode(context, m) },
-                                shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, ThemeMode.entries.size),
+                                shape = SegmentedButtonDefaults.itemShape(i, ThemeMode.entries.size),
                             ) { Text(m.label, maxLines = 1) }
                         }
                     }
