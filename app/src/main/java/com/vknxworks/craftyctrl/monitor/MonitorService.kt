@@ -193,6 +193,10 @@ class MonitorService : Service() {
             Intent(this, MonitorService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_IMMUTABLE,
         )
+        // Turning alerts off from the lock screen needs the phone unlocked first.
+        val turnOff = NotificationCompat.Action.Builder(0, "Turn off", stop)
+            .setAuthenticationRequired(true)
+            .build()
         return NotificationCompat.Builder(this, CHANNEL_STATUS)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Server alerts on")
@@ -201,7 +205,9 @@ class MonitorService : Service() {
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setContentIntent(openAppIntent())
-            .addAction(0, "Turn off", stop)
+            .addAction(turnOff)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(publicVersion(CHANNEL_STATUS, "Server alerts on"))
             .build()
     }
 
@@ -228,9 +234,22 @@ class MonitorService : Service() {
             .setAutoCancel(true)
             .setContentIntent(openAppIntent())
             .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(publicVersion(channel, "A server needs attention"))
             .build()
         NotificationManagerCompat.from(this).notify(nextId.incrementAndGet(), n)
     }
+
+    /**
+     * What a secure lock screen shows when the phone hides sensitive notification content:
+     * no server names, player counts or panel errors (those can name the panel's address).
+     */
+    private fun publicVersion(channel: String, title: String): Notification =
+        NotificationCompat.Builder(this, channel)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText("Unlock to see details")
+            .build()
 
     @SuppressLint("WakelockTimeout")
     private fun updateWakeLock(keepAwake: Boolean) {

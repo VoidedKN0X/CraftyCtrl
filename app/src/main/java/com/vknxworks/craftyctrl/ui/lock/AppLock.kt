@@ -216,6 +216,10 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
         if (checking || lockoutRemaining > 0) return
         viewModelScope.launch {
             checking = true
+            // Count the attempt before checking it, so closing the app mid-check can't skip the count.
+            val fails = withContext(Dispatchers.IO) {
+                (settings.failedAttempts + 1).also { settings.failedAttempts = it }
+            }
             // PBKDF2 takes a moment; keep it off the main thread.
             val ok = withContext(Dispatchers.Default) { settings.checkPin(pin) }
             checking = false
@@ -223,12 +227,10 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
                 unlock()
                 return@launch
             }
-            val fails = settings.failedAttempts + 1
-            settings.failedAttempts = fails
             if (fails >= MAX_TRIES) {
                 // 30 s, doubling for every further batch of wrong PINs, capped at 15 minutes.
                 val wait = (30_000L shl ((fails - MAX_TRIES) / MAX_TRIES).coerceAtMost(5)).coerceAtMost(900_000L)
-                settings.lockoutUntil = System.currentTimeMillis() + wait
+                settings.startLockout(wait)
                 refreshLockout()
             }
             pinError = "Wrong PIN"
@@ -237,12 +239,12 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun refreshLockout() {
-        val remaining = settings.lockoutUntil - System.currentTimeMillis()
+        val remaining = settings.lockoutRemaining()
         lockoutRemaining = remaining.coerceAtLeast(0)
         if (remaining > 0) {
             viewModelScope.launch {
                 while (true) {
-                    val left = settings.lockoutUntil - System.currentTimeMillis()
+                    val left = settings.lockoutRemaining()
                     lockoutRemaining = left.coerceAtLeast(0)
                     if (left <= 0) break
                     delay(500)

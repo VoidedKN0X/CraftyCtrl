@@ -402,6 +402,8 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
     private fun insideServer(path: String): Boolean {
         val root = rootPath?.trimEnd('/') ?: return false
+        // "root/../other" starts with the root but points outside it.
+        if (com.vknxworks.craftyctrl.data.hasDotSegment(path.removePrefix(root))) return false
         return path.startsWith("$root/") && path.trimEnd('/') != root
     }
 

@@ -208,6 +208,9 @@ class CraftyApi(
         readInto: (ByteArray, Int, Int) -> Int,
         onProgress: (Float) -> Unit,
     ) = withContext(Dispatchers.IO) {
+        // The name comes from whichever app provided the file; keep only its last part so a
+        // name like "../plugins/x.jar" can't place the upload outside the chosen folder.
+        val fileName = safeFileName(fileName)
         val chunkSize = UPLOAD_CHUNK
         val total = maxOf(1L, (size + chunkSize - 1) / chunkSize).toInt()
         val url = "$baseUrl/api/v2/servers/$serverId/files/upload/".toHttpUrlOrNull()
@@ -279,9 +282,14 @@ class CraftyApi(
             .mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
             .map { it.replace(ansi, "") }
 
-    /** Console command, without the leading slash. Crafty expects a plain-text body. */
+    /**
+     * Console command, without the leading slash. Crafty expects a plain-text body and writes it to
+     * the server's console followed by a newline, so line breaks are flattened: a player name or
+     * message taken from the server can never smuggle in a second command.
+     */
     suspend fun sendCommand(serverId: String, command: String) {
-        call("POST", "/servers/$serverId/stdin", command.toRequestBody(TEXT))
+        val oneLine = command.replace(lineBreaks, " ")
+        call("POST", "/servers/$serverId/stdin", oneLine.toRequestBody(TEXT))
     }
 
     /** start_server, stop_server, restart_server, kill_server, backup_server, ... */
@@ -574,6 +582,7 @@ class CraftyApi(
         private val TEXT = "text/plain; charset=utf-8".toMediaType()
         private val JSON_TYPE = "application/json; charset=utf-8".toMediaType()
         private val ansi = Regex("\u001B\\[[;?0-9]*[A-Za-z]")
+        private val lineBreaks = Regex("[\\r\\n\\u0085\\u2028\\u2029]+")
         private val main = Handler(Looper.getMainLooper())
         private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -582,6 +591,15 @@ class CraftyApi(
             .readTimeout(20, TimeUnit.SECONDS)
             .callTimeout(30, TimeUnit.SECONDS)
             .build()
+
+        /** The last part of [raw], without control characters; "upload.bin" if nothing usable is left. */
+        internal fun safeFileName(raw: String): String {
+            val name = raw.substringAfterLast('/').substringAfterLast('\\')
+                .filter { it.code >= 32 && it.code != 127 }
+                .trim()
+                .take(200)
+            return if (name.isEmpty() || name == "." || name == "..") "upload.bin" else name
+        }
 
         private fun jsonBody(o: JsonObject): RequestBody = o.toString().toRequestBody(JSON_TYPE)
 

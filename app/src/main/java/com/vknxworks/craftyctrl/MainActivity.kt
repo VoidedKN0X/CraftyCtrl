@@ -20,11 +20,14 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -118,8 +121,11 @@ private fun AppRoot(
     }
 
     // The app keeps running underneath the lock, so open screens and unsaved edits survive it.
+    // While locked, the screens underneath are hidden from accessibility services and screen readers.
     Box(Modifier.fillMaxSize()) {
-        AppContent(session, sessionVm)
+        Box(Modifier.fillMaxSize().then(if (lockVm.locked) Modifier.clearAndSetSemantics {} else Modifier)) {
+            AppContent(session, sessionVm)
+        }
         if (lockVm.locked) {
             LockScreen(
                 vm = lockVm,
@@ -154,19 +160,19 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
             popEnterTransition = { fadeIn(tween(220)) },
             popExitTransition = { slideOutHorizontally(tween(220)) { it / 6 } + fadeOut(tween(200)) },
         ) {
-            composable("servers") {
+            composable("servers") { entry ->
                 ServerListScreen(
                     api = api,
-                    onOpen = { s -> nav.navigate("server/${Uri.encode(s.id)}?name=${Uri.encode(s.name)}") },
-                    onSettings = { nav.navigate("settings") },
+                    onOpen = { s -> nav.go(entry, "server/${Uri.encode(s.id)}?name=${Uri.encode(s.name)}") },
+                    onSettings = { nav.go(entry, "settings") },
                     onSignOut = { sessionVm.signOut() },
-                    onCreate = { nav.navigate("create") },
+                    onCreate = { nav.go(entry, "create") },
                 )
             }
-            composable("create") {
+            composable("create") { entry ->
                 CreateServerScreen(
                     api = api,
-                    onBack = { nav.popBackStack() },
+                    onBack = { nav.back(entry) },
                     onOpenServer = { id, name ->
                         nav.navigate("server/${Uri.encode(id)}?name=${Uri.encode(name)}") {
                             popUpTo("servers")
@@ -186,12 +192,12 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
                     api = api,
                     serverId = serverId,
                     serverName = entry.arguments?.getString("name").orEmpty(),
-                    onBack = { nav.popBackStack() },
+                    onBack = { nav.back(entry) },
                     onOpenFile = { path ->
-                        nav.navigate("file/${Uri.encode(serverId)}?path=${Uri.encode(path)}")
+                        nav.go(entry, "file/${Uri.encode(serverId)}?path=${Uri.encode(path)}")
                     },
                     onDeleted = { nav.popBackStack("servers", inclusive = false) },
-                    onManage = { page -> nav.navigate("manage/${page.route}/${Uri.encode(serverId)}") },
+                    onManage = { page -> nav.go(entry, "manage/${page.route}/${Uri.encode(serverId)}") },
                     onOpenServer = { id, name ->
                         nav.navigate("server/${Uri.encode(id)}?name=${Uri.encode(name)}") { popUpTo("servers") }
                     },
@@ -205,7 +211,7 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
                 ),
             ) { entry ->
                 val serverId = entry.arguments?.getString("id").orEmpty()
-                val back: () -> Unit = { nav.popBackStack() }
+                val back: () -> Unit = { nav.back(entry) }
                 when (entry.arguments?.getString("page")) {
                     ManagePage.PROPERTIES.route -> ServerPropertiesScreen(api, serverId, back)
                     ManagePage.PLAYERS.route -> PlayersScreen(api, serverId, back)
@@ -225,12 +231,32 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
                     api = api,
                     serverId = entry.arguments?.getString("id").orEmpty(),
                     path = entry.arguments?.getString("path").orEmpty(),
-                    onBack = { nav.popBackStack() },
+                    onBack = { nav.back(entry) },
                 )
             }
-            composable("settings") {
-                SettingsScreen(onBack = { nav.popBackStack() })
+            composable("settings") { entry ->
+                SettingsScreen(onBack = { nav.back(entry) })
             }
         }
     }
+}
+
+/**
+ * Back from the screen [from]. Repeat taps while a screen change is still animating are ignored,
+ * as is a late call from a screen that's already gone, and the server list at the bottom is never
+ * popped (that emptied the screen stack and left a black screen).
+ */
+private fun NavHostController.back(from: NavBackStackEntry) {
+    val current = currentBackStackEntry ?: return
+    if (previousBackStackEntry == null) return
+    if (current.id != from.id) return
+    if (!current.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+    popBackStack()
+}
+
+/** Opens a screen from a tap on [from], ignoring taps on a screen that's on its way out or not shown yet. */
+private fun NavHostController.go(from: NavBackStackEntry, route: String) {
+    if (currentBackStackEntry?.id != from.id) return
+    if (!from.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+    navigate(route)
 }
