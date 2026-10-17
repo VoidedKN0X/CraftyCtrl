@@ -181,7 +181,24 @@ sealed interface FileResult {
     data class Text(val contents: String) : FileResult
 }
 
-internal fun parseFileResult(root: JsonElement, requestedPath: String): FileResult {
+internal fun parseFileResult(root: JsonElement, requestedPath: String): FileResult =
+    when (val r = parseFileResultRaw(root, requestedPath)) {
+        // Drop entries whose name or path could point outside the folder (a separator, "." / "..",
+        // control characters), so a bad reply can't make a tap open, edit or delete another path.
+        is FileResult.Folder -> FileResult.Folder(r.entries.filter { isSafeEntryName(it.name) && !hasDotSegment(it.path) })
+        is FileResult.Text -> r
+    }
+
+/** A single file or folder name: no path separators, not "." or "..", no control characters. */
+internal fun isSafeEntryName(name: String): Boolean =
+    name.isNotEmpty() && name != "." && name != ".." &&
+        name.none { it == '/' || it == '\\' || it.code < 32 || it.code == 127 }
+
+/** Whether [path] has a "." or ".." segment (with either separator). */
+internal fun hasDotSegment(path: String): Boolean =
+    path.split('/', '\\').any { it == "." || it == ".." }
+
+private fun parseFileResultRaw(root: JsonElement, requestedPath: String): FileResult {
     val data = (root as? JsonObject)?.get("data")
     return when (data) {
         is JsonPrimitive -> FileResult.Text(data.contentOrNull.orEmpty())

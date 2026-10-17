@@ -55,6 +55,8 @@ import kotlinx.serialization.json.JsonPrimitive
 
 @Composable
 fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
+    // RCON and management secrets can be revealed here, so screenshots stay blocked like in the file editor.
+    com.vknxworks.craftyctrl.ui.SecureScreen()
     val vm: PropertiesViewModel = viewModel(factory = viewModelFactory { initializer { PropertiesViewModel(api, serverId) } })
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

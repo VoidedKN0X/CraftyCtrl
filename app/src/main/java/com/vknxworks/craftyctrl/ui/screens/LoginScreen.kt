@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -62,10 +63,11 @@ fun LoginScreen(vm: SessionViewModel) {
     SecureScreen()
     var url by rememberSaveable { mutableStateOf(vm.lastUrl) }
     var mode by rememberSaveable { mutableStateOf(AuthMode.API_KEY) }
-    var apiKey by rememberSaveable { mutableStateOf("") }
+    // Secrets use remember, not rememberSaveable, so they're never written into the saved-state Bundle.
+    var apiKey by remember { mutableStateOf("") }
     var username by rememberSaveable { mutableStateOf(vm.lastUsername) }
-    var password by rememberSaveable { mutableStateOf("") }
-    var totp by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var totp by remember { mutableStateOf("") }
     var reveal by rememberSaveable { mutableStateOf(false) }
 
     val canSubmit = !vm.busy && url.isNotBlank() && when (mode) {

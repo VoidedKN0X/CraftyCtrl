@@ -3,6 +3,24 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.4.2] - 2026-10-17
+
+### Security
+- **Wrong-PIN lockout can't be skipped by changing the clock.** The wait after too many wrong PINs now runs on the phone's uptime clock, so setting the date or time forward no longer ends it early. It still carries on after a restart.
+- Every PIN attempt is counted before it's checked, so closing the app right after a wrong PIN no longer resets the count.
+- While the app is locked, the screens underneath are hidden from screen readers and other accessibility services.
+- **Notifications on the lock screen:** when your phone hides sensitive notification content, server alerts show only "A server needs attention" and the alerts notification shows no server names, player counts or errors. Unlock to see details.
+- The **Turn off** button on the alerts notification needs the phone unlocked first.
+- Uploaded files keep only their own name. A file whose name (as given by the app it came from) contains a folder path like `../plugins/` can no longer land outside the folder you chose.
+- File and folder names from the server that contain `/`, `\`, `.` / `..` or control characters are left out of the file list, and move, rename, delete and extract refuse paths that step out of the server's folder with `..`.
+- Console commands are always sent as a single line, so a player name or message taken from the server can't sneak in a second command.
+- **Server settings** (server.properties) always blocks screenshots and screen recording, like sign-in and the file editor, because RCON and management passwords can be revealed there.
+- The API key, password and 2FA code typed on the sign-in screen are no longer kept in Android's saved screen state.
+- Unencrypted HTTP is now switched off in the app's manifest too (it was already refused at sign-in).
+
+### Fixed
+- Tapping Back (or a list item) twice quickly during a screen change could close one screen too many and leave a black screen. Repeat taps during a transition are now ignored, and the server list is never closed.
+
 ## [2.4.1] - 2026-10-16
 
 ### Security

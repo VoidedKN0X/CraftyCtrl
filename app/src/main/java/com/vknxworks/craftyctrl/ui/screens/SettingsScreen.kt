@@ -202,7 +202,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     title = "Hide content in screenshots & recents",
                     icon = Icons.Outlined.VisibilityOff,
                     body = "Blocks screenshots and screen recording, and blanks the app in Recents. " +
-                        "Sign-in and the file editor are always hidden.",
+                        "Sign-in, the file editor and server settings are always hidden.",
                     checked = ScreenPrivacy.hideContent,
                     onChange = { ScreenPrivacy.saveHideContent(context, it) },
                 )
