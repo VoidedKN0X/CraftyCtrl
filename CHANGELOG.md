@@ -18,23 +18,23 @@ Each version below becomes a GitHub release. To publish a new one: bump `version
 ### Changed
 - **Server pages use the tab island too:** Overview, Console, Stats, Files, Backups and Schedules are now in the same floating frosted-glass island as the home screen, at the bottom instead of a tab row at the top. It steps aside while the keyboard is open, so the console's command field stays in view.
 
- - 2026-10-16
+## [2.3.2] - 2026-10-16
 
 ### Changed
 - The Servers header has a single ⋮ button, styled like the other tonal buttons, holding Broadcast, Settings and Sign out.
 
- - 2026-10-16
+## [2.3.1] - 2026-10-16
 
 ### Fixed
 - Text and icons on the Servers and Host tabs (including the ⋮ menu button) were black in dark mode. They now follow the theme: light in dark mode, dark in light mode.
 
- - 2026-10-16
+## [2.3.0] - 2026-10-16
 
 ### Changed
 - **Floating tab island:** the home screen's Servers / Host tabs are now a frosted-glass island floating above the content, like in SeerrCtrl and JellyCtrl. The list scrolls underneath it and blurs, and a selection bubble springs between tabs.
 - Updated to the same Kotlin and Jetpack Compose versions as the other Ctrl apps.
 
- - 2026-10-16
+## [2.2.0] - 2026-10-16
 
 ### Changed
 - **Same layout as the other Ctrl apps.**
@@ -45,19 +45,19 @@ Each version below becomes a GitHub release. To publish a new one: bump `version
   - Stats charts sit in cards.
   - Settings has a large collapsing title, and its options are rows with icons, switches and segmented buttons.
 
- - 2026-10-16
+## [2.1.0] - 2026-10-16
 
 ### Changed
 - **Matches the other Ctrl apps' theme:** Material You colours by default, with CraftyCtrl's blue as the fallback; System / Light / Dark; the system font; and the same rounded shapes.
 - **Settings → Appearance** now has Theme, **Material You colours** and **Pure black** (true black backgrounds in dark mode). The accent colour picker is gone.
 - Server status colours (running, starting, crashed, stopped) are tuned separately for light and dark mode.
 
- - 2026-10-15
+## [2.0.1] - 2026-10-15
 
 ### Changed
 - **New icon:** the server rack in a blocky pixel style with a small pixel pickaxe. Android's themed (monochrome) icons use the same mark.
 
- - 2026-10-15
+## [2.0.0] - 2026-10-15
 
 ### Changed
 - **New package name: `com.vknxworks.craftyctrl`** (was `com.vknxworks.craftyremote`), to match the CraftyCtrl name.
@@ -65,18 +65,18 @@ Each version below becomes a GitHub release. To publish a new one: bump `version
 ### Upgrading
 Android sees this as a new app, so it won't update over Crafty Remote or CraftyCtrl 1.x. Uninstall the old app, install this one, then sign in again and set your PIN, theme and alerts again.
 
- - 2026-10-15
+## [1.6.0] - 2026-10-15
 
 ### Changed
 - **Requires Android 13 or newer** (was Android 8). Code paths that only existed for older Android versions were removed.
 - Confirming a stop, restart or kill now always accepts your phone's PIN, pattern or password as well as fingerprint or face.
 
- - 2026-10-15
+## [1.5.1] - 2026-10-15
 
 ### Changed
 - **Crafty Remote is now CraftyCtrl.** The new name shows on the home screen, sign-in and lock screens. It installs over earlier versions and keeps your sign-in and settings.
 
- - 2026-10-15
+## [1.5.0] - 2026-10-15
 
 ### New
 - **Plugins & mods** (server → Manage): see every plugin and mod, turn them on or off (the jar is renamed to `.jar.disabled`), remove them, and upload new jars.
@@ -89,13 +89,13 @@ Android sees this as a new app, so it won't update over Crafty Remote or CraftyC
 ### Changed
 - **More colour:** on Android 12+ the app now uses your wallpaper's Material You palette by default, for buttons, switches, tabs, chips, bars and charts. The fixed accents tint the app in the same way. Running servers always show a green dot.
 
- - 2026-10-15
+## [1.4.1] - 2026-10-15
 
 ### New
 - **Light mode.** The minimal look now comes in light too: a warm off-white background with near-black text.
 - **Theme setting** in Settings → Appearance: Follow system (the default), Light or Dark. The status and navigation bar icons follow the app's choice.
 
- - 2026-10-15
+## [1.4.0] - 2026-10-15
 
 ### Changed
 - **New minimal look.** A quiet near-black theme with off-white text, the Geist typeface (Geist Mono for numbers), thin divider lines instead of cards, and underlined text tabs.
@@ -104,7 +104,7 @@ Android sees this as a new app, so it won't update over Crafty Remote or CraftyC
 - **Stats:** each chart is a single thin line with min, average and max underneath.
 - **Accent colour** in Settings → Appearance: green, blue, amber, purple, or your wallpaper's colour (Android 12+). Colour is only used for server status and the players chart.
 
- - 2026-10-14
+## [1.3.1] - 2026-10-14
 
 ### Changed
 - Alerts now only notify when a server stops or crashes. Player-join and backup alerts are gone, along with their notification categories in Android's settings.
