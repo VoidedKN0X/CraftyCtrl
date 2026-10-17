@@ -1,67 +1,91 @@
 # CraftyCtrl
 
-An Android app for managing a [Crafty Controller 4](https://craftycontrol.com) panel from your phone, built with Kotlin and Jetpack Compose on Crafty's v2 API.
+**Manage your Minecraft servers on Crafty Controller from your phone.**
 
-CraftyCtrl is an unofficial app. It isn't made by or affiliated with the Crafty Controller team.
+[![Latest release](https://img.shields.io/github/v/release/VoidedKN0X/CraftyCtrl?label=download)](https://github.com/VoidedKN0X/CraftyCtrl/releases/latest) ![Android 13+](https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white) [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE) [![Sponsor](https://img.shields.io/badge/sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/VoidedKN0X)
+
+CraftyCtrl is an Android app for [Crafty Controller 4](https://craftycontrol.com), the self-hosted Minecraft server panel. Start, stop and watch your servers, use the console and manage backups without opening a browser.
+
+Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
+
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/VoidedKN0X/CraftyCtrl"><img src=".github/assets/badge_obtainium.png" alt="Get it on Obtainium" height="48"></a>
 
 ## Features
 
-**Servers**
-- Server list with live status, CPU, memory, players and uptime, plus the host machine's CPU, memory and disk
-- Start, restart, stop and kill. Stopping, restarting and killing ask for your fingerprint, face or screen lock
-- Restarts and stops can warn players first, with a chat countdown you can cancel
-- Broadcast one chat message to every running server
-- Create new Java or Bedrock servers, clone, update the server jar, or delete a server
-
-**Console and logs**
-- Live console with search, warning/error filters, copy on long-press, quick commands and player-name completion
-- Log viewer for `latest.log` and older logs, with search and filters
-- Stats history charts for CPU, memory and players
-
-**Configuration**
-- Server settings: every `server.properties` key for Java and Bedrock, grouped and typed
-- Players & bans: whitelist/allowlist, operators, banned players and IPs
-- Server options: name, memory, auto-start, crash detection, stop command and more
-- Plugins & mods: turn them on or off, add or remove jars
-- File browser with a text editor, upload, create, rename, move, copy, unzip and delete
-
-**Backups and schedules**
-- Backup profiles: run, edit, restore and schedule
-- Scheduled tasks: create, edit, enable, run now and delete
-
-**App**
-- Light and dark mode (or follow the system), Material You colours and an optional pure black mode
-- App lock with a PIN and fingerprint or face unlock
-- Background alerts when a server stops or crashes
+- **Server list** with live status, CPU, memory, players and uptime
+- **Start, restart, stop and kill**, with a fingerprint check for stop and kill and an optional in-game countdown
+- **Live console** with search, filters, quick commands and player-name completion
+- **Logs and stats history** charts for CPU, memory and players
+- **Server settings**: every `server.properties` option, whitelist, operators and bans
+- **Plugins and mods**: turn them on or off, add or remove jars
+- **File browser** with a built-in text editor, upload, unzip and more
+- **Backups and scheduled tasks**: run, edit, restore and schedule
+- **Create, clone and update** Java and Bedrock servers
+- **Alerts** when a server stops or crashes; app lock with PIN and fingerprint
 
 ## Requirements
 
-- Crafty Controller 4.x reachable over **HTTPS with a valid certificate**, for example behind a reverse proxy. The app refuses plain `http://`.
-- Android 13 or newer.
+- Android 13 or newer
+- Crafty Controller 4.x reachable over **HTTPS with a valid certificate** (for example behind a reverse proxy). Plain `http://` is not supported.
 
-## First run
+## Install
 
-1. Enter the panel address, e.g. `https://crafty.example.com`. A pasted dashboard URL works, and reverse-proxy subpaths such as `/crafty` are kept.
-2. Sign in with either:
-   - **API key:** in Crafty open your profile → *API Keys* → *Generate*, and give it only the servers and permissions you need.
-   - **Password:** your Crafty username, password and, if enabled, your 2FA code.
-3. Tap **Connect**. The app checks the address and credentials before saving anything. The token is encrypted with the Android Keystore; passwords are never stored.
+1. Download the latest `.apk` file from the [Releases page](https://github.com/VoidedKN0X/CraftyCtrl/releases/latest).
+2. Open it on your phone. Android may ask you to allow installing apps from your browser or file manager.
+3. Updates install over the old version. Your settings and login are kept.
 
-## Building from source
+**Automatic updates with Obtainium:** install [Obtainium](https://github.com/ImranR98/Obtainium), then tap the button below on your phone. Obtainium adds CraftyCtrl and installs every new release for you.
 
-Open the project in Android Studio (Ladybug or newer) and run it, or build from a terminal with `./gradlew assembleDebug`.
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/VoidedKN0X/CraftyCtrl"><img src=".github/assets/badge_obtainium.png" alt="Get it on Obtainium" height="48"></a>
 
-## Crafty API endpoints used
+If the button doesn't open Obtainium, add `https://github.com/VoidedKN0X/CraftyCtrl` in Obtainium by hand.
 
-| Feature | Endpoint |
+## Getting started
+
+1. Enter your panel address, e.g. `https://crafty.example.com`.
+2. Sign in with an **API key** (in Crafty: your profile → *API Keys* → *Generate*) or your **username and password**.
+3. Tap **Connect**. Your login is stored encrypted on the phone.
+
+## Build from source
+
+You need [Android Studio](https://developer.android.com/studio), or JDK 17 and the Android SDK.
+
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/VoidedKN0X/CraftyCtrl.git
+   cd CraftyCtrl
+   ```
+2. Build the app:
+   ```bash
+   ./gradlew assembleDebug
+   ```
+   On Windows, use `gradlew.bat assembleDebug`.
+3. The APK is in `app/build/outputs/apk/debug/`. Copy it to your phone and install it.
+
+Or open the folder in Android Studio and press **Run** with your phone connected.
+
+## Support the project
+
+CraftyCtrl is free and open source. If it's useful to you, you can support development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). Starring the repo and [reporting bugs](https://github.com/VoidedKN0X/CraftyCtrl/issues) helps too.
+
+## The Ctrl series
+
+Native Android apps for self-hosted services and everyday tools, all with the same Material You design.
+
+| App | What it's for |
 | --- | --- |
-| Login | `POST /auth/login` |
-| Servers | `GET /servers`, `POST /servers`, `GET`/`PATCH`/`DELETE /servers/{id}` |
-| Stats and history | `GET /servers/{id}/stats`, `GET /servers/{id}/history`, `GET /crafty/stats` |
-| Power, backup, update, clone | `POST /servers/{id}/action/{action}` |
-| Console | `GET /servers/{id}/logs`, `POST /servers/{id}/stdin` |
-| Files | `POST`/`PATCH`/`DELETE /servers/{id}/files`, `PUT`/`PATCH /servers/{id}/files/create`, `POST /servers/{id}/files/upload/`, `POST /servers/{id}/files/zip` |
-| Backups | `GET /servers/{id}/backups`, `PATCH`/`POST /servers/{id}/backups/backup/{backupId}` |
-| Schedules | `GET`/`POST /servers/{id}/tasks`, `GET`/`PATCH`/`DELETE /servers/{id}/tasks/{taskId}`, `POST /servers/{id}/tasks/{taskId}/run` |
+| [BeamCtrl](https://github.com/VoidedKN0X/BeamCtrl) | TV remote for phones with an IR blaster |
+| **CraftyCtrl** (this app) | Manage Minecraft servers on Crafty Controller |
+| [ElementCtrl](https://github.com/VoidedKN0X/ElementCtrl) | Matrix chat client for matrix.org and self-hosted Synapse |
+| [FilesCtrl](https://github.com/VoidedKN0X/FilesCtrl) | File manager with NFS, SMB, SFTP, FTP and WebDAV |
+| [FrigateCtrl](https://github.com/VoidedKN0X/FrigateCtrl) | Watch and review your Frigate NVR cameras |
+| [ImmichCtrl](https://github.com/VoidedKN0X/ImmichCtrl) | Photos and backup for your Immich server |
+| [JellyCtrl](https://github.com/VoidedKN0X/JellyCtrl) | Movies, shows, music and Live TV from Jellyfin |
+| [NaviCtrl](https://github.com/VoidedKN0X/NaviCtrl) | Music player for Navidrome servers |
+| [SeerrCtrl](https://github.com/VoidedKN0X/SeerrCtrl) | Request movies and shows on Seerr / Jellyseerr |
 
-All paths are under `/api/v2`. Responses are parsed leniently, because field types differ between Crafty releases.
+## License
+
+CraftyCtrl is licensed under the [GNU General Public License v3.0](LICENSE). © VKNXWorks
+
+CraftyCtrl is an unofficial app and is not affiliated with the Crafty Controller team.
