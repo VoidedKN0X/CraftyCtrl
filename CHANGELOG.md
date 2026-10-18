@@ -3,6 +3,16 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.4.3] - 2026-10-18
+
+### Security
+- **The lock screen now covers everything.** Before, a dialog, menu or sheet that was open when the app locked (for example a delete confirmation or a rename box) stayed on top of the lock screen and could still be used without the PIN. The lock screen now sits above all of them.
+- A wrong-PIN lockout is now checked against the saved lockout itself rather than the countdown on screen, so a PIN can't slip through in the moment before the countdown appears.
+- Uploaded file names are cleaned up further: names made only of dots, trailing dots and spaces (which Windows servers drop, turning a name like `.. .` into `..`), colons (drive letters and hidden data streams on Windows) and invisible text-direction characters are removed or replaced.
+- Console commands now have every control character removed, including the less common line breaks (vertical tab, form feed and others), so nothing can start a second command or send terminal escape codes.
+- File paths are always built from the folder you opened and the item's own name, never taken from the server's reply as-is, so a bad reply can't make rename, delete or the plugin and mod manager act on a file somewhere else.
+- New files and folders, renames and uploads only happen inside the server's own folder, and a new name can't contain `/`, `\` or `..`. (To move an item, use Move.)
+
 ## [2.4.2] - 2026-10-17
 
 ### Security

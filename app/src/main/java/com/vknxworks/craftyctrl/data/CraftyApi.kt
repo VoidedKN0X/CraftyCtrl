@@ -288,7 +288,7 @@ class CraftyApi(
      * message taken from the server can never smuggle in a second command.
      */
     suspend fun sendCommand(serverId: String, command: String) {
-        val oneLine = command.replace(lineBreaks, " ")
+        val oneLine = command.replace(lineBreaks, " ").replace(controlChars, " ")
         call("POST", "/servers/$serverId/stdin", oneLine.toRequestBody(TEXT))
     }
 
@@ -582,7 +582,11 @@ class CraftyApi(
         private val TEXT = "text/plain; charset=utf-8".toMediaType()
         private val JSON_TYPE = "application/json; charset=utf-8".toMediaType()
         private val ansi = Regex("\u001B\\[[;?0-9]*[A-Za-z]")
-        private val lineBreaks = Regex("[\\r\\n\\u0085\\u2028\\u2029]+")
+        private val lineBreaks = Regex("[\\r\\n\\u000B\\u000C\\u001C-\\u001E\\u0085\\u2028\\u2029]+")
+        /** Any other control character (escape sequences, NUL, ...) never belongs in a console command. */
+        private val controlChars = Regex("[\\p{Cntrl}]")
+        /** Invisible direction overrides that can make a file name read differently from what it is. */
+        private val bidiControls = Regex("[\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]")
         private val main = Handler(Looper.getMainLooper())
         private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -595,10 +599,15 @@ class CraftyApi(
         /** The last part of [raw], without control characters; "upload.bin" if nothing usable is left. */
         internal fun safeFileName(raw: String): String {
             val name = raw.substringAfterLast('/').substringAfterLast('\\')
-                .filter { it.code >= 32 && it.code != 127 }
+                .filter { it.code >= 32 && it.code != 127 && it != '\u0085' && it != '\u2028' && it != '\u2029' }
+                .replace(bidiControls, "")
+                // A colon is a drive letter or an alternate data stream on Windows hosts ("C:x", "a.txt:x").
+                .replace(':', '_')
+                // Windows drops trailing dots and spaces, which can turn a name like ".. ." into "..".
+                .trimEnd('.', ' ')
                 .trim()
                 .take(200)
-            return if (name.isEmpty() || name == "." || name == "..") "upload.bin" else name
+            return if (name.isEmpty() || name.all { it == '.' || it == ' ' }) "upload.bin" else name
         }
 
         private fun jsonBody(o: JsonObject): RequestBody = o.toString().toRequestBody(JSON_TYPE)

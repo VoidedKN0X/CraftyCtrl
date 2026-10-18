@@ -374,6 +374,11 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
     fun createEntry(name: String, directory: Boolean) {
         val folder = filePath ?: return
+        if (!inServerFolder(folder)) return
+        if (!com.vknxworks.craftyctrl.data.isSafeEntryName(name.trim())) {
+            viewModelScope.launch { _messages.send("Use a plain name, without / or \\.") }
+            return
+        }
         viewModelScope.launch {
             try {
                 api.createEntry(serverId, folder, name, directory)
@@ -400,6 +405,12 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         clip = null
     }
 
+    /** The server's own folder or anything inside it (where new files and uploads may go). */
+    private fun inServerFolder(path: String): Boolean {
+        val root = rootPath?.trimEnd('/') ?: return false
+        return path.trimEnd('/') == root || insideServer(path)
+    }
+
     private fun insideServer(path: String): Boolean {
         val root = rootPath?.trimEnd('/') ?: return false
         // "root/../other" starts with the root but points outside it.
@@ -410,6 +421,11 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     fun renameEntry(entry: FileEntry, newName: String) {
         val folder = filePath ?: return
         if (!insideServer(entry.path)) return
+        // A rename stays in the same folder: a name with a separator or ".." would move the item elsewhere.
+        if (!com.vknxworks.craftyctrl.data.isSafeEntryName(newName.trim())) {
+            viewModelScope.launch { _messages.send("Use a plain name, without / or \\.") }
+            return
+        }
         viewModelScope.launch {
             try {
                 api.renameEntry(serverId, entry.path, newName)
@@ -487,7 +503,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     /** Uploads a picked file into the open folder. */
     fun upload(resolver: android.content.ContentResolver, uri: android.net.Uri) {
         val folder = filePath ?: return
-        if (uploadProgress != null) return
+        if (uploadProgress != null || !inServerFolder(folder)) return
         viewModelScope.launch {
             uploadProgress = 0f
             try {

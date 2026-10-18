@@ -230,7 +230,9 @@ private fun entryFrom(o: JsonObject, key: String?, parent: String): FileEntry? {
     // that was asked for, so build the absolute path from that folder.
     val raw = o.str("path")?.takeIf { it.isNotBlank() }
     val name = key?.takeIf { it.isNotBlank() } ?: raw?.trimEnd('/')?.substringAfterLast('/') ?: return null
-    val path = if (raw != null && raw.startsWith("/")) raw else join(parent, name)
+    // Always built from the folder that was asked for and the entry's own name: an absolute path in the reply is
+    // never trusted, so a bad reply can't make rename, delete or the add-on manager act on a path elsewhere.
+    val path = join(parent, name)
     val isDir = o.bool("dir") ?: o.bool("is_dir") ?: o.bool("directory")
         ?: (o.str("type")?.lowercase()?.let { it == "dir" || it == "directory" || it == "folder" }) ?: false
     return FileEntry(name, path, isDir, o.bool("can_open"))
