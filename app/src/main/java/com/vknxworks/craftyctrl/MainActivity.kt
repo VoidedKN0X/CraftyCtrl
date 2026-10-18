@@ -127,15 +127,30 @@ private fun AppRoot(
             AppContent(session, sessionVm)
         }
         if (lockVm.locked) {
-            LockScreen(
-                vm = lockVm,
-                onForgot = {
-                    lockVm.settings.clearPin()
-                    lockVm.settings.alertsEnabled = false
-                    lockVm.unlock()
-                    sessionVm.signOut("PIN removed. Sign in again to continue.")
-                },
-            )
+            // Opaque cover in the app's own window (also behind the system bars).
+            androidx.compose.material3.Surface(Modifier.fillMaxSize().clearAndSetSemantics {}) {}
+            // The lock itself is a full-screen window of its own. Dialogs, menus and sheets that were open when the
+            // app locked are separate windows above the app's window, so drawing the lock in the app's window
+            // alone would leave them visible and usable on top of it; this window covers them.
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = {},
+                properties = androidx.compose.ui.window.DialogProperties(
+                    dismissOnBackPress = false,
+                    dismissOnClickOutside = false,
+                    usePlatformDefaultWidth = false,
+                    decorFitsSystemWindows = false,
+                ),
+            ) {
+                LockScreen(
+                    vm = lockVm,
+                    onForgot = {
+                        lockVm.settings.clearPin()
+                        lockVm.settings.alertsEnabled = false
+                        lockVm.unlock()
+                        sessionVm.signOut("PIN removed. Sign in again to continue.")
+                    },
+                )
+            }
         }
     }
 }

@@ -213,7 +213,8 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun submitPin(pin: String, onWrong: () -> Unit) {
-        if (checking || lockoutRemaining > 0) return
+        // Asks the stored lockout (monotonic clock), not the on-screen countdown, which may not have caught up yet.
+        if (checking || settings.lockoutRemaining() > 0) return
         viewModelScope.launch {
             checking = true
             // Count the attempt before checking it, so closing the app mid-check can't skip the count.
@@ -238,11 +239,13 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private var ticker: kotlinx.coroutines.Job? = null
+
     private fun refreshLockout() {
         val remaining = settings.lockoutRemaining()
         lockoutRemaining = remaining.coerceAtLeast(0)
-        if (remaining > 0) {
-            viewModelScope.launch {
+        if (remaining > 0 && ticker?.isActive != true) {
+            ticker = viewModelScope.launch {
                 while (true) {
                     val left = settings.lockoutRemaining()
                     lockoutRemaining = left.coerceAtLeast(0)
