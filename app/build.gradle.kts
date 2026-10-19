@@ -40,8 +40,8 @@ android {
         applicationId = "com.vknxworks.craftyctrl"
         minSdk = 33
         targetSdk = 35
-        versionCode = 24
-        versionName = "2.4.4"
+        versionCode = 25
+        versionName = "2.4.5"
 
         buildConfigField("String", "APTABASE_KEY", "\"${aptabaseKey.replace("\"", "")}\"")
         buildConfigField("String", "APTABASE_HOST", "\"$aptabaseHost\"")
