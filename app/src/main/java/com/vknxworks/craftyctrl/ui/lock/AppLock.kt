@@ -56,6 +56,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.lifecycle.repeatOnLifecycle
 import java.security.KeyStore
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -129,8 +130,15 @@ fun showBiometricPrompt(
     activity: FragmentActivity,
     title: String,
     onInvalidated: () -> Unit = {},
+    onDismissed: (systemCancelled: Boolean) -> Unit = {},
     onSuccess: () -> Unit,
 ) {
+    // Android silently ignores a prompt requested while the screen is in the background, so the
+    // caller must only ask while it's showing; report that it didn't open so it can try again.
+    if (activity.supportFragmentManager.isStateSaved) {
+        onDismissed(true)
+        return
+    }
     val cipher = UnlockKey.cipher()
     if (cipher == null) {
         onInvalidated()
@@ -147,6 +155,11 @@ fun showBiometricPrompt(
                     unlocked.doFinal(ByteArray(16).also { SecureRandom().nextBytes(it) })
                 }.isSuccess
                 if (ok) onSuccess()
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                // Cancelled by the system (the app was hidden, the screen turned off, ...) rather than by the user.
+                onDismissed(errorCode == BiometricPrompt.ERROR_CANCELED)
             }
         },
     )
@@ -187,6 +200,8 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onBackground() {
         backgroundedAt = SystemClock.elapsedRealtime()
+        // Coming back should offer the fingerprint again.
+        biometricShown = false
         // "Immediately" locks before the app is hidden, so its content isn't shown on return.
         if (settings.pinSet && settings.lockAfterSeconds == 0) lockNow()
     }
@@ -279,14 +294,21 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
                         vm.settings.biometricEnabled = false
                         vm.biometricInvalidated = true
                     },
+                    // Not shown, or closed by the system: offer it again next time the app is on screen.
+                    onDismissed = { system -> if (system) vm.biometricShown = false },
                 ) { vm.unlock() }
-            }
+            }.onFailure { vm.biometricShown = false }
         }
     }
-    LaunchedEffect(Unit) {
-        if (!vm.biometricShown) {
-            vm.biometricShown = true
-            askBiometric()
+    // Ask only once the lock screen is actually in front (resumed). The lock can engage while the
+    // app is going to the background, and a prompt requested then would never appear.
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle, canBio) {
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+            if (!vm.biometricShown) {
+                vm.biometricShown = true
+                askBiometric()
+            }
         }
     }
     // Back leaves the app rather than reaching the screens underneath.

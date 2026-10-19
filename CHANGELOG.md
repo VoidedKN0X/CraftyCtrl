@@ -3,7 +3,10 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## Unreleased
+## [2.4.7] - 2026-10-19
+
+### Fixed
+- **Fingerprint and face unlock works again.** With "Lock again after leaving the app" set to **Immediately**, the app locks while it's going to the background. The fingerprint prompt was requested at that moment, which Android silently ignores, and the app then didn't ask again, so you only got the PIN pad. The prompt now opens only once the lock screen is actually on screen, opens again every time you come back to the app, and opens again if Android closes it (for example when the screen turns off). Tapping **Use PIN** still keeps it closed until you leave and come back, or tap the fingerprint button.
 
 ### Changed
 - **README brought up to date with CraftyCtrl 2.4.6.** The feature list now matches the app: restart asks for your fingerprint or face too (not only stop and kill), and the list now mentions the broadcast to every running server, the player actions (message, kick, ban, make operator, game mode, clear inventory), the typed confirmations for restoring a backup and deleting a server, alerts that work with the app closed, hiding the app in screenshots and Recents, and the theme options. Getting started now mentions the 2FA code and that a password is never stored, only the token Crafty sends back. Requirements now say the notification permission is only needed for server alerts. No change to the app itself.
