@@ -24,6 +24,7 @@ import com.vknxworks.craftyctrl.data.TaskAction
 import com.vknxworks.craftyctrl.data.ServerStats
 import com.vknxworks.craftyctrl.data.ServerSummary
 import com.vknxworks.craftyctrl.data.Session
+import com.vknxworks.craftyctrl.data.Telemetry
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -83,6 +84,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
                 val s = Session(base, token, mode, username.trim().takeIf { mode == AuthMode.PASSWORD })
                 store.save(s)
                 session = s
+                Telemetry.track("signed_in", mapOf("method" to if (mode == AuthMode.PASSWORD) "password" else "api_key"))
             } catch (e: Exception) {
                 loginError = if (e is CraftyException && e.httpCode in listOf(401, 403) && mode == AuthMode.API_KEY) {
                     "Crafty rejected that API key."
@@ -656,6 +658,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                     return@launch
                 }
                 api.action(serverId, action.apiName)
+                trackPower(action, countdown = false)
                 _messages.send("${action.label} sent")
                 delay(1500)
                 refreshStats()
@@ -715,6 +718,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                     if (config?.id == null || e.httpCode !in listOf(400, 404, 405)) throw e
                     api.action(serverId, "backup_server")
                 }
+                Telemetry.track("backup_started", mapOf("kind" to if (config == null) "default" else "config"))
                 _messages.send("Backup started: ${config?.name ?: "default"}")
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
@@ -812,7 +816,19 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         Countdowns.start(api, serverId, action, seconds, note) { err ->
             viewModelScope.launch { _messages.send(err) }
         }
+        trackPower(action, countdown = true)
         viewModelScope.launch { _messages.send("Players warned: ${action.label.lowercase()} in ${Countdowns.human(seconds)}") }
+    }
+
+    /** Only which kind of power action was used, never which server. */
+    private fun trackPower(action: PowerAction, countdown: Boolean) {
+        val kind = when (action) {
+            PowerAction.START -> "start"
+            PowerAction.STOP -> "stop"
+            PowerAction.RESTART -> "restart"
+            PowerAction.KILL -> "kill"
+        }
+        Telemetry.track("server_power", mapOf("action" to kind, "countdown" to countdown.toString()))
     }
 
     fun cancelCountdown() {

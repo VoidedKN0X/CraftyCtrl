@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -31,13 +32,16 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.vknxworks.craftyctrl.data.CraftyApi
 import com.vknxworks.craftyctrl.data.Session
+import com.vknxworks.craftyctrl.data.Telemetry
 import com.vknxworks.craftyctrl.monitor.MonitorService
 import com.vknxworks.craftyctrl.ui.ScreenPrivacy
 import com.vknxworks.craftyctrl.ui.SessionViewModel
+import com.vknxworks.craftyctrl.ui.UsageStatsPrompt
 import com.vknxworks.craftyctrl.ui.lock.AppLockViewModel
 import com.vknxworks.craftyctrl.ui.lock.LockScreen
 import com.vknxworks.craftyctrl.ui.screens.CreateServerScreen
@@ -63,6 +67,9 @@ class MainActivity : FragmentActivity() {
         setRecentsScreenshotEnabled(false)
         ThemePrefs.load(this)
         ScreenPrivacy.load(this)
+        // Reads the usage stats setting before anything can be tracked; sends nothing unless opted in.
+        Telemetry.init(this)
+        if (savedInstanceState == null) Telemetry.appOpened()
         enableEdgeToEdge()
         setContent {
             // FLAG_SECURE follows the privacy setting, and is forced on by sign-in and the file editor.
@@ -152,6 +159,8 @@ private fun AppRoot(
                 )
             }
         }
+        // Asked once after sign-in, never on top of the lock screen.
+        if (!lockVm.locked) UsageStatsPrompt()
     }
 }
 
@@ -166,6 +175,14 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
             }
         }
         val nav = rememberNavController()
+
+        // Usage stats (only if the user opted in): the kind of screen, never the server, file or path it shows.
+        val backStack by nav.currentBackStackEntryAsState()
+        val entryId = backStack?.id
+        val screen = backStack?.let(::screenName)
+        LaunchedEffect(entryId) {
+            if (screen != null) Telemetry.track("screen_viewed", mapOf("screen" to screen))
+        }
 
         NavHost(
             navController = nav,
@@ -254,6 +271,17 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
             }
         }
     }
+}
+
+/**
+ * "server/{id}?name={name}" -> "server". Only the route's fixed name: arguments (server IDs and names, file paths)
+ * are dropped. Manage pages add their fixed page name from code, e.g. "manage_players".
+ */
+private fun screenName(entry: NavBackStackEntry): String? {
+    val base = entry.destination.route?.substringBefore('/')?.substringBefore('?') ?: return null
+    if (base != "manage") return base
+    val page = entry.arguments?.getString("page")
+    return ManagePage.entries.firstOrNull { it.route == page }?.let { "manage_${it.route}" } ?: base
 }
 
 /**

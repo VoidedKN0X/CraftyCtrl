@@ -49,6 +49,16 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 2. Sign in with an **API key** (in Crafty: your profile → *API Keys* → *Generate*) or your **username and password**.
 3. Tap **Connect**. Your login is stored encrypted on the phone.
 
+## Usage stats
+
+CraftyCtrl can share anonymous usage stats, **only if you say yes**. It asks once after you sign in, and you can change it any time in **Settings → Usage stats**.
+
+- **Shared:** which screens you open (the kind of screen, never which server or file), whether you start, stop, restart or kill a server, opening the console, starting a backup, whether you sign in with an API key or a password, the app version, Android version, phone model, language, phone or tablet, and your theme setting.
+- **Never shared:** your panel address, username, password or API key, server or player names, console output or commands, file names, or any ID that stays the same between sessions.
+- **Where:** VKNXWorks' own self-hosted [Aptabase](https://aptabase.com) server. Nothing goes to Google or analytics companies. Like any website, the server sees your IP address; Aptabase uses it only to work out the country and doesn't store it.
+
+Builds from source don't include the stats key, so they can't send anything and the setting is hidden. The code is in [`Telemetry.kt`](app/src/main/java/com/vknxworks/craftyctrl/data/Telemetry.kt).
+
 ## Build from source
 
 You need [Android Studio](https://developer.android.com/studio), or JDK 17 and the Android SDK.
