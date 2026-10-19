@@ -26,6 +26,10 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **App lock** with PIN and fingerprint or face, and an option to hide the app in screenshots and Recents
 - Light and dark themes, pure black, and Material You colours from your wallpaper
 
+## Screenshots
+
+Coming soon.
+
 ## Requirements
 
 - Android 13 or newer
