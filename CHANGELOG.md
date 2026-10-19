@@ -3,7 +3,16 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## [2.4.5] - 2026-10-19
+## [2.4.6] - 2026-10-19
+
+A privacy review of the new optional usage stats and of every connection the app makes. The stats are still off unless you said yes.
+
+### Security
+- **Switching usage stats off now throws away anything not yet sent.** Before, a stat recorded just before you switched them off could still be waiting in the app, and if you switched stats back on within a few seconds it could have been sent after all. Now everything waiting is discarded the moment you switch stats off, so nothing recorded before that point can ever go out.
+
+### Changed
+- **README: every connection the app makes is now listed.** Besides your Crafty panel and the optional stats, CraftyCtrl only goes online for two things you start yourself: adding a player to the whitelist, operators or bans of an online-mode Java server looks the name up at Mojang to get the account's ID, and the **Create server** screen loads the list of server versions from Crafty's download catalog. Neither sends your panel address or login. The README's **Usage stats** section now also mentions the countdown and backup-type details that were already listed in the 2.4.4 notes.
+
 
 ### Changed
 
