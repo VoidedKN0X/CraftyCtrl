@@ -139,6 +139,18 @@ class AppSettings(context: Context) {
         get() = prefs.getBoolean(KEY_ALERT_AWAKE, false)
         set(v) = prefs.edit().putBoolean(KEY_ALERT_AWAKE, v).apply()
 
+    // ------------------------------------------------------------ usage stats
+
+    /** Opt-in anonymous usage stats (off until the user says yes). */
+    var usageStats: Boolean
+        get() = prefs.getBoolean(KEY_USAGE_STATS, false)
+        set(v) = prefs.edit().putBoolean(KEY_USAGE_STATS, v).apply()
+
+    /** Whether the one-time usage stats question has been answered. */
+    var usageStatsAsked: Boolean
+        get() = prefs.getBoolean(KEY_USAGE_STATS_ASKED, false)
+        set(v) = prefs.edit().putBoolean(KEY_USAGE_STATS_ASKED, v).apply()
+
     private fun hash(pin: String, salt: ByteArray): ByteArray {
         val spec = PBEKeySpec(pin.toCharArray(), salt, 60_000, 256)
         return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
@@ -164,5 +176,7 @@ class AppSettings(context: Context) {
         const val KEY_ALERT_SHUTDOWN = "alert_shutdown"
         const val KEY_ALERT_INTERVAL = "alert_interval"
         const val KEY_ALERT_AWAKE = "alert_keep_awake"
+        const val KEY_USAGE_STATS = "usage_stats"
+        const val KEY_USAGE_STATS_ASKED = "usage_stats_asked"
     }
 }

@@ -3,13 +3,17 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## Unreleased
+## [2.4.4] - 2026-10-19
 
-README only; the app itself hasn't changed, so this doesn't make a new release.
+### New
+- **Optional anonymous usage stats.** After you sign in, CraftyCtrl asks once whether you'd like to share anonymous usage stats. Nothing is sent unless you tap **Share stats**, and you can switch it on or off any time in **Settings → Usage stats**.
+- **What's shared:** which screens you open (for example "servers", "server" or "settings", never which server or file), whether you start, stop, restart or kill a server (and whether you used a countdown), opening the console, starting a backup, whether you signed in with an API key or a password, the app version, Android version, phone model, language, phone or tablet, and your theme setting.
+- **What's never shared:** your panel address, username, password or API key, server names, player names, console output or commands, file names, or any ID that follows you between sessions. Each session gets a new random ID, and stats from before and after you switch them off and on again aren't linked.
+- **Where it goes:** to VKNXWorks' own self-hosted server (Aptabase), not to Google or any analytics company. Builds you make from source can't send stats at all, and the setting doesn't appear in them.
 
 ### Changed
-
 - **PrintCtrl in the Ctrl series list.** The README's table of Ctrl apps now includes [PrintCtrl](https://github.com/VoidedKN0X/PrintCtrl), the app for Bambu Lab printers through a self-hosted Bambuddy server, and Spoolman spools.
+- The README has a new **Usage stats** section listing exactly what's collected.
 
 ## [2.4.3] - 2026-10-18
 
