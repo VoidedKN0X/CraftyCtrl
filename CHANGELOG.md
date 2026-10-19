@@ -3,6 +3,14 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Unreleased
+
+README only; the app itself hasn't changed, so this doesn't make a new release.
+
+### Changed
+
+- **PrintCtrl in the Ctrl series list.** The README's table of Ctrl apps now includes [PrintCtrl](https://github.com/VoidedKN0X/PrintCtrl), the app for Bambu Lab printers through a self-hosted Bambuddy server, and Spoolman spools.
+
 ## [2.4.3] - 2026-10-18
 
 ### Security
