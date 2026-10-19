@@ -27,10 +27,8 @@ fun verifyUser(
     onSuccess: () -> Unit,
     onNoLock: () -> Unit = {},
 ) {
-    if (activity == null) {
-        onSuccess()
-        return
-    }
+    // Without the activity there's no way to show the prompt; refuse rather than skip the check.
+    if (activity == null) return
     val allowed = BIOMETRIC_STRONG or DEVICE_CREDENTIAL
     if (BiometricManager.from(activity).canAuthenticate(allowed) != BiometricManager.BIOMETRIC_SUCCESS) {
         onNoLock()

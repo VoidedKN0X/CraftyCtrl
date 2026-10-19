@@ -2,6 +2,7 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.lock.findFragmentActivity
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.outlined.Lock
@@ -168,7 +169,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                         checked = bio,
                         enabled = bioAvailable,
                         onChange = { on ->
-                            val activity = context as? FragmentActivity
+                            val activity = context.findFragmentActivity()
                             if (on && activity != null) {
                                 // A fresh key each time, bound to the fingerprints and faces enrolled now.
                                 resetBiometricKey()
