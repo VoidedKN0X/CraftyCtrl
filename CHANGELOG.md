@@ -3,6 +3,11 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.4.11] - 2026-10-19
+
+### Changed
+- **One About section in every Ctrl app**: Support, Report a bug, Source code and Licence (GPL-3.0), with the version underneath, at the bottom of Settings (⋮ → Settings on the Servers screen). The rows are in the same order, with the same wording and icons, as in the other Ctrl apps. The new **Report a bug** row ("Found a problem or have an idea? Open an issue on GitHub") opens CraftyCtrl's issue tracker, the old "Source code and issues" row is now simply **Source code**, and the installed version ("CraftyCtrl 2.4.11 · VKNXWorks") is shown under the section.
+
 ## [2.4.10] - 2026-10-19
 
 ### New

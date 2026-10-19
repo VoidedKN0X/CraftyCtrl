@@ -89,9 +89,12 @@ import com.vknxworks.craftyctrl.ui.lock.resetBiometricKey
 import com.vknxworks.craftyctrl.ui.ScreenPrivacy
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material.icons.outlined.Gavel
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.ui.text.style.TextAlign
+import com.vknxworks.craftyctrl.BuildConfig
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
@@ -103,6 +106,7 @@ private enum class PinDialog { NEW, CHANGE, DISABLE }
 
 private const val SPONSOR_URL = "https://github.com/sponsors/VoidedKN0X"
 private const val REPO_URL = "https://github.com/VoidedKN0X/CraftyCtrl"
+private const val ISSUES_URL = "https://github.com/VoidedKN0X/CraftyCtrl/issues"
 private const val LICENCE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 
 @Composable
@@ -355,24 +359,38 @@ fun SettingsScreen(onBack: () -> Unit) {
                 LinkRow(
                     title = stringResource(R.string.support_title),
                     body = stringResource(R.string.support_subtitle),
-                    icon = Icons.Outlined.Favorite,
+                    icon = Icons.Filled.Favorite,
                     onClick = { open(SPONSOR_URL) },
+                )
+                ItemDivider()
+                LinkRow(
+                    title = stringResource(R.string.bugs_title),
+                    body = stringResource(R.string.bugs_subtitle),
+                    icon = Icons.Filled.BugReport,
+                    onClick = { open(ISSUES_URL) },
                 )
                 ItemDivider()
                 LinkRow(
                     title = stringResource(R.string.source_title),
                     body = stringResource(R.string.source_subtitle),
-                    icon = Icons.Outlined.Code,
+                    icon = Icons.Filled.Code,
                     onClick = { open(REPO_URL) },
                 )
                 ItemDivider()
                 LinkRow(
                     title = stringResource(R.string.licence_title),
                     body = stringResource(R.string.licence_subtitle),
-                    icon = Icons.Outlined.Gavel,
+                    icon = Icons.Filled.Gavel,
                     onClick = { open(LICENCE_URL) },
                 )
             }
+            Text(
+                stringResource(R.string.about_footer, BuildConfig.VERSION_NAME),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
             Spacer(Modifier.height(24.dp))
         }
     }
