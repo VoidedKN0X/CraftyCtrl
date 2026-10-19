@@ -12,21 +12,25 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 
 ## Features
 
-- **Server list** with live status, CPU, memory, players and uptime
-- **Start, restart, stop and kill**, with a fingerprint check for stop and kill and an optional in-game countdown
+- **Server list** with live status, CPU, memory, players and uptime, and a broadcast to every running server
+- **Start, restart, stop and kill**, with a fingerprint or face check (or your phone's screen lock) before restart, stop and kill, and an optional in-game countdown
 - **Live console** with search, filters, quick commands and player-name completion
 - **Logs and stats history** charts for CPU, memory and players
 - **Server settings**: every `server.properties` option, whitelist, operators and bans
+- **Players**: message, kick, ban, make operator, change game mode or clear inventory for any player
 - **Plugins and mods**: turn them on or off, add or remove jars
 - **File browser** with a built-in text editor, upload, unzip and more
-- **Backups and scheduled tasks**: run, edit, restore and schedule
-- **Create, clone and update** Java and Bedrock servers
-- **Alerts** when a server stops or crashes; app lock with PIN and fingerprint
+- **Backups and scheduled tasks**: run, edit, restore and schedule; restoring asks you to type RESTORE first
+- **Create, clone, update and delete** Java and Bedrock servers; deleting asks you to type the server name
+- **Alerts** when a server stops or crashes, even with the app closed
+- **App lock** with PIN and fingerprint or face, and an option to hide the app in screenshots and Recents
+- Light and dark themes, pure black, and Material You colours from your wallpaper
 
 ## Requirements
 
 - Android 13 or newer
 - Crafty Controller 4.x reachable over **HTTPS with a valid certificate** (for example behind a reverse proxy). Plain `http://` is not supported.
+- Notification permission, only if you turn on server alerts
 
 ## Install
 
@@ -46,8 +50,8 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 ## Getting started
 
 1. Enter your panel address, e.g. `https://crafty.example.com`.
-2. Sign in with an **API key** (in Crafty: your profile → *API Keys* → *Generate*) or your **username and password**.
-3. Tap **Connect**. Your login is stored encrypted on the phone.
+2. Sign in with an **API key** (in Crafty: your profile → *API Keys* → *Generate*) or your **username and password**, plus your 2FA code if you use one.
+3. Tap **Connect**. Your login is stored encrypted on the phone; with a password, only the token Crafty sends back is kept, never the password itself.
 
 ## Usage stats
 

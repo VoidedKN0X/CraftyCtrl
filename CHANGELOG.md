@@ -3,6 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Unreleased
+
+### Changed
+- **README brought up to date with CraftyCtrl 2.4.6.** The feature list now matches the app: restart asks for your fingerprint or face too (not only stop and kill), and the list now mentions the broadcast to every running server, the player actions (message, kick, ban, make operator, game mode, clear inventory), the typed confirmations for restoring a backup and deleting a server, alerts that work with the app closed, hiding the app in screenshots and Recents, and the theme options. Getting started now mentions the 2FA code and that a password is never stored, only the token Crafty sends back. Requirements now say the notification permission is only needed for server alerts. No change to the app itself.
+- **Changelog: the 2.4.5 heading is back.** It was lost when the 2.4.6 notes were added, so the new app icon looked like part of 2.4.6.
+
 ## [2.4.6] - 2026-10-19
 
 A privacy review of the new optional usage stats and of every connection the app makes. The stats are still off unless you said yes.
@@ -13,6 +19,7 @@ A privacy review of the new optional usage stats and of every connection the app
 ### Changed
 - **README: every connection the app makes is now listed.** Besides your Crafty panel and the optional stats, CraftyCtrl only goes online for two things you start yourself: adding a player to the whitelist, operators or bans of an online-mode Java server looks the name up at Mojang to get the account's ID, and the **Create server** screen loads the list of server versions from Crafty's download catalog. Neither sends your panel address or login. The README's **Usage stats** section now also mentions the countdown and backup-type details that were already listed in the 2.4.4 notes.
 
+## [2.4.5] - 2026-10-19
 
 ### Changed
 
