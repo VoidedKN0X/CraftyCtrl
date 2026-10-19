@@ -77,7 +77,9 @@ object Telemetry {
             .put("deviceModel", Build.MODEL ?: "")
     }
 
-    private val queue = Channel<JSONObject>(capacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val queue = Channel<Queued>(capacity = 64, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    /** Bumped when stats are switched off: anything queued before that is thrown away, never sent. */
+    @Volatile private var generation = 0
     @Volatile private var sessionId = newSessionId()
     @Volatile private var lastEventAt = 0L
     @Volatile private var started = false
@@ -92,7 +94,7 @@ object Telemetry {
         if (available && !started) {
             started = true
             // One event at a time, in order. Failures are dropped: stats are never stored or retried.
-            scope.launch { for (event in queue) send(event) }
+            scope.launch { for (item in queue) send(item) }
         }
     }
 
@@ -109,6 +111,8 @@ object Telemetry {
             resetSession()
             trackOpened()
         }
+        // Switched off: drop whatever is still waiting to be sent.
+        if (!on) discardQueued()
     }
 
     /** Called when the app's screen is opened (not when only the alerts service runs in the background). */
@@ -132,7 +136,13 @@ object Telemetry {
             .put("eventName", name)
             .put("systemProps", systemProps)
             .put("props", JSONObject(props))
-        queue.trySend(event)
+        queue.trySend(Queued(generation, event))
+    }
+
+    /** Throws away every event that hasn't been sent yet, so switching stats off takes effect at once. */
+    private fun discardQueued() {
+        generation++
+        while (queue.tryReceive().isSuccess) Unit
     }
 
     private fun resetSession() {
@@ -140,9 +150,10 @@ object Telemetry {
         lastEventAt = 0L
     }
 
-    private fun send(event: JSONObject) {
-        // The user may have opted out while this was queued.
-        if (!enabled) return
+    private fun send(item: Queued) {
+        // The user may have opted out (and maybe back in) while this was queued.
+        if (!enabled || item.generation != generation) return
+        val event = item.event
         val request = Request.Builder()
             .url("${BuildConfig.APTABASE_HOST.trimEnd('/')}/api/v0/event")
             .header("App-Key", BuildConfig.APTABASE_KEY)
@@ -162,6 +173,8 @@ object Telemetry {
 
     private fun timestamp(ms: Long): String =
         SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(ms))
+
+    private class Queued(val generation: Int, val event: JSONObject)
 
     private val JSON = "application/json".toMediaType()
     private val SESSION_TIMEOUT_MS = TimeUnit.HOURS.toMillis(1)
