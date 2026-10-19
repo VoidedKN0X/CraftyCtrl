@@ -31,6 +31,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - Android 13 or newer
 - Crafty Controller 4.x reachable over **HTTPS with a valid certificate** (for example behind a reverse proxy). Plain `http://` is not supported.
 - Notification permission, only if you turn on server alerts
+- **Google-free:** works without Google Play services, contains no Google libraries that contact Google, and draws emoji with your phone's own emoji font
 
 ## Install
 
