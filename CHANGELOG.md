@@ -3,6 +3,14 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.4.9] - 2026-10-19
+
+### Fixed
+- **Fingerprint and face unlock really works again.** Since 2.4.1 the lock screen is drawn in a window of its own, so it also covers menus and dialogs that were open when the app locked. From inside that window the lock screen couldn't find the app it belongs to, which the fingerprint prompt has to be attached to, so it quietly treated biometrics as unavailable. It never showed the prompt, and the fingerprint button on the lock screen was missing too, leaving only the PIN pad. The lock screen now finds the app correctly, so the prompt opens when you return to CraftyCtrl and the fingerprint button is back.
+
+### Security
+- **Stop, restart, kill, delete, restore and update can't skip the fingerprint check.** If the app couldn't attach the fingerprint prompt to the screen, these actions went ahead without asking. That couldn't happen on the screens where these buttons are today, but they now refuse instead of skipping the check, and they use the same, more robust way of finding the app as the lock screen.
+
 ## [2.4.8] - 2026-10-19
 
 CraftyCtrl is now completely Google-free. Nothing changes in how you use it.

@@ -2,6 +2,7 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.lock.findFragmentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -212,7 +213,7 @@ fun ServerDetailScreen(
     val snackbar = remember { SnackbarHostState() }
     var overflow by remember { mutableStateOf(false) }
     var confirmDeleteServer by remember { mutableStateOf(false) }
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = LocalContext.current.findFragmentActivity()
     var confirmUpdate by remember { mutableStateOf(false) }
     var confirmClone by remember { mutableStateOf(false) }
 
@@ -509,7 +510,7 @@ private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
 @Composable
 private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Unit) {
     val s = vm.stats
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = LocalContext.current.findFragmentActivity()
     var confirm by remember { mutableStateOf<PowerAction?>(null) }
     // "" opens the sheet with a name field; a name opens it for that player.
     var playerSheet by remember { mutableStateOf<String?>(null) }
@@ -985,7 +986,7 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
     var editingTask by remember { mutableStateOf<TaskEdit?>(null) }
     var editingBackup by remember { mutableStateOf<BackupConfig?>(null) }
     var restoring by remember { mutableStateOf<BackupConfig?>(null) }
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = LocalContext.current.findFragmentActivity()
 
     LazyColumn(
         Modifier.fillMaxSize(),

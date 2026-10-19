@@ -118,6 +118,16 @@ private object UnlockKey {
     }
 }
 
+/** The FragmentActivity behind [this] context, looking through wrappers such as a dialog's. */
+fun Context.findFragmentActivity(): FragmentActivity? {
+    var c: Context? = this
+    while (c != null) {
+        if (c is FragmentActivity) return c
+        c = (c as? android.content.ContextWrapper)?.baseContext
+    }
+    return null
+}
+
 /** Forgets the biometric unlock key, so turning biometrics on again makes a fresh one. */
 fun resetBiometricKey() = UnlockKey.delete()
 
@@ -279,7 +289,10 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
 @Composable
 fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     val context = LocalContext.current
-    val activity = context as? FragmentActivity
+    // The lock screen lives in its own window (a dialog), whose context wraps the activity rather
+    // than being it, so look through the wrappers. A plain cast found nothing, which turned the
+    // fingerprint prompt and button off without any message.
+    val activity = remember(context) { context.findFragmentActivity() }
     var pin by remember { mutableStateOf("") }
     val canBio = !vm.biometricInvalidated && vm.settings.biometricEnabled && activity != null && biometricAvailable(context)
 

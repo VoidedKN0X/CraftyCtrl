@@ -1,5 +1,6 @@
 package com.vknxworks.craftyctrl
 
+import com.vknxworks.craftyctrl.ui.lock.findFragmentActivity
 import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
@@ -104,7 +105,7 @@ private fun AppRoot(
     sessionVm: SessionViewModel = viewModel(),
     lockVm: AppLockViewModel = viewModel(),
 ) {
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = LocalContext.current.findFragmentActivity()
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -166,7 +167,7 @@ private fun AppRoot(
 
 @Composable
 private fun AppContent(session: Session, sessionVm: SessionViewModel) {
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = LocalContext.current.findFragmentActivity()
     // A new token means a fresh API client and a fresh navigation stack.
     key(session.token) {
         val api = remember {
