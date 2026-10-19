@@ -3,6 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Unreleased
+
+### Changed
+
+- **README**: a Screenshots section (screenshots are coming soon), and a link preview image (`.github/assets/social-preview.png`) with CraftyCtrl's icon, name and summary, for when the repo is shared on Reddit, Discord or elsewhere
+
 ## [2.4.11] - 2026-10-19
 
 ### Changed
