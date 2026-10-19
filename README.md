@@ -90,7 +90,7 @@ Or open the folder in Android Studio and press **Run** with your phone connected
 
 ## Support the project
 
-CraftyCtrl is free and open source. If it's useful to you, you can support development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). Starring the repo and [reporting bugs](https://github.com/VoidedKN0X/CraftyCtrl/issues) helps too.
+CraftyCtrl is free and open source. If it's useful to you, you can support development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X), or tap **Support CraftyCtrl** under **⋮ → Settings → About** in the app. Starring the repo and [reporting bugs](https://github.com/VoidedKN0X/CraftyCtrl/issues) helps too.
 
 ## The Ctrl series
 

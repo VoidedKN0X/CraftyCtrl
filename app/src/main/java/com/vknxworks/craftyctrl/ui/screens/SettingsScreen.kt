@@ -89,10 +89,21 @@ import com.vknxworks.craftyctrl.ui.lock.resetBiometricKey
 import com.vknxworks.craftyctrl.ui.ScreenPrivacy
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.Gavel
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
+import com.vknxworks.craftyctrl.R
 import com.vknxworks.craftyctrl.data.Telemetry
 import com.vknxworks.craftyctrl.ui.USAGE_STATS_DESCRIPTION
 
 private enum class PinDialog { NEW, CHANGE, DISABLE }
+
+private const val SPONSOR_URL = "https://github.com/sponsors/VoidedKN0X"
+private const val REPO_URL = "https://github.com/VoidedKN0X/CraftyCtrl"
+private const val LICENCE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
@@ -111,6 +122,10 @@ fun SettingsScreen(onBack: () -> Unit) {
     var notifDenied by remember { mutableStateOf(false) }
 
     val bioAvailable = remember { biometricAvailable(context) }
+    val uriHandler = LocalUriHandler.current
+    fun open(url: String) {
+        runCatching { uriHandler.openUri(url) }
+    }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         alerts = settings.alertsEnabled
@@ -334,6 +349,30 @@ fun SettingsScreen(onBack: () -> Unit) {
                     },
                 )
             }
+
+            SectionLabel(stringResource(R.string.group_about))
+            SettingsCard {
+                LinkRow(
+                    title = stringResource(R.string.support_title),
+                    body = stringResource(R.string.support_subtitle),
+                    icon = Icons.Outlined.Favorite,
+                    onClick = { open(SPONSOR_URL) },
+                )
+                ItemDivider()
+                LinkRow(
+                    title = stringResource(R.string.source_title),
+                    body = stringResource(R.string.source_subtitle),
+                    icon = Icons.Outlined.Code,
+                    onClick = { open(REPO_URL) },
+                )
+                ItemDivider()
+                LinkRow(
+                    title = stringResource(R.string.licence_title),
+                    body = stringResource(R.string.licence_subtitle),
+                    icon = Icons.Outlined.Gavel,
+                    onClick = { open(LICENCE_URL) },
+                )
+            }
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -469,6 +508,25 @@ private fun SwitchRow(
         trailingContent = { Switch(checked = checked, onCheckedChange = onChange, enabled = enabled) },
         colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         modifier = Modifier.clickable(enabled = enabled) { onChange(!checked) },
+    )
+}
+
+@Composable
+private fun LinkRow(
+    title: String,
+    body: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+) {
+    androidx.compose.material3.ListItem(
+        leadingContent = { Icon(icon, contentDescription = null) },
+        headlineContent = { Text(title) },
+        supportingContent = { Text(body) },
+        trailingContent = {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        },
+        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.clickable(onClick = onClick),
     )
 }
 

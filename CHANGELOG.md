@@ -3,6 +3,13 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.4.10] - 2026-10-19
+
+### New
+- **Support CraftyCtrl** under Settings → About opens VKNXWorks' GitHub Sponsors page in your browser. CraftyCtrl is free and open source, and this is the place to sponsor its development if you'd like to. Settings is in the ⋮ menu on the Servers screen.
+- **New About section at the bottom of Settings.** Besides **Support CraftyCtrl** it has **Source code and issues**, which opens CraftyCtrl's GitHub page where you can read the code and report bugs, and **Licence**, which opens the GNU General Public License v3.0 that CraftyCtrl is released under.
+- The README's **Support the project** section now also points to the **Support CraftyCtrl** button.
+
 ## [2.4.9] - 2026-10-19
 
 ### Fixed
