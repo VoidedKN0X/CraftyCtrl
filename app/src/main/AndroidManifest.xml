@@ -49,8 +49,8 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
-        <!-- Google-free: don't let androidx.emoji2 ask Google Play services for a downloadable emoji
-             font at start-up. Emoji are drawn with the phone's own emoji font instead. -->
+        <!-- No downloadable emoji font: androidx.emoji2 doesn't look for one at start-up, and emoji
+             are drawn with the phone's own emoji font. -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
