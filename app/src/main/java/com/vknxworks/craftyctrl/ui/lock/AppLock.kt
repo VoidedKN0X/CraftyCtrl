@@ -165,13 +165,15 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun lockoutLeft(): Long = if (vault.enabled) vault.lockoutRemaining() else settings.lockoutRemaining()
 
+    /** The current trip away was started by the app itself (file picker, a link, settings). */
+    private var exemptTrip = false
+
     fun onBackground() {
-        // The app opened a file picker, a link or settings itself: that trip doesn't count as leaving.
-        if (Lock.consumeExpectedTrip()) {
-            backgroundedAt = 0L
-            return
-        }
         backgroundedAt = SystemClock.elapsedRealtime()
+        // The app opened a file picker, a link or settings itself: that trip doesn't count as leaving
+        // (unless you stay away long, see onForeground).
+        exemptTrip = Lock.consumeExpectedTrip()
+        if (exemptTrip) return
         // Coming back should offer the fingerprint again.
         biometricShown = false
         // "Immediately" locks before the app is hidden, so its content and key are gone right away.
@@ -180,11 +182,15 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onForeground() {
         val since = backgroundedAt
+        val exempt = exemptTrip
         backgroundedAt = 0L
+        exemptTrip = false
         val after = settings.lockAfterSeconds
         if (!lockOn || locked || since == 0L || after < 0) return
         val away = SystemClock.elapsedRealtime() - since
-        if (away >= after * 1000L) lockNow()
+        // A trip the app started still locks if you stay away long: after 5 minutes, or the chosen time if longer.
+        val limit = if (exempt) maxOf(after * 1000L, 5 * 60_000L) else after * 1000L
+        if (away >= limit) lockNow()
     }
 
     fun lockNow() {
