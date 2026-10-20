@@ -22,16 +22,6 @@ val onCi = System.getenv("CI") == "true" || System.getenv("GITHUB_ACTIONS") == "
 // Set by the workflow for pull requests only, which build but never publish.
 val allowDebugSigning = System.getenv("CRAFTY_ALLOW_DEBUG_SIGNING") == "true"
 
-// Opt-in usage stats go to VKNXWorks' self-hosted Aptabase server. The app key comes from the APTABASE_KEY
-// environment variable (a GitHub Actions secret) or `aptabase.key` in local.properties. Without one, the
-// build can't send stats at all and the setting is hidden, so builds from source never send anything.
-val aptabaseKey: String = System.getenv("APTABASE_KEY")?.trim()?.takeIf { it.isNotEmpty() }
-    ?: rootProject.file("local.properties").takeIf { it.exists() }?.let { f ->
-        Properties().apply { f.inputStream().use { stream -> load(stream) } }.getProperty("aptabase.key")?.trim()
-    }
-    ?: ""
-val aptabaseHost = "https://telemetry.vkhub.org"
-
 android {
     namespace = "com.vknxworks.craftyctrl"
     compileSdk = 35
@@ -40,11 +30,8 @@ android {
         applicationId = "com.vknxworks.craftyctrl"
         minSdk = 33
         targetSdk = 35
-        versionCode = 31
-        versionName = "2.4.11"
-
-        buildConfigField("String", "APTABASE_KEY", "\"${aptabaseKey.replace("\"", "")}\"")
-        buildConfigField("String", "APTABASE_HOST", "\"$aptabaseHost\"")
+        versionCode = 32
+        versionName = "2.4.12"
     }
 
     signingConfigs {

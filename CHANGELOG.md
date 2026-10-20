@@ -3,11 +3,13 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## Unreleased
+## [2.4.12] - 2026-10-20
+
+### Privacy
+- **No more usage stats: CraftyCtrl is now telemetry-free.** The optional anonymous usage stats are gone completely, along with the Usage stats setting and the one-time question after sign-in. The app no longer contacts VKNXWorks' stats server at all, and the settings it used are deleted from your phone when you update. CraftyCtrl now only talks to your Crafty panel, plus the Mojang player lookup and Crafty's server version catalog when you use those features.
 
 ### Changed
-
-- **README**: a Screenshots section (screenshots are coming soon), and a link preview image (`.github/assets/social-preview.png`) with CraftyCtrl's icon, name and summary, for when the repo is shared on Reddit, Discord or elsewhere
+- **README**: a Screenshots section (screenshots are coming soon), and a link preview image (`.github/assets/social-preview.png`) with CraftyCtrl's icon, name and summary, for when the repo is shared on Reddit, Discord or elsewhere. It also gets a "Telemetry-free" badge and tag, and a Privacy section listing exactly what CraftyCtrl connects to, in place of the old Usage stats section.
 
 ## [2.4.11] - 2026-10-19
 

@@ -88,7 +88,6 @@ import com.vknxworks.craftyctrl.ui.lock.showBiometricPrompt
 import com.vknxworks.craftyctrl.ui.lock.resetBiometricKey
 import com.vknxworks.craftyctrl.ui.ScreenPrivacy
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Favorite
@@ -99,8 +98,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import com.vknxworks.craftyctrl.R
-import com.vknxworks.craftyctrl.data.Telemetry
-import com.vknxworks.craftyctrl.ui.USAGE_STATS_DESCRIPTION
 
 private enum class PinDialog { NEW, CHANGE, DISABLE }
 
@@ -228,25 +225,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                         "Sign-in, the file editor and server settings are always hidden.",
                     checked = ScreenPrivacy.hideContent,
                     onChange = { ScreenPrivacy.saveHideContent(context, it) },
-                )
-            }
-
-            if (Telemetry.available) {
-                SectionLabel("Usage stats")
-                SettingsCard {
-                    SwitchRow(
-                        title = "Share anonymous usage stats",
-                        icon = Icons.Outlined.BarChart,
-                        body = "Helps decide what to improve next",
-                        checked = Telemetry.optedIn,
-                        onChange = { Telemetry.setOptedIn(context, it) },
-                    )
-                }
-                Text(
-                    USAGE_STATS_DESCRIPTION,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp),
                 )
             }
 
