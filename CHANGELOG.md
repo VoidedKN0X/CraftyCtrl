@@ -3,12 +3,6 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## Unreleased
-
-### Changed
-
-- **Store listing for IzzyOnDroid**: the app's name, short and full description, icon and feature graphic are now in the repo (`fastlane/metadata/android/en-US`), so app stores like IzzyOnDroid can show them. Screenshots are coming soon
-
 ## [2.4.14] - 2026-10-20
 
 ### Changed
