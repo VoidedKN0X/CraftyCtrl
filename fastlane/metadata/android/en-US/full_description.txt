@@ -1,0 +1,16 @@
+<p>Manage your Minecraft servers on a self-hosted Crafty Controller 4 panel.</p>
+<ul>
+<li>Server list with live status, CPU, memory, players and uptime</li>
+<li>Start, restart, stop and kill with a fingerprint check and optional in-game countdown</li>
+<li>Live console with search, filters, quick commands and name completion</li>
+<li>CPU, memory and player history charts</li>
+<li>server.properties, whitelist, operators, bans and player actions</li>
+<li>Turn plugins and mods on or off, add or remove jars</li>
+<li>File browser with text editor, upload and unzip</li>
+<li>Backups and scheduled tasks</li>
+<li>Create, clone, update and delete Java and Bedrock servers</li>
+<li>Crash and stop alerts, app lock with PIN and fingerprint</li>
+</ul>
+<p>Needs Crafty Controller 4.x reachable over HTTPS. Unofficial app, not affiliated with the Crafty Controller team.</p>
+<p>Google-free and de-Googled: no Google Play services, Firebase or other Google services, and the app never contacts Google. It works the same on de-Googled phones (GrapheneOS, CalyxOS, /e/OS, LineageOS without Google apps).</p>
+<p>Telemetry-free: no analytics, crash reporting, usage stats or tracking of any kind.</p>
