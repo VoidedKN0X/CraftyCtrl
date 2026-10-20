@@ -3,6 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.5.1] - 2026-10-21
+
+### Security
+
+- **Trips out of the app no longer skip the lock if you stay away.** The file pickers, links and the battery settings screen still don't count as leaving the app, but if you don't come back within 5 minutes (or your "Lock again" time, if that's longer), CraftyCtrl locks anyway. Before, such a trip never locked, however long you were gone.
+
 ## [2.5.0] - 2026-10-21
 
 The app lock now works the same way in every Ctrl app, with the strongest protection of the options we compared.
