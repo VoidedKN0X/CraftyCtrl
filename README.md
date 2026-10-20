@@ -23,7 +23,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Backups and scheduled tasks**: run, edit, restore and schedule; restoring asks you to type RESTORE first
 - **Create, clone, update and delete** Java and Bedrock servers; deleting asks you to type the server name
 - **Alerts** when a server stops or crashes, even with the app closed
-- **App lock** with PIN and fingerprint or face, and an option to hide the app in screenshots and Recents
+- **App lock** with its own 6–12 digit PIN and optional fingerprint unlock; your Crafty login stays encrypted while the app is locked, and an option hides the app in screenshots and Recents
 - Light and dark themes, pure black, and Material You colours from your wallpaper
 
 ## Screenshots

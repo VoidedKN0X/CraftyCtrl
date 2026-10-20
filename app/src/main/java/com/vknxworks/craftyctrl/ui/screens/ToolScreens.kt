@@ -61,6 +61,7 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
     }
     fun pick(folder: String) {
         uploadTo = folder
+        com.vknxworks.craftyctrl.data.lock.Lock.expectReturn()
         picker.launch(arrayOf("application/java-archive", "application/octet-stream", "*/*"))
     }
 

@@ -105,12 +105,14 @@ class MonitorService : Service() {
     private suspend fun run() {
         while (scope.isActive) {
             val settings = AppSettings(this)
-            val session = CredentialStore(this).load()
-            if (!settings.alertsEnabled || session == null) {
+            val store = CredentialStore(this)
+            val session = store.load()
+            val token = store.backgroundToken()
+            if (!settings.alertsEnabled || session == null || token == null) {
                 stopSelf()
                 return
             }
-            val api = CraftyApi(session.baseUrl, session.token)
+            val api = CraftyApi(session.baseUrl, token)
             try {
                 poll(api, settings)
             } catch (e: CancellationException) {

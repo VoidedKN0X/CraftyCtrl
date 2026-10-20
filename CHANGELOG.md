@@ -3,6 +3,27 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.5.0] - 2026-10-21
+
+The app lock now works the same way in every Ctrl app, with the strongest protection of the options we compared.
+
+### Security
+
+- **Your Crafty login is encrypted with your PIN while CraftyCtrl is locked.** The key that decrypts it only exists in memory while the app is unlocked and is wiped the moment it locks, so a locked app, or a copy of its files, can't use your token. The screens underneath the lock keep their place and unsaved edits, but can't reach Crafty until you unlock.
+- **The PIN can't be guessed off the phone.** It's never stored. It's stretched with 600,000 rounds of PBKDF2 (up from 60,000) and mixed with a secret held in the phone's secure hardware (StrongBox where available), so copying CraftyCtrl's files to a computer isn't enough to try PINs there.
+- **Fingerprint unlock has to unlock that key**, so it can't be faked on a rooted phone. Only strong biometrics count, such as the fingerprint sensor, not face unlock that only uses the camera, which a photo can sometimes fool. The PIN is needed after the phone restarts and at least every 72 hours, like Android's own screen lock. Adding a new fingerprint turns fingerprint unlock off until you turn it on again.
+- **Wrong PINs still lock the screen**: after 5 tries you wait 30 seconds, doubling with every further 5 wrong tries up to 15 minutes. Restarting the app or the phone, or changing the clock, doesn't reset the wait. Checking your current PIN in Settings (to change it or turn the lock off) counts towards it too.
+
+### Changed
+
+- **One-time update when you first unlock.** Enter your PIN once to move it to the new lock. Fingerprint unlock can't be used for this one unlock, and you have to turn it on again afterwards in **Settings > App lock**.
+- **PINs need 6 to 12 digits**, and very obvious ones (like 111111 or 123456) are refused. An older 4- or 5-digit PIN unlocks this one time, then you choose a new one before the app opens.
+- **"Lock again" has new choices:** as soon as you leave the app (now the default), after 1, 5 or 15 minutes, after 1 hour, or only when the app restarts. If you had "30 s" or never changed it, it's now "as soon as you leave the app".
+- **Picking a file to upload, opening the EULA or a link, and opening battery settings from CraftyCtrl no longer count as leaving the app**, so the lock doesn't ask again when you come back from them.
+- **Server alerts with the app lock on**: alerts keep their own copy of your Crafty login (encrypted with the phone's Keystore, as before) so they keep working while the app is locked. Settings says so under Server alerts. Turning alerts off deletes that copy.
+- **"Forgot PIN?" asks first, then signs out and forgets everything on the phone**: the login, the panel address and username, the PIN and the fingerprint key. Server alerts are turned off. Your servers on Crafty aren't touched.
+- **README**: the app lock line describes the new PIN, fingerprint unlock and encrypted login.
+
 ## [2.4.14] - 2026-10-20
 
 ### Changed

@@ -487,7 +487,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
                 ) {
                     Checkbox(checked = eula, onCheckedChange = { eula = it })
                     Text("I agree to the Minecraft EULA", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { uri.openUri("https://www.minecraft.net/eula") }) { Text("Read") }
+                    TextButton(onClick = { com.vknxworks.craftyctrl.data.lock.Lock.expectReturn(); uri.openUri("https://www.minecraft.net/eula") }) { Text("Read") }
                 }
                 Row(
                     Modifier

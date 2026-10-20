@@ -120,7 +120,7 @@ private fun AppRoot(
     val session = sessionVm.session
     val context = LocalContext.current
     // Start or stop alerts whenever someone signs in or out.
-    LaunchedEffect(session?.token) { MonitorService.sync(context) }
+    LaunchedEffect(session, sessionVm.signIns) { MonitorService.sync(context) }
     if (session == null) {
         LoginScreen(sessionVm)
         return
@@ -150,9 +150,8 @@ private fun AppRoot(
                 LockScreen(
                     vm = lockVm,
                     onForgot = {
-                        lockVm.settings.clearPin()
-                        lockVm.settings.alertsEnabled = false
-                        lockVm.unlock()
+                        lockVm.forget()
+                        MonitorService.sync(context)
                         sessionVm.signOut("PIN removed. Sign in again to continue.")
                     },
                 )
@@ -165,11 +164,15 @@ private fun AppRoot(
 private fun AppContent(session: Session, sessionVm: SessionViewModel) {
     val activity = LocalContext.current.findFragmentActivity()
     // A new token means a fresh API client and a fresh navigation stack.
-    key(session.token) {
+    key(session, sessionVm.signIns) {
         val api = remember {
-            CraftyApi(session.baseUrl, session.token) {
-                sessionVm.signOut("Your session expired. Sign in again.")
-            }
+            CraftyApi(
+                session.baseUrl,
+                fixedToken = null,
+                onUnauthorized = { sessionVm.signOut("Your session expired. Sign in again.") },
+                // Wiped while the app is locked: the screens stay, but can't reach Crafty until you unlock.
+                tokenProvider = { com.vknxworks.craftyctrl.data.lock.Lock.liveToken },
+            )
         }
         val nav = rememberNavController()
 

@@ -84,8 +84,11 @@ import com.vknxworks.craftyctrl.ui.SectionLabel
 import com.vknxworks.craftyctrl.ui.lock.PIN_MAX
 import com.vknxworks.craftyctrl.ui.lock.PIN_MIN
 import com.vknxworks.craftyctrl.ui.lock.biometricAvailable
-import com.vknxworks.craftyctrl.ui.lock.showBiometricPrompt
-import com.vknxworks.craftyctrl.ui.lock.resetBiometricKey
+import com.vknxworks.craftyctrl.ui.lock.showVaultPrompt
+import com.vknxworks.craftyctrl.data.CredentialStore
+import com.vknxworks.craftyctrl.data.lock.Lock
+import com.vknxworks.craftyctrl.data.lock.LockVault
+import androidx.compose.material3.RadioButton
 import com.vknxworks.craftyctrl.ui.ScreenPrivacy
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.filled.BugReport
@@ -111,8 +114,10 @@ fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { AppSettings(context) }
 
-    var pinSet by remember { mutableStateOf(settings.pinSet) }
-    var bio by remember { mutableStateOf(settings.biometricEnabled) }
+    val vault = remember { Lock.vault(context) }
+    val store = remember { CredentialStore(context) }
+    val pinSet = vault.enabled
+    val bio = vault.biometricEnabled
     var lockAfter by remember { mutableIntStateOf(settings.lockAfterSeconds) }
     var pinDialog by remember { mutableStateOf<PinDialog?>(null) }
 
@@ -125,18 +130,19 @@ fun SettingsScreen(onBack: () -> Unit) {
     val bioAvailable = remember { biometricAvailable(context) }
     val uriHandler = LocalUriHandler.current
     fun open(url: String) {
+        Lock.expectReturn()
         runCatching { uriHandler.openUri(url) }
     }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         alerts = settings.alertsEnabled
-        pinSet = settings.pinSet
-        bio = settings.biometricEnabled
     }
 
     fun turnAlertsOn() {
         settings.alertsEnabled = true
         alerts = true
+        // With the app lock on, alerts get their own copy of the login so they work while locked.
+        store.syncBackgroundCopy(true)
         MonitorService.sync(context)
     }
 
@@ -172,41 +178,70 @@ fun SettingsScreen(onBack: () -> Unit) {
                 SwitchRow(
                     title = "Require a PIN",
                     icon = Icons.Outlined.Lock,
-                    body = "Ask for a PIN when opening the app.",
+                    body = "Ask for a $PIN_MIN–$PIN_MAX digit PIN when opening the app, separate from your phone's. " +
+                        "While locked, your Crafty login stays encrypted with it.",
                     checked = pinSet,
                     onChange = { on -> pinDialog = if (on) PinDialog.NEW else PinDialog.DISABLE },
                 )
                 if (pinSet) {
                     ItemDivider()
                     SwitchRow(
-                        title = "Unlock with fingerprint or face",
+                        title = "Unlock with fingerprint",
                         icon = Icons.Outlined.Fingerprint,
-                        body = if (bioAvailable) "Your PIN still works as a backup." else "No fingerprint or face unlock is set up on this phone.",
+                        body = if (bioAvailable || bio) {
+                            "Only strong biometrics such as your fingerprint, checked by the phone's secure hardware. " +
+                                "The PIN is still needed after a restart and every 72 hours."
+                        } else {
+                            "No fingerprint is set up on this phone."
+                        },
                         checked = bio,
-                        enabled = bioAvailable,
+                        enabled = bioAvailable || bio,
                         onChange = { on ->
                             val activity = context.findFragmentActivity()
                             if (on && activity != null) {
-                                // A fresh key each time, bound to the fingerprints and faces enrolled now.
-                                resetBiometricKey()
-                                showBiometricPrompt(activity, "Confirm to turn on") {
-                                    settings.biometricEnabled = true
-                                    bio = true
+                                // A fresh key each time, bound to the fingerprints enrolled now.
+                                val cipher = vault.biometricEnrolCipher()
+                                if (cipher != null) {
+                                    showVaultPrompt(activity, "Confirm to turn on", cipher) { unlocked ->
+                                        vault.finishBiometricEnrol(unlocked)
+                                    }
                                 }
                             } else {
-                                settings.biometricEnabled = false
-                                bio = false
-                                resetBiometricKey()
+                                vault.disableBiometric()
                             }
                         },
                     )
                     ItemDivider()
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Lock again after leaving the app", style = MaterialTheme.typography.bodyLarge)
-                        ChoiceChips(
-                            options = listOf(0 to "Immediately", 30 to "30 s", 60 to "1 min", 300 to "5 min"),
-                            selected = lockAfter,
-                            onSelect = { settings.lockAfterSeconds = it; lockAfter = it },
+                    Column(Modifier.padding(vertical = 8.dp)) {
+                        Text(
+                            "Lock again",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                        listOf(
+                            0 to "As soon as you leave the app",
+                            60 to "After 1 minute away",
+                            300 to "After 5 minutes away",
+                            900 to "After 15 minutes away",
+                            3600 to "After 1 hour away",
+                            -1 to "Only when the app restarts",
+                        ).forEach { (value, label) ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { settings.lockAfterSeconds = value; lockAfter = value }
+                                    .padding(horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                RadioButton(selected = lockAfter == value, onClick = { settings.lockAfterSeconds = value; lockAfter = value })
+                                Text(label, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                        Text(
+                            "Picking a file or opening a link from CraftyCtrl doesn't count as leaving.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         )
                     }
                     ItemDivider()
@@ -284,7 +319,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                 SwitchRow(
                     title = "Server alerts",
                     icon = Icons.Outlined.NotificationsActive,
-                    body = "Get notified when a server stops or crashes, even with the app closed. Shows a quiet ongoing notification while on.",
+                    body = "Get notified when a server stops or crashes, even with the app closed. Shows a quiet ongoing notification while on." +
+                        if (pinSet) " With the app lock on, alerts keep their own copy of your Crafty login so they work while the app is locked." else "",
                     checked = alerts,
                     onChange = { on ->
                         if (on) {
@@ -296,6 +332,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                         } else {
                             settings.alertsEnabled = false
                             alerts = false
+                            store.syncBackgroundCopy(false)
                             MonitorService.sync(context)
                         }
                     },
@@ -376,13 +413,8 @@ fun SettingsScreen(onBack: () -> Unit) {
     pinDialog?.let { mode ->
         PinSetupDialog(
             mode = mode,
-            settings = settings,
             onDismiss = { pinDialog = null },
-            onDone = {
-                pinSet = settings.pinSet
-                bio = settings.biometricEnabled
-                pinDialog = null
-            },
+            onDone = { pinDialog = null },
         )
     }
 }
@@ -391,6 +423,7 @@ fun SettingsScreen(onBack: () -> Unit) {
 private fun requestBatteryExemption(context: android.content.Context) {
     val pm = context.getSystemService(PowerManager::class.java)
     if (pm.isIgnoringBatteryOptimizations(context.packageName)) return
+    Lock.expectReturn()
     runCatching {
         context.startActivity(
             Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}")),
@@ -401,10 +434,10 @@ private fun requestBatteryExemption(context: android.content.Context) {
 @Composable
 private fun PinSetupDialog(
     mode: PinDialog,
-    settings: AppSettings,
     onDismiss: () -> Unit,
     onDone: () -> Unit,
 ) {
+    val context = LocalContext.current
     val needsCurrent = mode != PinDialog.NEW
     val needsNew = mode != PinDialog.DISABLE
     var current by remember { mutableStateOf("") }
@@ -443,19 +476,34 @@ private fun PinSetupDialog(
                 onClick = {
                     scope.launch {
                         working = true
-                        // PBKDF2 is deliberately slow; keep it off the main thread.
-                        val currentOk = !needsCurrent || withContext(Dispatchers.Default) { settings.checkPin(current) }
+                        val vault = Lock.vault(context)
+                        // Checked first, so a wrong current PIN isn't counted for a typo in the new one.
                         error = when {
-                            !currentOk -> "Current PIN is wrong"
                             needsNew && first.length < PIN_MIN -> "Use at least $PIN_MIN digits"
+                            needsNew && Lock.isObvious(first) -> "Too easy to guess. Try a less obvious PIN."
                             needsNew && first != second -> "The PINs don't match"
                             else -> null
                         }
-                        if (error == null) {
-                            withContext(Dispatchers.Default) {
-                                if (needsNew) settings.setPin(first) else settings.clearPin()
+                        if (error == null && needsCurrent) {
+                            // Slow on purpose; counts towards the wrong-PIN lockout like the lock screen.
+                            val result = withContext(Dispatchers.Default) { vault.unlockWithPin(current) }
+                            error = when (result) {
+                                LockVault.PinResult.Ok -> null
+                                LockVault.PinResult.LockedOut -> "Too many tries. Try again in ${(vault.lockoutRemaining() + 999) / 1000}s"
+                                LockVault.PinResult.Wrong -> "Current PIN is wrong"
                             }
-                            onDone()
+                        }
+                        if (error == null) {
+                            val ok = withContext(Dispatchers.Default) {
+                                runCatching {
+                                    when (mode) {
+                                        PinDialog.NEW -> Lock.enable(context, first)
+                                        PinDialog.CHANGE -> check(vault.changePin(first))
+                                        PinDialog.DISABLE -> Lock.disable(context)
+                                    }
+                                }.isSuccess
+                            }
+                            if (ok) onDone() else error = "Couldn't save. Try again."
                         }
                         working = false
                     }

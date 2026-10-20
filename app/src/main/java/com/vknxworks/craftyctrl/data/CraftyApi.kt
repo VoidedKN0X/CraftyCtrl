@@ -39,10 +39,23 @@ class CraftyException(
  */
 class CraftyApi(
     baseUrl: String,
-    private val token: String?,
+    private val fixedToken: String?,
     private val onUnauthorized: () -> Unit = {},
+    /** Where the app's screens get the token from, so it can be wiped while the app is locked. */
+    private val tokenProvider: (() -> String?)? = null,
 ) {
     val baseUrl: String = normalizeUrl(baseUrl)
+
+    /**
+     * The token for the next request. With a [tokenProvider] and no token (the app is locked), nothing
+     * is sent at all, and it doesn't count as being signed out.
+     */
+    private val token: String?
+        get() {
+            if (tokenProvider == null) return fixedToken
+            return tokenProvider.invoke()
+                ?: throw CraftyException(0, "LOCKED", "CraftyCtrl is locked.")
+        }
 
     suspend fun servers(): List<ServerSummary> =
         call("GET", "/servers").dataArray()

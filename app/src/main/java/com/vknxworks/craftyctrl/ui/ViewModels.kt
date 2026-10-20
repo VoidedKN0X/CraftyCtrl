@@ -45,9 +45,19 @@ private fun Exception.userMessage(): String {
 
 class SessionViewModel(app: Application) : AndroidViewModel(app) {
     private val store = CredentialStore(app)
+    private val settings = com.vknxworks.craftyctrl.data.AppSettings(app)
 
     var session by mutableStateOf(store.load())
         private set
+
+    /** Bumped on every sign-in, so a new sign-in gets fresh screens. */
+    var signIns by mutableStateOf(0)
+        private set
+
+    init {
+        // Null while the app lock keeps the token sealed; the lock fills it in when you unlock.
+        com.vknxworks.craftyctrl.data.lock.Lock.liveToken = store.token()
+    }
     var busy by mutableStateOf(false)
         private set
     var loginError by mutableStateOf<String?>(null)
@@ -80,8 +90,11 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 // Proves the address and token work before saving anything.
                 CraftyApi(base, token).servers()
-                val s = Session(base, token, mode, username.trim().takeIf { mode == AuthMode.PASSWORD })
-                store.save(s)
+                val s = Session(base, mode, username.trim().takeIf { mode == AuthMode.PASSWORD })
+                store.save(s, token)
+                store.syncBackgroundCopy(settings.alertsEnabled)
+                com.vknxworks.craftyctrl.data.lock.Lock.liveToken = token
+                signIns++
                 session = s
             } catch (e: Exception) {
                 loginError = if (e is CraftyException && e.httpCode in listOf(401, 403) && mode == AuthMode.API_KEY) {
@@ -97,6 +110,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
 
     fun signOut(reason: String? = null) {
         store.clear()
+        com.vknxworks.craftyctrl.data.lock.Lock.liveToken = null
         session = null
         loginError = reason
     }

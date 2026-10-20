@@ -9,7 +9,10 @@ import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 
-/** App lock and alert preferences. Only a salted PBKDF2 hash of the PIN is stored. */
+/**
+ * App lock and alert preferences. The PIN itself lives in [com.vknxworks.craftyctrl.data.lock.LockVault];
+ * the PIN hash here is only read once, to move a PIN from before CraftyCtrl 2.5.0 into the vault.
+ */
 class AppSettings(context: Context) {
     private val appContext = context.applicationContext
     private val prefs = context.applicationContext.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
@@ -22,9 +25,16 @@ class AppSettings(context: Context) {
         get() = pinSet && prefs.getBoolean(KEY_BIOMETRIC, false)
         set(v) = prefs.edit().putBoolean(KEY_BIOMETRIC, v).apply()
 
-    /** How long the app may sit in the background before it locks again. 0 = immediately. */
+    /**
+     * How long the app may sit in the background before it locks again: 0 = as soon as you leave,
+     * 60/300/900/3600 seconds, or -1 = only when the app restarts. Older choices (30 s, and the old
+     * 30 s default) count as "as soon as you leave".
+     */
     var lockAfterSeconds: Int
-        get() = prefs.getInt(KEY_LOCK_AFTER, 30)
+        get() = when (val v = prefs.getInt(KEY_LOCK_AFTER, 0)) {
+            -1, 60, 300, 900, 3600 -> v
+            else -> 0
+        }
         set(v) = prefs.edit().putInt(KEY_LOCK_AFTER, v).apply()
 
     /** FLAG_SECURE for the whole app: blank screenshots and Recents thumbnail. On by default. */
