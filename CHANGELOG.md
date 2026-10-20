@@ -3,6 +3,13 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.4.14] - 2026-10-20
+
+### Changed
+
+- **64-bit ARM phones only.** CraftyCtrl now ships only the 64-bit ARM (arm64-v8a) build that nearly every phone from the last several years uses, like every Ctrl app, so the download is smaller. Old 32-bit phones and x86 devices (emulators, some Chromebooks) are no longer supported.
+- **README**: Requirements say 64-bit ARM phones only
+
 ## [2.4.13] - 2026-10-20
 
 ### Privacy
