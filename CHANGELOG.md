@@ -3,6 +3,14 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.4.13] - 2026-10-20
+
+### Privacy
+- **Google-free and de-Googled.** CraftyCtrl has no Google Play services, Firebase or other Google services and never contacts Google. This release removes the last mention of Google from inside the app (a note in the app's setup about emoji fonts), so nothing Google-related is left in it. Nothing changes in how the app works: emoji still use your phone's own emoji font, and CraftyCtrl works the same on de-Googled phones (GrapheneOS, CalyxOS, /e/OS, LineageOS without Google apps).
+
+### Changed
+- **README**: the "Google-free" line now reads "Google-free and de-Googled" and names the de-Googled phones CraftyCtrl works on.
+
 ## [2.4.12] - 2026-10-20
 
 ### Privacy
