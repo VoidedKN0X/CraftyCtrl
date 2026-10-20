@@ -51,26 +51,8 @@ jobs:
             exit 1
           fi
 
-      # The opt-in usage stats need the Aptabase app key. A push to main can publish a release, and a release
-      # without the key would quietly ship with stats switched off for everyone, so those stop here; other builds only warn.
-      - name: Check usage stats key
-        env:
-          APTABASE_KEY: ${{ secrets.APTABASE_KEY }}
-          EVENT_NAME: ${{ github.event_name }}
-          REF: ${{ github.ref }}
-        run: |
-          if [ -n "$APTABASE_KEY" ]; then
-            echo "Usage stats key is set."
-          elif [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/main" ]; then
-            echo "::error title=Usage stats key missing::Add the APTABASE_KEY secret (Settings > Secrets and variables > Actions), then re-run this workflow"
-            exit 1
-          else
-            echo "::warning title=Usage stats key missing::APTABASE_KEY isn't set, so this build can't send usage stats"
-          fi
-
       - name: Build release APK
         env:
-          APTABASE_KEY: ${{ secrets.APTABASE_KEY }}
           CRAFTY_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           # The alias isn't secret: keep it as a repository *variable* so it isn't masked
           # (as ***) in logs. Falls back to the old KEY_ALIAS secret if no variable is set.

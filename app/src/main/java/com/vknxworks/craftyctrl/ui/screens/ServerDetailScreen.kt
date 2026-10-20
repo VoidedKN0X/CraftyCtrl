@@ -802,8 +802,6 @@ internal fun isWarn(line: String) = "WARN" in line
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ConsoleTab(vm: ServerDetailViewModel) {
-    // Usage stats (only if opted in): that the console was opened, never which server or what it shows.
-    LaunchedEffect(Unit) { com.vknxworks.craftyctrl.data.Telemetry.track("console_opened") }
     val consoleMs = rememberRefreshMs().coerceAtMost(2_000)
     PollWhileVisible("console-${vm.serverId}" to consoleMs, consoleMs) { vm.refreshLogs() }
 

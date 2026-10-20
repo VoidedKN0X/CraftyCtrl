@@ -2,7 +2,7 @@
 
 **Manage your Minecraft servers on Crafty Controller from your phone.**
 
-[![Latest release](https://img.shields.io/github/v/release/VoidedKN0X/CraftyCtrl?label=download)](https://github.com/VoidedKN0X/CraftyCtrl/releases/latest) ![Android 13+](https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white) [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE) [![Sponsor](https://img.shields.io/badge/sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/VoidedKN0X)
+[![Latest release](https://img.shields.io/github/v/release/VoidedKN0X/CraftyCtrl?label=download)](https://github.com/VoidedKN0X/CraftyCtrl/releases/latest) ![Android 13+](https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white) [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE) ![Telemetry-free](https://img.shields.io/badge/telemetry-none-brightgreen) [![Sponsor](https://img.shields.io/badge/sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/VoidedKN0X)
 
 CraftyCtrl is an Android app for [Crafty Controller 4](https://craftycontrol.com), the self-hosted Minecraft server panel. Start, stop and watch your servers, use the console and manage backups without opening a browser.
 
@@ -58,21 +58,14 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 2. Sign in with an **API key** (in Crafty: your profile → *API Keys* → *Generate*) or your **username and password**, plus your 2FA code if you use one.
 3. Tap **Connect**. Your login is stored encrypted on the phone; with a password, only the token Crafty sends back is kept, never the password itself.
 
-## Usage stats
+## Privacy
 
-CraftyCtrl can share anonymous usage stats, **only if you say yes**. It asks once after you sign in, and you can change it any time in **Settings → Usage stats**.
-
-- **Shared:** which screens you open (the kind of screen, never which server or file), whether you start, stop, restart or kill a server (and whether you used a countdown), opening the console, starting a backup (the default one or a backup config), whether you sign in with an API key or a password, the app version, Android version, phone model, language, phone or tablet, and your theme setting.
-- **Never shared:** your panel address, username, password or API key, server or player names, console output or commands, file names, or any ID that stays the same between sessions.
-- **Where:** VKNXWorks' own self-hosted [Aptabase](https://aptabase.com) server. Nothing goes to Google or analytics companies. Like any website, the server sees your IP address; Aptabase uses it only to work out the country and doesn't store it.
-- **Switching stats off** stops them straight away and throws away anything not yet sent.
-
-**Other connections.** Apart from your Crafty panel (and the stats above, only if you said yes), CraftyCtrl only goes online for two things you start yourself, and neither sends your panel address or login:
+**Telemetry-free.** CraftyCtrl has no analytics, crash reporting, usage stats or tracking of any kind. It only talks to the Crafty panel you sign in to, plus two lookups you start yourself, and neither of those sends your panel address or login:
 
 - Adding someone to the whitelist, operators or bans of an online-mode Java server looks the player name up at Mojang (`api.mojang.com`) to get the account's ID, as Minecraft itself does.
 - The **Create server** screen loads the list of available server versions from Crafty's download catalog (`jars.arcadiatech.org`).
 
-Builds from source don't include the stats key, so they can't send anything and the setting is hidden. The code is in [`Telemetry.kt`](app/src/main/java/com/vknxworks/craftyctrl/data/Telemetry.kt).
+The Support, Report a bug, Source code and Licence links in Settings, and the Minecraft EULA link, open in your browser only when you tap them.
 
 ## Build from source
 
