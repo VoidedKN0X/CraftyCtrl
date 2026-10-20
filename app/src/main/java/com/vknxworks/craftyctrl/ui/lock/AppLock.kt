@@ -3,9 +3,6 @@ package com.vknxworks.craftyctrl.ui.lock
 import android.app.Application
 import android.content.Context
 import android.os.SystemClock
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyPermanentlyInvalidatedException
-import android.security.keystore.KeyProperties
 import androidx.activity.compose.BackHandler
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
@@ -27,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,71 +50,26 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vknxworks.craftyctrl.data.AppSettings
+import com.vknxworks.craftyctrl.data.CredentialStore
+import com.vknxworks.craftyctrl.data.lock.Lock
+import com.vknxworks.craftyctrl.data.lock.LockVault
+import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.repeatOnLifecycle
-import java.security.KeyStore
-import java.security.SecureRandom
 import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
 
-/** Shortest PIN that can be set now. Older 4- and 5-digit PINs keep working until changed. */
-const val PIN_MIN = 6
-/** Shortest PIN the lock screen accepts, so PINs saved before the minimum went up still unlock. */
+/** Shortest PIN that can be set now. */
+const val PIN_MIN = LockVault.PIN_MIN
+/** Shortest PIN the lock screen accepts, so a 4- or 5-digit PIN from before 2.5.0 still unlocks once. */
 const val PIN_MIN_LEGACY = 4
-const val PIN_MAX = 8
+const val PIN_MAX = LockVault.PIN_MAX
 
+/** Only class 3 ("strong") biometrics: camera-only face unlock can be fooled by a photo. */
 fun biometricAvailable(context: Context): Boolean =
     BiometricManager.from(context).canAuthenticate(BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
-
-/**
- * A Keystore key that can only be used right after a strong (class 3) biometric match. Unlocking
- * goes through it, so a hooked or faked "success" callback without a real match can't open the app.
- * It is separate from the API token key, which stays as it is.
- */
-private object UnlockKey {
-    private const val ANDROID_KEYSTORE = "AndroidKeyStore"
-    private const val ALIAS = "craftyctrl_biometric_unlock_key"
-    private const val TRANSFORMATION = "AES/GCM/NoPadding"
-
-    private fun keyStore() = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-
-    fun delete() {
-        runCatching { keyStore().deleteEntry(ALIAS) }
-    }
-
-    private fun key(): SecretKey {
-        (keyStore().getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
-        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
-        generator.init(
-            KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setKeySize(256)
-                .setUserAuthenticationRequired(true)
-                // 0 = every use needs its own biometric match; only class 3 biometrics count.
-                .setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)
-                .setInvalidatedByBiometricEnrollment(true)
-                .build(),
-        )
-        return generator.generateKey()
-    }
-
-    /** A cipher ready to be unlocked by the prompt, or null if the key was invalidated (new fingerprint added). */
-    fun cipher(): Cipher? = try {
-        Cipher.getInstance(TRANSFORMATION).apply { init(Cipher.ENCRYPT_MODE, key()) }
-    } catch (e: KeyPermanentlyInvalidatedException) {
-        delete()
-        null
-    } catch (e: Exception) {
-        // E.g. no strong biometric enrolled any more, so the key can't be made.
-        delete()
-        null
-    }
-}
 
 /** The FragmentActivity behind [this] context, looking through wrappers such as a dialog's. */
 fun Context.findFragmentActivity(): FragmentActivity? {
@@ -128,20 +81,16 @@ fun Context.findFragmentActivity(): FragmentActivity? {
     return null
 }
 
-/** Forgets the biometric unlock key, so turning biometrics on again makes a fresh one. */
-fun resetBiometricKey() = UnlockKey.delete()
-
 /**
- * Shows a strong-biometric prompt bound to [UnlockKey]. [onSuccess] runs only if the key could
- * actually be used afterwards. [onInvalidated] runs when fingerprints or faces changed since
- * biometric unlock was turned on, so the PIN is needed again.
+ * Shows a strong-biometric prompt for [cipher], a vault Keystore key that only works right after a real
+ * match. [onSuccess] gets the unlocked cipher; a faked "success" without a match can't use it.
  */
-fun showBiometricPrompt(
+fun showVaultPrompt(
     activity: FragmentActivity,
     title: String,
-    onInvalidated: () -> Unit = {},
+    cipher: Cipher,
     onDismissed: (systemCancelled: Boolean) -> Unit = {},
-    onSuccess: () -> Unit,
+    onSuccess: (Cipher) -> Unit,
 ) {
     // Android silently ignores a prompt requested while the screen is in the background, so the
     // caller must only ask while it's showing; report that it didn't open so it can try again.
@@ -149,22 +98,12 @@ fun showBiometricPrompt(
         onDismissed(true)
         return
     }
-    val cipher = UnlockKey.cipher()
-    if (cipher == null) {
-        onInvalidated()
-        return
-    }
     val prompt = BiometricPrompt(
         activity,
         ContextCompat.getMainExecutor(activity),
         object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                val unlocked = result.cryptoObject?.cipher ?: return
-                // Fails unless the Keystore saw a real strong-biometric match for this cipher.
-                val ok = runCatching {
-                    unlocked.doFinal(ByteArray(16).also { SecureRandom().nextBytes(it) })
-                }.isSuccess
-                if (ok) onSuccess()
+                result.cryptoObject?.cipher?.let(onSuccess)
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
@@ -183,11 +122,22 @@ fun showBiometricPrompt(
     )
 }
 
-/** Holds whether the app is locked; survives rotation, not process death (which locks again). */
+/**
+ * Whether the app is locked; survives rotation, not process death (which locks again). Locking wipes
+ * the vault key and the token the screens use; the screens themselves stay underneath, so open pages
+ * and unsaved edits survive the lock.
+ */
 class AppLockViewModel(app: Application) : AndroidViewModel(app) {
     val settings = AppSettings(app)
+    val vault = Lock.vault(app)
+    private val store = CredentialStore(app)
 
-    var locked by mutableStateOf(settings.pinSet)
+    /** A PIN is set: in the vault, or an old PIN not moved into the vault yet. */
+    val lockOn: Boolean get() = vault.enabled || settings.pinSet
+    /** The old PIN from before 2.5.0 is still in use; the next correct PIN moves it into the vault. */
+    val legacy: Boolean get() = !vault.enabled && settings.pinSet
+
+    var locked by mutableStateOf(lockOn)
         private set
     var pinError by mutableStateOf<String?>(null)
         private set
@@ -195,6 +145,11 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var lockoutRemaining by mutableLongStateOf(0L)
         private set
+
+    /** The old PIN was shorter than 6 digits: a new one has to be chosen before the app opens. */
+    var mustChoosePin by mutableStateOf(false)
+        private set
+    private var oldPin: String? = null
 
     private var backgroundedAt = 0L
 
@@ -205,54 +160,95 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
     /** Set when the lock screen has already shown the biometric prompt, so rotation doesn't show it twice. */
     var biometricShown = false
 
-    /** Set when the biometric key was invalidated by a new fingerprint or face; the PIN is needed. */
+    /** Set when the biometric key was invalidated by a new fingerprint; the PIN is needed. */
     var biometricInvalidated by mutableStateOf(false)
 
+    private fun lockoutLeft(): Long = if (vault.enabled) vault.lockoutRemaining() else settings.lockoutRemaining()
+
     fun onBackground() {
+        // The app opened a file picker, a link or settings itself: that trip doesn't count as leaving.
+        if (Lock.consumeExpectedTrip()) {
+            backgroundedAt = 0L
+            return
+        }
         backgroundedAt = SystemClock.elapsedRealtime()
         // Coming back should offer the fingerprint again.
         biometricShown = false
-        // "Immediately" locks before the app is hidden, so its content isn't shown on return.
-        if (settings.pinSet && settings.lockAfterSeconds == 0) lockNow()
+        // "Immediately" locks before the app is hidden, so its content and key are gone right away.
+        if (lockOn && settings.lockAfterSeconds == 0) lockNow()
     }
 
     fun onForeground() {
         val since = backgroundedAt
         backgroundedAt = 0L
-        if (!settings.pinSet || locked || since == 0L) return
+        val after = settings.lockAfterSeconds
+        if (!lockOn || locked || since == 0L || after < 0) return
         val away = SystemClock.elapsedRealtime() - since
-        if (away >= settings.lockAfterSeconds * 1000L) lockNow()
+        if (away >= after * 1000L) lockNow()
     }
 
     fun lockNow() {
-        if (settings.pinSet && !locked) {
+        if (lockOn && !locked) {
             locked = true
             biometricShown = false
+            vault.close()
+            Lock.liveToken = null
         }
     }
 
-    fun unlock() {
+    private fun unlocked() {
         settings.failedAttempts = 0
         pinError = null
+        mustChoosePin = false
+        oldPin = null
+        Lock.liveToken = store.token()
         locked = false
+    }
+
+    /** Fingerprint unlock: the prompt's cipher has to decrypt the vault key. */
+    fun unlockWithBiometric(cipher: Cipher) {
+        if (vault.unlockWithBiometric(cipher)) unlocked() else pinError = "Fingerprint didn't unlock. Use your PIN."
     }
 
     fun submitPin(pin: String, onWrong: () -> Unit) {
         // Asks the stored lockout (monotonic clock), not the on-screen countdown, which may not have caught up yet.
-        if (checking || settings.lockoutRemaining() > 0) return
+        if (checking || lockoutLeft() > 0) return
         viewModelScope.launch {
             checking = true
-            // Count the attempt before checking it, so closing the app mid-check can't skip the count.
+            if (!legacy) {
+                // Slow on purpose (it makes guessing slow too), so off the main thread.
+                val result = withContext(Dispatchers.Default) { vault.unlockWithPin(pin) }
+                checking = false
+                if (result == LockVault.PinResult.Ok) {
+                    unlocked()
+                } else {
+                    refreshLockout()
+                    pinError = "Wrong PIN"
+                    onWrong()
+                }
+                return@launch
+            }
+            // The old PIN hash: count the attempt before checking it, so closing the app mid-check can't skip the count.
             val fails = withContext(Dispatchers.IO) {
                 (settings.failedAttempts + 1).also { settings.failedAttempts = it }
             }
-            // PBKDF2 takes a moment; keep it off the main thread.
             val ok = withContext(Dispatchers.Default) { settings.checkPin(pin) }
-            checking = false
             if (ok) {
-                unlock()
+                settings.failedAttempts = 0
+                if (pin.length >= PIN_MIN && !Lock.isObvious(pin)) {
+                    // Moves the PIN into the vault and seals the token with it.
+                    val moved = withContext(Dispatchers.Default) { runCatching { Lock.migrate(getApplication<Application>(), pin) }.isSuccess }
+                    checking = false
+                    if (moved) unlocked() else { pinError = "Couldn't finish the security update. Try again."; onWrong() }
+                } else {
+                    checking = false
+                    oldPin = pin
+                    pinError = null
+                    mustChoosePin = true
+                }
                 return@launch
             }
+            checking = false
             if (fails >= MAX_TRIES) {
                 // 30 s, doubling for every further batch of wrong PINs, capped at 15 minutes.
                 val wait = (30_000L shl ((fails - MAX_TRIES) / MAX_TRIES).coerceAtMost(5)).coerceAtMost(900_000L)
@@ -264,15 +260,32 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** The new PIN chosen after an old short one; moves the lock into the vault with it. */
+    fun chooseNewPin(pin: String, onFailed: (String) -> Unit) {
+        if (checking || oldPin == null) return
+        viewModelScope.launch {
+            checking = true
+            val moved = withContext(Dispatchers.Default) { runCatching { Lock.migrate(getApplication<Application>(), pin) }.isSuccess }
+            checking = false
+            if (moved) unlocked() else onFailed("Couldn't save the PIN. Try again.")
+        }
+    }
+
+    /** "Forgot PIN?": signs out and forgets the token, the PIN and the vault. */
+    fun forget() {
+        Lock.forgetEverything(getApplication<Application>())
+        unlocked()
+    }
+
     private var ticker: kotlinx.coroutines.Job? = null
 
     private fun refreshLockout() {
-        val remaining = settings.lockoutRemaining()
+        val remaining = lockoutLeft()
         lockoutRemaining = remaining.coerceAtLeast(0)
         if (remaining > 0 && ticker?.isActive != true) {
             ticker = viewModelScope.launch {
                 while (true) {
-                    val left = settings.lockoutRemaining()
+                    val left = lockoutLeft()
                     lockoutRemaining = left.coerceAtLeast(0)
                     if (left <= 0) break
                     delay(500)
@@ -288,29 +301,37 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
 
 @Composable
 fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
+    if (vm.mustChoosePin) {
+        ChooseNewPin(vm)
+        return
+    }
     val context = LocalContext.current
     // The lock screen lives in its own window (a dialog), whose context wraps the activity rather
-    // than being it, so look through the wrappers. A plain cast found nothing, which turned the
-    // fingerprint prompt and button off without any message.
+    // than being it, so look through the wrappers.
     val activity = remember(context) { context.findFragmentActivity() }
     var pin by remember { mutableStateOf("") }
-    val canBio = !vm.biometricInvalidated && vm.settings.biometricEnabled && activity != null && biometricAvailable(context)
+    var forgetting by remember { mutableStateOf(false) }
+    val pinDue = vm.vault.biometricEnabled && vm.vault.pinRequired()
+    val canBio = !vm.legacy && !vm.biometricInvalidated && vm.vault.biometricEnabled && !pinDue &&
+        activity != null && biometricAvailable(context)
 
     val askBiometric: () -> Unit = {
         if (canBio && activity != null) {
-            runCatching {
-                showBiometricPrompt(
-                    activity,
-                    "Unlock CraftyCtrl",
-                    onInvalidated = {
-                        // Fingerprints or faces changed: ask for the PIN and turn biometric unlock off.
-                        vm.settings.biometricEnabled = false
-                        vm.biometricInvalidated = true
-                    },
-                    // Not shown, or closed by the system: offer it again next time the app is on screen.
-                    onDismissed = { system -> if (system) vm.biometricShown = false },
-                ) { vm.unlock() }
-            }.onFailure { vm.biometricShown = false }
+            val cipher = vm.vault.biometricUnlockCipher()
+            if (cipher == null) {
+                // A fingerprint was added or removed (or the PIN is due): ask for the PIN.
+                vm.biometricInvalidated = !vm.vault.biometricEnabled
+            } else {
+                runCatching {
+                    showVaultPrompt(
+                        activity,
+                        "Unlock CraftyCtrl",
+                        cipher,
+                        // Not shown, or closed by the system: offer it again next time the app is on screen.
+                        onDismissed = { system -> if (system) vm.biometricShown = false },
+                    ) { unlocked -> vm.unlockWithBiometric(unlocked) }
+                }.onFailure { vm.biometricShown = false }
+            }
         }
     }
     // Ask only once the lock screen is actually in front (resumed). The lock can engage while the
@@ -331,7 +352,8 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
         if (vm.lockoutRemaining > 0 || vm.checking || pin.length >= PIN_MAX) return
         pin += d
         // Submit automatically once the PIN reaches its saved length.
-        if (pin.length == vm.settings.pinLength) vm.submitPin(pin) { pin = "" }
+        val length = if (vm.legacy) vm.settings.pinLength else vm.vault.pinLength
+        if (pin.length == length) vm.submitPin(pin) { pin = "" }
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -350,32 +372,107 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
             val sub = when {
                 vm.lockoutRemaining > 0 -> "Too many tries. Try again in ${(vm.lockoutRemaining + 999) / 1000}s"
                 vm.pinError != null -> vm.pinError!!
-                vm.biometricInvalidated -> "Fingerprints or faces changed. Enter your PIN, then turn biometric unlock on again in Settings."
+                vm.legacy -> "Enter your PIN to finish the security update"
+                vm.biometricInvalidated -> "A fingerprint was added or removed. Enter your PIN, then turn fingerprint unlock on again in Settings."
+                pinDue -> "Enter your PIN. It's needed after a restart and every 72 hours."
                 else -> "Enter your PIN"
             }
             Text(
                 sub,
                 style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
                 color = if (vm.pinError != null || vm.lockoutRemaining > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(20.dp))
             PinDots(pin.length)
             Spacer(Modifier.height(28.dp))
+            val min = if (vm.legacy) PIN_MIN_LEGACY else PIN_MIN
             PinPad(
                 onDigit = ::press,
                 onBackspace = { if (pin.isNotEmpty()) pin = pin.dropLast(1) },
-                onConfirm = { if (pin.length >= PIN_MIN_LEGACY) vm.submitPin(pin) { pin = "" } },
-                confirmEnabled = pin.length >= PIN_MIN_LEGACY && !vm.checking && vm.lockoutRemaining == 0L,
+                onConfirm = { if (pin.length >= min) vm.submitPin(pin) { pin = "" } },
+                confirmEnabled = pin.length >= min && !vm.checking && vm.lockoutRemaining == 0L,
             )
             Spacer(Modifier.height(16.dp))
             if (canBio) {
                 TextButton(onClick = askBiometric) {
                     Icon(Icons.Filled.Fingerprint, contentDescription = null)
                     Spacer(Modifier.size(8.dp))
-                    Text("Use fingerprint or face")
+                    Text("Use fingerprint")
                 }
             }
-            TextButton(onClick = onForgot) { Text("Forgot PIN? Sign out") }
+            TextButton(onClick = { forgetting = true }) { Text("Forgot PIN? Sign out") }
+        }
+    }
+    if (forgetting) {
+        AlertDialog(
+            onDismissRequest = { forgetting = false },
+            title = { Text("Forgot your PIN?") },
+            text = {
+                Text(
+                    "The PIN can't be recovered, because it encrypts your Crafty login. CraftyCtrl will sign out, " +
+                        "turn off server alerts and forget the panel address and login on this phone. Your servers on Crafty aren't touched.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { forgetting = false; onForgot() }) {
+                    Text("Sign out and reset", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { forgetting = false }) { Text("Cancel") } },
+        )
+    }
+}
+
+/** After unlocking with an old 4- or 5-digit PIN: choose a new one (twice) before the app opens. */
+@Composable
+private fun ChooseNewPin(vm: AppLockViewModel) {
+    val activity = LocalContext.current.findFragmentActivity()
+    var pin by remember { mutableStateOf("") }
+    var first by remember { mutableStateOf<String?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
+    BackHandler { activity?.moveTaskToBack(true) }
+
+    fun next() {
+        if (vm.checking || pin.length < PIN_MIN) return
+        val f = first
+        when {
+            f == null && Lock.isObvious(pin) -> { message = "Too easy to guess. Try a less obvious PIN."; pin = "" }
+            f == null -> { first = pin; pin = ""; message = null }
+            f != pin -> { first = null; pin = ""; message = "The PINs didn't match. Start again." }
+            else -> vm.chooseNewPin(pin) { message = it; first = null; pin = "" }
+        }
+    }
+
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .safeDrawingPadding()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
+            Spacer(Modifier.height(16.dp))
+            Text("Choose a new PIN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                message ?: if (first == null) "PINs now need $PIN_MIN to $PIN_MAX digits. It also encrypts your Crafty login while the app is locked."
+                else "Enter the same PIN again",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = if (message != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(20.dp))
+            PinDots(pin.length)
+            Spacer(Modifier.height(28.dp))
+            PinPad(
+                onDigit = { d -> if (pin.length < PIN_MAX && !vm.checking) { pin += d; message = null } },
+                onBackspace = { if (pin.isNotEmpty()) pin = pin.dropLast(1) },
+                onConfirm = ::next,
+                confirmEnabled = pin.length >= PIN_MIN && !vm.checking,
+            )
         }
     }
 }

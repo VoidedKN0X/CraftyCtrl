@@ -295,7 +295,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                     DropdownMenuItem(
                         text = { Text("Upload file") },
                         leadingIcon = { Icon(Icons.Filled.Upload, contentDescription = null) },
-                        onClick = { addMenu = false; picker.launch(arrayOf("*/*")) },
+                        onClick = { addMenu = false; com.vknxworks.craftyctrl.data.lock.Lock.expectReturn(); picker.launch(arrayOf("*/*")) },
                     )
                 }
             }

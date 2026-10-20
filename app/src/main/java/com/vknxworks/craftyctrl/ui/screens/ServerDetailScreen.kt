@@ -621,7 +621,7 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
             confirmButton = { TextButton(onClick = vm::acceptEulaAndStart) { Text("Accept & start") } },
             dismissButton = {
                 Row {
-                    TextButton(onClick = { uri.openUri("https://aka.ms/MinecraftEULA") }) { Text("Read EULA") }
+                    TextButton(onClick = { com.vknxworks.craftyctrl.data.lock.Lock.expectReturn(); uri.openUri("https://aka.ms/MinecraftEULA") }) { Text("Read EULA") }
                     TextButton(onClick = vm::dismissEula) { Text("Cancel") }
                 }
             },
