@@ -1,6 +1,8 @@
 package com.vknxworks.craftyctrl.ui.theme
 
 import android.content.Context
+import androidx.annotation.StringRes
+import com.vknxworks.craftyctrl.R
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
@@ -28,11 +30,11 @@ import com.vknxworks.craftyctrl.data.ServerState
 // Follow system / Dark / Light / Pure black, the system font and the shared corner shapes.
 
 /** The theme choices every Ctrl app offers: follow the phone, always dark or light, or pure black. */
-enum class ThemeMode(val key: String, val label: String) {
-    SYSTEM("system", "Follow system"),
-    DARK("dark", "Dark"),
-    LIGHT("light", "Light"),
-    BLACK("black", "Pure black");
+enum class ThemeMode(val key: String, @StringRes val label: Int) {
+    SYSTEM("system", R.string.theme_system),
+    DARK("dark", R.string.theme_dark),
+    LIGHT("light", R.string.theme_light),
+    BLACK("black", R.string.theme_black);
 
     companion object {
         fun of(key: String?) = entries.firstOrNull { it.key == key } ?: SYSTEM

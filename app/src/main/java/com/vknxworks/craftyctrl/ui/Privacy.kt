@@ -16,24 +16,36 @@ import androidx.compose.ui.platform.LocalContext
 import com.vknxworks.craftyctrl.data.AppSettings
 
 /**
- * Decides whether the window gets FLAG_SECURE (blank screenshots, screen recordings and Recents
- * thumbnail). On when the user keeps "Hide content in screenshots & recents" on (the default),
- * and always while a screen holding secrets (sign-in, file editor) is showing.
+ * The two privacy switches (Settings > Privacy and security), both off by default:
+ * - [hideScreenshots]: FLAG_SECURE, so screenshots and screen recordings show a blank screen.
+ * - [hideRecents]: the recent-apps view shows a blank card instead of the app.
+ * FLAG_SECURE is also always on while a screen holding secrets (sign-in, the lock and PIN screens, the file
+ * editor, server settings) is showing, whatever the switch says.
  */
 object ScreenPrivacy {
-    var hideContent by mutableStateOf(true)
+    var hideScreenshots by mutableStateOf(false)
+        private set
+    var hideRecents by mutableStateOf(false)
         private set
     private var forced by mutableIntStateOf(0)
 
-    val secure: Boolean get() = hideContent || forced > 0
+    val secure: Boolean get() = hideScreenshots || forced > 0
 
     fun load(context: Context) {
-        hideContent = AppSettings(context).hideContent
+        val settings = AppSettings(context)
+        settings.migrateHideContent()
+        hideScreenshots = settings.hideScreenshots
+        hideRecents = settings.hideRecents
     }
 
-    fun saveHideContent(context: Context, on: Boolean) {
-        AppSettings(context).hideContent = on
-        hideContent = on
+    fun saveHideScreenshots(context: Context, on: Boolean) {
+        AppSettings(context).hideScreenshots = on
+        hideScreenshots = on
+    }
+
+    fun saveHideRecents(context: Context, on: Boolean) {
+        AppSettings(context).hideRecents = on
+        hideRecents = on
     }
 
     internal fun acquire() { forced++ }

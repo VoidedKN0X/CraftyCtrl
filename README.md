@@ -23,7 +23,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Backups and scheduled tasks**: run, edit, restore and schedule; restoring asks you to type RESTORE first
 - **Create, clone, update and delete** Java and Bedrock servers; deleting asks you to type the server name
 - **Alerts** when a server stops or crashes, even with the app closed
-- **App lock** with its own PIN and optional fingerprint unlock; your Crafty login stays encrypted while the app is locked, and an option hides the app in screenshots and recent apps
+- **App lock** with its own PIN and optional fingerprint unlock; your Crafty login stays encrypted while the app is locked, and two switches keep the app out of screenshots and the recent apps view
 - Follow system, dark, light or pure black themes, and colours from your wallpaper
 
 ## Screenshots
@@ -60,16 +60,19 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 
 ## App lock
 
-Turn it on in **⋮ → Settings → Privacy and security → App lock**. It's off until you turn it on.
+Turn it on under **⋮ > Settings > Privacy and security > App lock**. It's off until you turn it on.
 
-- **An app PIN of its own**, at least 6 digits and separate from your phone's. Very obvious PINs, like 111111 or 123456, are refused. The PIN is never stored: it's stretched with 600,000 rounds of PBKDF2 and mixed with a key that never leaves the phone's secure hardware, so a copy of the app's files isn't enough to guess it somewhere else.
-- **Unlock with fingerprint** (optional): strong biometrics only, checked by the phone's secure hardware. Adding a fingerprint to the phone turns it off until you turn it on again. The PIN is still needed after the phone restarts and at least every 72 hours.
-- **Wrong PINs make you wait**: 30 seconds after 5 wrong tries, doubling up to 15 minutes. Restarting the app or the phone, or changing the clock, doesn't end the wait.
-- **Your Crafty login stays encrypted while CraftyCtrl is locked**, with a key that only exists in memory while the app is unlocked and is wiped the moment it locks.
-- **Lock again**: as soon as you leave the app (the default), after 1, 5 or 15 minutes or 1 hour away, or only when the app restarts. Picking a file, opening a link or the battery settings from CraftyCtrl doesn't count as leaving, unless you're away for more than 5 minutes.
-- **Hide in screenshots and recent apps** (on by default) blocks screenshots and screen recording and blanks the app in recent apps. Sign-in, the lock and PIN screens, the file editor and server settings are always hidden.
+- **Its own app PIN** of at least 6 digits, separate from your phone's screen lock. Very obvious PINs such as 111111 or 123456 are refused.
+- **Unlock with fingerprint** (optional) only accepts strong biometrics, such as the fingerprint sensor, checked by the phone's secure hardware. Face unlock that only uses the camera isn't accepted. The PIN is still needed after the phone restarts and at least every 72 hours, and adding a new fingerprint to the phone turns fingerprint unlock off until you turn it on again.
+- **Your Crafty login is encrypted with the PIN while CraftyCtrl is locked.** The key only exists in memory while the app is unlocked and is wiped the moment it locks. The PIN itself is never stored: it's stretched with 600,000 rounds of PBKDF2 and mixed with a key held in the phone's secure hardware, so a copy of the app's files isn't enough to guess it on a computer.
+- **Wrong PINs:** after 5 tries you wait 30 seconds, doubling up to 15 minutes. Restarting the app or the phone, or changing the clock, doesn't skip the wait.
+- **Lock again:** as soon as you leave the app (the default), after 1, 5 or 15 minutes or 1 hour away, or only when the app restarts. Picking a file to upload, opening a link or the Minecraft EULA, and opening battery settings from CraftyCtrl don't count as leaving, unless you stay away for more than 5 minutes.
+- **Change app PIN** asks for your current PIN first, and turning the app lock off asks for the PIN too.
+- **Forgot your PIN?** It can't be recovered, because it encrypts your login. The lock screen offers to sign out, turn off server alerts and forget the panel address and login on this phone; your servers on Crafty aren't touched.
+- **With the app lock on**, the recent-apps screen always shows a blank card.
 - **Server alerts keep working while locked**: while alerts are on, they keep their own copy of your Crafty login, encrypted with the Android Keystore as without the app lock. Turn alerts off to keep the login sealed with your PIN only.
-- **Forgot PIN?** on the lock screen signs out and forgets the panel address and login on this phone, so you can sign in again. Your servers on Crafty aren't touched.
+
+**Hide in screenshots** and **Hide in recent apps** are in the same section, work without the app lock too, and are both off by default. The first keeps CraftyCtrl out of screenshots and screen recordings; the second shows a blank card in the recent-apps view instead of the app. Sign-in, the lock screen, the PIN screens, the file editor and server settings are always kept out of screenshots, whatever the switches say.
 
 ## Privacy
 

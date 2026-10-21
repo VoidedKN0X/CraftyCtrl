@@ -3,6 +3,15 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.5.4] - 2026-10-21
+
+### Changed
+
+- **Hide in screenshots** and **Hide in recent apps** are now two separate switches in Settings › Privacy and security, both off by default, the same in every Ctrl app. Hide in screenshots makes screenshots and screen recordings show a blank screen; Hide in recent apps shows a blank card in the recent-apps view instead of the app (screenshots still work). Before, one setting, "Hide content in screenshots & recents", did both and was on unless you turned it off, and the recent-apps view was always blank. **What changes for you:** if you had turned that setting on yourself, both new switches are on. If you never changed it, both are now off, so screenshots work and the recent-apps view shows CraftyCtrl; turn them on if you want the old behaviour. With the app lock on, the recent-apps view always shows a blank card.
+- **Always protected, whatever the switches say:** sign-in, the lock screen, the PIN screens, the file editor and server settings are never in screenshots, screen recordings or casting.
+- The app lock's text and the Privacy and security rows now come from the app's translatable text resources, with the same wording as the other Ctrl apps. Nothing else changes in how they work.
+- **README**: the App lock section now uses the same wording as the other Ctrl apps and describes the two switches.
+
 ## [2.5.3] - 2026-10-21
 
 ### Security

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Palette
@@ -83,12 +84,12 @@ private const val LICENCE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 
 /** When the app lock asks again after you leave the app (seconds; -1 = only when the app restarts). */
 private val LOCK_AGAIN = listOf(
-    0 to "As soon as you leave the app",
-    60 to "After 1 minute away",
-    300 to "After 5 minutes away",
-    900 to "After 15 minutes away",
-    3600 to "After 1 hour away",
-    -1 to "Only when the app restarts",
+    0 to R.string.lock_again_immediately,
+    60 to R.string.lock_again_1m,
+    300 to R.string.lock_again_5m,
+    900 to R.string.lock_again_15m,
+    3600 to R.string.lock_again_1h,
+    -1 to R.string.lock_again_restart,
 )
 
 @Composable
@@ -151,16 +152,16 @@ fun SettingsScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp),
         ) {
-            Group("Appearance") {
+            Group(stringResource(R.string.group_appearance)) {
                 GroupChoice(
-                    "Theme",
-                    ThemeMode.entries.map { it to it.label },
+                    stringResource(R.string.theme),
+                    ThemeMode.entries.map { it to stringResource(it.label) },
                     ThemePrefs.mode,
                     icon = Icons.Outlined.DarkMode,
                 ) { ThemePrefs.saveMode(context, it) }
                 GroupSwitch(
-                    "Use wallpaper colours",
-                    "Replaces the default colours with ones from your wallpaper",
+                    stringResource(R.string.dynamic_colour),
+                    stringResource(R.string.dynamic_colour_subtitle),
                     ThemePrefs.dynamicColor,
                     icon = Icons.Outlined.Palette,
                 ) { ThemePrefs.saveDynamic(context, it) }
@@ -209,39 +210,27 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
 
             Group(
-                "Privacy and security",
-                footer = buildString {
-                    append("CraftyCtrl has no analytics or tracking. It only talks to your own Crafty panel, ")
-                    append("plus Mojang's player lookup and Crafty's server version list when you use those.")
-                    if (lockOn && alerts) {
-                        append(" Server alerts are on, so they keep their own copy of your Crafty login, encrypted with the ")
-                        append("Android Keystore, to keep working while CraftyCtrl is locked. Turn off server alerts to keep it sealed with your PIN only.")
-                    }
-                },
+                stringResource(R.string.group_privacy),
+                footer = stringResource(R.string.privacy_footer) +
+                    if (lockOn && alerts) " " + stringResource(R.string.privacy_footer_alerts) else "",
             ) {
                 GroupSwitch(
-                    "App lock",
-                    "Ask for an app PIN (and optionally your fingerprint) when opening CraftyCtrl. While locked, " +
-                        "your Crafty login stays encrypted with the PIN.",
+                    stringResource(R.string.lock_app),
+                    stringResource(R.string.lock_app_subtitle),
                     lockOn,
                     icon = Icons.Outlined.Lock,
                 ) { on -> PinRequests.request = if (on) PinRequest.ENABLE else PinRequest.DISABLE }
                 if (lockOn) {
                     GroupRow(
-                        "Change app PIN",
-                        "At least ${LockVault.PIN_MIN} digits, separate from your phone's PIN",
+                        stringResource(R.string.lock_change_pin),
+                        stringResource(R.string.lock_change_pin_subtitle, LockVault.PIN_MIN),
                         icon = Icons.Outlined.Password,
                         showChevron = true,
                         onClick = { PinRequests.request = PinRequest.CHANGE },
                     )
                     GroupSwitch(
-                        "Unlock with fingerprint",
-                        if (bioAvailable || vault.biometricEnabled) {
-                            "Only strong biometrics such as your fingerprint, checked by the phone's secure hardware. " +
-                                "The PIN is still needed after a restart and every 72 hours."
-                        } else {
-                            "Set up a fingerprint on this phone first"
-                        },
+                        stringResource(R.string.lock_fingerprint),
+                        stringResource(if (bioAvailable || vault.biometricEnabled) R.string.lock_fingerprint_settings_subtitle else R.string.lock_fingerprint_unavailable),
                         vault.biometricEnabled,
                         icon = Icons.Outlined.Fingerprint,
                         enabled = bioAvailable || vault.biometricEnabled,
@@ -252,32 +241,41 @@ fun SettingsScreen(onBack: () -> Unit) {
                             val activity = context.findFragmentActivity() ?: return@GroupSwitch
                             // A fresh key each time, bound to the fingerprints enrolled now.
                             val cipher = vault.biometricEnrolCipher() ?: run {
-                                Toast.makeText(context, "Couldn't set up fingerprint unlock", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, R.string.lock_fingerprint_setup_failed, Toast.LENGTH_SHORT).show()
                                 return@GroupSwitch
                             }
-                            showVaultPrompt(activity, "Turn on fingerprint unlock", cipher, subtitle = "Confirm your fingerprint") { unlocked ->
+                            showVaultPrompt(
+                                activity,
+                                context.getString(R.string.lock_fingerprint_enable_title),
+                                cipher,
+                                subtitle = context.getString(R.string.lock_fingerprint_enable_subtitle),
+                            ) { unlocked ->
                                 if (!vault.finishBiometricEnrol(unlocked)) {
-                                    Toast.makeText(context, "Couldn't set up fingerprint unlock", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, R.string.lock_fingerprint_setup_failed, Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
                     }
                     GroupChoice(
-                        "Lock again",
-                        LOCK_AGAIN,
+                        stringResource(R.string.lock_again),
+                        LOCK_AGAIN.map { (v, label) -> v to stringResource(label) },
                         lockAfter,
                         icon = Icons.Outlined.Timer,
-                        footer = "Picking a file, opening a link or the battery settings from CraftyCtrl doesn't count as leaving, " +
-                            "unless you stay away for more than 5 minutes.",
+                        footer = stringResource(R.string.lock_again_footer),
                     ) { settings.lockAfterSeconds = it; lockAfter = it }
                 }
                 GroupSwitch(
-                    "Hide in screenshots and recent apps",
-                    "Blocks screenshots and screen recording, and blanks the app in recent apps. " +
-                        "Sign-in, the lock screen, the file editor and server settings are always hidden",
-                    ScreenPrivacy.hideContent,
+                    stringResource(R.string.hide_screenshots),
+                    stringResource(R.string.hide_screenshots_subtitle),
+                    ScreenPrivacy.hideScreenshots,
                     icon = Icons.Outlined.VisibilityOff,
-                ) { ScreenPrivacy.saveHideContent(context, it) }
+                ) { ScreenPrivacy.saveHideScreenshots(context, it) }
+                GroupSwitch(
+                    stringResource(R.string.hide_recents),
+                    stringResource(R.string.hide_recents_subtitle),
+                    ScreenPrivacy.hideRecents,
+                    icon = Icons.Outlined.Layers,
+                ) { ScreenPrivacy.saveHideRecents(context, it) }
             }
 
             Group(

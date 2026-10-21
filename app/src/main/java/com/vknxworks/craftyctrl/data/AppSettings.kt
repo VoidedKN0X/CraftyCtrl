@@ -37,10 +37,27 @@ class AppSettings(context: Context) {
         }
         set(v) = prefs.edit().putInt(KEY_LOCK_AFTER, v).apply()
 
-    /** FLAG_SECURE for the whole app: blank screenshots and Recents thumbnail. On by default. */
-    var hideContent: Boolean
-        get() = prefs.getBoolean(KEY_HIDE_CONTENT, true)
-        set(v) = prefs.edit().putBoolean(KEY_HIDE_CONTENT, v).apply()
+    /** FLAG_SECURE for the whole app: screenshots and screen recordings show a blank screen. Off by default. */
+    var hideScreenshots: Boolean
+        get() = prefs.getBoolean(KEY_HIDE_SCREENSHOTS, false)
+        set(v) = prefs.edit().putBoolean(KEY_HIDE_SCREENSHOTS, v).apply()
+
+    /** A blank card in the recent-apps view instead of the app. Off by default. */
+    var hideRecents: Boolean
+        get() = prefs.getBoolean(KEY_HIDE_RECENTS, false)
+        set(v) = prefs.edit().putBoolean(KEY_HIDE_RECENTS, v).apply()
+
+    /**
+     * Before 2.5.4 one setting, "Hide content in screenshots & recents" (on unless turned off), did both. Only a
+     * choice the user made themselves is kept: turned on, it turns both new switches on; otherwise both start off.
+     */
+    fun migrateHideContent() {
+        if (!prefs.contains(KEY_HIDE_CONTENT)) return
+        val on = prefs.getBoolean(KEY_HIDE_CONTENT, false)
+        val edit = prefs.edit().remove(KEY_HIDE_CONTENT)
+        if (on) edit.putBoolean(KEY_HIDE_SCREENSHOTS, true).putBoolean(KEY_HIDE_RECENTS, true)
+        edit.commit()
+    }
 
     fun setPin(pin: String) {
         val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
@@ -174,6 +191,8 @@ class AppSettings(context: Context) {
         const val KEY_BIOMETRIC = "biometric"
         const val KEY_LOCK_AFTER = "lock_after"
         const val KEY_HIDE_CONTENT = "hide_content"
+        const val KEY_HIDE_SCREENSHOTS = "hide_screenshots"
+        const val KEY_HIDE_RECENTS = "hide_recents"
         const val KEY_FAILED = "pin_failed"
         const val KEY_LOCKOUT_UNTIL = "pin_lockout_until"
         const val KEY_LOCKOUT_REMAINING = "pin_lockout_remaining"
