@@ -13,16 +13,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Fingerprint
@@ -50,14 +45,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import com.vknxworks.craftyctrl.BuildConfig
 import com.vknxworks.craftyctrl.R
 import com.vknxworks.craftyctrl.data.AppSettings
 import com.vknxworks.craftyctrl.data.CredentialStore
@@ -77,11 +69,6 @@ import com.vknxworks.craftyctrl.ui.settings.GroupSwitch
 import com.vknxworks.craftyctrl.ui.theme.ThemeMode
 import com.vknxworks.craftyctrl.ui.theme.ThemePrefs
 
-private const val SPONSOR_URL = "https://github.com/sponsors/VoidedKN0X"
-private const val REPO_URL = "https://github.com/VoidedKN0X/CraftyCtrl"
-private const val ISSUES_URL = "https://github.com/VoidedKN0X/CraftyCtrl/issues"
-private const val LICENCE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
-
 /** When the app lock asks again after you leave the app (seconds; -1 = only when the app restarts). */
 private val LOCK_AGAIN = listOf(
     0 to R.string.lock_again_immediately,
@@ -92,6 +79,7 @@ private val LOCK_AGAIN = listOf(
     -1 to R.string.lock_again_restart,
 )
 
+/** Settings, opened from the You page (tap your profile picture). About is on the You page itself. */
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -109,11 +97,6 @@ fun SettingsScreen(onBack: () -> Unit) {
     var notifDenied by remember { mutableStateOf(false) }
 
     val bioAvailable = remember { biometricAvailable(context) }
-    val uriHandler = LocalUriHandler.current
-    fun open(url: String) {
-        Lock.expectReturn()
-        runCatching { uriHandler.openUri(url) }
-    }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         alerts = settings.alertsEnabled
@@ -290,44 +273,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                     icon = Icons.Outlined.Refresh,
                 ) { settings.liveRefreshSeconds = it; liveRefresh = it }
             }
-
-            Group(stringResource(R.string.group_about)) {
-                GroupRow(
-                    stringResource(R.string.support_title),
-                    stringResource(R.string.support_subtitle),
-                    icon = Icons.Filled.Favorite,
-                    showChevron = true,
-                    onClick = { open(SPONSOR_URL) },
-                )
-                GroupRow(
-                    stringResource(R.string.bugs_title),
-                    stringResource(R.string.bugs_subtitle),
-                    icon = Icons.Filled.BugReport,
-                    showChevron = true,
-                    onClick = { open(ISSUES_URL) },
-                )
-                GroupRow(
-                    stringResource(R.string.source_title),
-                    stringResource(R.string.source_subtitle),
-                    icon = Icons.Filled.Code,
-                    showChevron = true,
-                    onClick = { open(REPO_URL) },
-                )
-                GroupRow(
-                    stringResource(R.string.licence_title),
-                    stringResource(R.string.licence_subtitle),
-                    icon = Icons.Filled.Gavel,
-                    showChevron = true,
-                    onClick = { open(LICENCE_URL) },
-                )
-            }
-            Text(
-                stringResource(R.string.about_footer, BuildConfig.VERSION_NAME),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                textAlign = TextAlign.Center,
-            )
         }
     }
 }

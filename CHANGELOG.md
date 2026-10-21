@@ -3,6 +3,23 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.6.0] - 2026-10-21
+
+Settings now open from your profile picture, the same in every Ctrl app.
+
+### New
+
+- **Your profile picture at the top right** of the Servers and Host tabs. It shows the first letter of your Crafty username, or the round placeholder picture the other Ctrl apps use when you signed in with an API key. Tapping it opens the new **You** page
+- **The You page** shows who you're signed in as and how (username and password, or an API key), which Crafty panel you're connected to, then **Settings** and **Sign out**, and **About** (Support CraftyCtrl, Report a bug, Source code, Licence) with the version underneath, in the same layout as NaviCtrl, MemoCtrl, ProxCtrl and TrueCtrl
+- **Sign out asks first** and says what it does: CraftyCtrl forgets your login on this phone and server alerts stop until you sign in again, while the panel address and username stay filled in. Before, Sign out in the menu signed you out straight away
+
+### Changed
+
+- **Settings moved to your profile picture**: before, Settings was in the **⋮** menu on the Servers screen. Now tap your profile picture, then **Settings** for Appearance, Notifications, Privacy and security and Live stats. It's the only way in, as in every Ctrl app
+- **The ⋮ menu on the Servers screen is gone.** **Broadcast** is now its own megaphone button next to your profile picture, and **Sign out** is on the You page
+- **About moved from the bottom of Settings to the bottom of the You page**, with the same four rows
+- **README**: Getting started says where Settings, Sign out and About are; the App lock, Privacy and Support sections say "tap your profile picture" instead of "⋮ › Settings"
+
 ## [2.5.4] - 2026-10-21
 
 ### Changed
