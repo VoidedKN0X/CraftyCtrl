@@ -67,7 +67,7 @@ Turn it on in **⋮ → Settings → Privacy and security → App lock**. It's o
 - **Wrong PINs make you wait**: 30 seconds after 5 wrong tries, doubling up to 15 minutes. Restarting the app or the phone, or changing the clock, doesn't end the wait.
 - **Your Crafty login stays encrypted while CraftyCtrl is locked**, with a key that only exists in memory while the app is unlocked and is wiped the moment it locks.
 - **Lock again**: as soon as you leave the app (the default), after 1, 5 or 15 minutes or 1 hour away, or only when the app restarts. Picking a file, opening a link or the battery settings from CraftyCtrl doesn't count as leaving, unless you're away for more than 5 minutes.
-- **Hide in screenshots and recent apps** (on by default) blocks screenshots and screen recording and blanks the app in recent apps. Sign-in, the file editor and server settings are always hidden.
+- **Hide in screenshots and recent apps** (on by default) blocks screenshots and screen recording and blanks the app in recent apps. Sign-in, the lock and PIN screens, the file editor and server settings are always hidden.
 - **Server alerts keep working while locked**: while alerts are on, they keep their own copy of your Crafty login, encrypted with the Android Keystore as without the app lock. Turn alerts off to keep the login sealed with your PIN only.
 - **Forgot PIN?** on the lock screen signs out and forgets the panel address and login on this phone, so you can sign in again. Your servers on Crafty aren't touched.
 

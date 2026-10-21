@@ -3,6 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.5.3] - 2026-10-21
+
+### Security
+
+- **The lock screen and the PIN screens are never in screenshots, screen recordings or casting**, whatever "Hide in screenshots and recent apps" is set to, the same as sign-in already was. A recording would otherwise show which keys of the PIN pad were pressed. This applies to the lock screen, and to choosing, changing or confirming your app PIN in Settings.
+
 ## [2.5.2] - 2026-10-21
 
 The app lock and Settings now look and work the same as in every other Ctrl app.
