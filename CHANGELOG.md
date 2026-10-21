@@ -3,6 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Unreleased
+
+### Changed
+
+- The "not in file" note next to a setting in **Server settings** is now one text with the setting's name in it, ready for translation. It looks the same as before
+
 ## [2.6.1] - 2026-10-21
 
 A tidy-up release: all of CraftyCtrl's text now lives in one place.
