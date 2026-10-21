@@ -150,6 +150,8 @@ private fun AppRoot(
                     dismissOnClickOutside = false,
                     usePlatformDefaultWidth = false,
                     decorFitsSystemWindows = false,
+                    // Its own window, so it needs its own FLAG_SECURE: never in screenshots or recordings.
+                    securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn,
                 ),
             ) {
                 LockScreen(
