@@ -477,7 +477,7 @@
     <string name="action">Action</string>
     <string name="command_without">Command, without /</string>
     <string name="backup_profile">Backup profile</string>
-    <string name="when">When</string>
+    <string name="when_label">When</string>
     <string name="every">Every</string>
     <string name="time_24_hour_server_s_clock">Time (24-hour, server\'s clock)</string>
     <string name="cron_minute_hour_day_month_weekday">Cron (minute hour day month weekday)</string>
@@ -667,7 +667,7 @@
     <string name="back_up_now">Back up now</string>
     <string name="backups_run_on_the_crafty_host">Backups run on the Crafty host. Downloading backup archives stays in the web panel.</string>
     <string name="restore_x">Restore %1$s</string>
-    <string name="default">Default</string>
+    <string name="default_label">Default</string>
     <string name="last_result">Last result</string>
     <string name="schedule">Schedule</string>
     <string name="loading_schedule">Loading schedule…</string>

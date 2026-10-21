@@ -1104,7 +1104,7 @@ private fun BackupCard(
                 if (b.isDefault) {
                     Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
                         Text(
-                            stringResource(R.string.default),
+                            stringResource(R.string.default_label),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                         )
@@ -1501,7 +1501,7 @@ private fun PowerDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(action.confirmText.orEmpty())
                 if (canWarn) {
-                    Text(stringResource(R.string.when), style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.when_label), style = MaterialTheme.typography.labelLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0 to stringResource(R.string.now)) + listOf(1, 5, 10).map { it * 60 to stringResource(R.string.x_min, it) }.forEach { (sec, label) ->
                             FilterChip(selected = delay == sec, onClick = { delay = sec }, label = { Text(label) })

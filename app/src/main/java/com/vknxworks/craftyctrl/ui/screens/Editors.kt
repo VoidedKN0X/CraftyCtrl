@@ -204,7 +204,7 @@ fun TaskEditorSheet(
                 else -> Unit
             }
 
-            SectionLabel(stringResource(R.string.when))
+            SectionLabel(stringResource(R.string.when_label))
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 Timing.entries.forEachIndexed { i, t ->
                     SegmentedButton(
