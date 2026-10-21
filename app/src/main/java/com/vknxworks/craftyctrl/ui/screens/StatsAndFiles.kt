@@ -181,7 +181,7 @@ fun StatsTab(vm: ServerDetailViewModel) {
             }
         } else if (vm.history.error != null) {
             Text(
-                stringResource(R.string.crafty_didn_t_return_stored_history, vm.history.error),
+                stringResource(R.string.crafty_didn_t_return_stored_history, vm.history.error.orEmpty()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
