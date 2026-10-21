@@ -65,15 +65,13 @@ import com.vknxworks.craftyctrl.ui.theme.ThemePrefs
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Recents shows a blank card instead of a snapshot of the console or files.
-        setRecentsScreenshotEnabled(false)
         ThemePrefs.load(this)
         ScreenPrivacy.load(this)
         // Deletes what the anonymous stats (removed in 2.4.12) left in the settings, once after the update.
         if (savedInstanceState == null) AppSettings(this).removeLeftoverStats()
         enableEdgeToEdge()
         setContent {
-            // FLAG_SECURE follows the privacy setting, and is forced on by sign-in and the file editor.
+            // FLAG_SECURE follows "Hide in screenshots", and is forced on by sign-in, the lock and PIN screens and the file editor.
             val secure = ScreenPrivacy.secure
             LaunchedEffect(secure) {
                 if (secure) {
@@ -82,6 +80,9 @@ class MainActivity : FragmentActivity() {
                     window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                 }
             }
+            // "Hide in recent apps", and always with the app lock on: a blank card instead of a snapshot.
+            val blankRecents = ScreenPrivacy.hideRecents || com.vknxworks.craftyctrl.data.lock.Lock.vault(this).enabled
+            LaunchedEffect(blankRecents) { setRecentsScreenshotEnabled(!blankRecents) }
             // System bar icons follow the app's own light/dark choice, not just the phone's.
             val dark = ThemePrefs.isDark()
             LaunchedEffect(dark) {

@@ -32,6 +32,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.repeatOnLifecycle
 import javax.crypto.Cipher
+import androidx.compose.ui.res.stringResource
+import com.vknxworks.craftyctrl.R
 
 /** Shortest PIN that can be set now. */
 const val PIN_MIN = LockVault.PIN_MIN
@@ -89,7 +91,7 @@ fun showVaultPrompt(
         BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
             .apply { if (subtitle != null) setSubtitle(subtitle) }
-            .setNegativeButtonText("Use PIN")
+            .setNegativeButtonText(activity.getString(R.string.lock_use_pin))
             .setAllowedAuthenticators(BIOMETRIC_STRONG)
             .build(),
         BiometricPrompt.CryptoObject(cipher),
@@ -113,7 +115,8 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
 
     var locked by mutableStateOf(lockOn)
         private set
-    var pinError by mutableStateOf<String?>(null)
+    /** A string resource: why the last try didn't unlock. */
+    var pinError by mutableStateOf<Int?>(null)
         private set
     var checking by mutableStateOf(false)
         private set
@@ -188,7 +191,7 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Fingerprint unlock: the prompt's cipher has to decrypt the vault key. */
     fun unlockWithBiometric(cipher: Cipher) {
-        if (vault.unlockWithBiometric(cipher)) unlocked() else pinError = "Couldn't unlock with your fingerprint. Use your PIN."
+        if (vault.unlockWithBiometric(cipher)) unlocked() else pinError = R.string.lock_fingerprint_failed
     }
 
     fun submitPin(pin: String, onWrong: () -> Unit) {
@@ -204,7 +207,7 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
                     unlocked()
                 } else {
                     refreshLockout()
-                    pinError = "Wrong PIN"
+                    pinError = R.string.lock_wrong_pin
                     onWrong()
                 }
                 return@launch
@@ -220,7 +223,7 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
                     // Moves the PIN into the vault and seals the token with it.
                     val moved = withContext(Dispatchers.Default) { runCatching { Lock.migrate(getApplication<Application>(), pin) }.isSuccess }
                     checking = false
-                    if (moved) unlocked() else { pinError = "Couldn't finish the security update. Try again."; onWrong() }
+                    if (moved) unlocked() else { pinError = R.string.lock_update_failed; onWrong() }
                 } else {
                     checking = false
                     oldPin = pin
@@ -236,7 +239,7 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
                 settings.startLockout(wait)
                 refreshLockout()
             }
-            pinError = "Wrong PIN"
+            pinError = R.string.lock_wrong_pin
             onWrong()
         }
     }
@@ -288,9 +291,8 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
         // Unlocked with an old 4- or 5-digit PIN: choose a new one (twice) before the app opens.
         PinSetupScreen(
             vault = vm.vault,
-            title = "Choose an app PIN",
-            intro = "PINs now need at least $PIN_MIN digits, different from your phone's PIN. " +
-                "Your Crafty login is encrypted with it while the app is locked.",
+            title = stringResource(R.string.lock_choose_title),
+            intro = stringResource(R.string.lock_migrate_intro, PIN_MIN),
             verifyCurrent = false,
             cancellable = false,
             onDone = { pin -> vm.chooseNewPin(pin) },
@@ -321,9 +323,9 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
                 runCatching {
                     showVaultPrompt(
                         activity,
-                        "Unlock CraftyCtrl",
+                        context.getString(R.string.lock_fingerprint_title),
                         cipher,
-                        subtitle = "Confirm it's you to manage your servers",
+                        subtitle = context.getString(R.string.lock_fingerprint_subtitle),
                         // Not shown, or closed by the system: offer it again next time the app is on screen.
                         onDismissed = { system -> if (system) vm.biometricShown = false },
                     ) { unlocked -> vm.unlockWithBiometric(unlocked) }
@@ -354,14 +356,14 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     val min = if (vm.legacy) PIN_MIN_LEGACY else PIN_MIN
 
     PinPadScreen(
-        title = "CraftyCtrl is locked",
+        title = stringResource(R.string.lock_title),
         message = when {
             vm.lockoutRemaining > 0 -> lockoutText(vm.lockoutRemaining)
-            vm.pinError != null -> vm.pinError!!
-            vm.legacy -> "Enter your PIN to finish the security update"
-            vm.biometricInvalidated -> "A fingerprint was added or removed. Unlock with your PIN, then turn fingerprint unlock on again."
-            pinDue -> "Enter your PIN. It's needed after a restart and every 72 hours."
-            else -> "Enter your PIN"
+            vm.pinError != null -> stringResource(vm.pinError!!)
+            vm.legacy -> stringResource(R.string.lock_legacy_pin)
+            vm.biometricInvalidated -> stringResource(R.string.lock_fingerprint_changed)
+            pinDue -> stringResource(R.string.lock_pin_due)
+            else -> stringResource(R.string.lock_enter_pin)
         },
         isError = vm.pinError != null || vm.lockoutRemaining > 0 || vm.biometricInvalidated,
         pin = pin,
@@ -385,9 +387,8 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     )
     if (forgetting) {
         ForgotPinDialog(
-            body = "The PIN can't be recovered, because it encrypts your Crafty login. CraftyCtrl will sign out, " +
-                "turn off server alerts and forget the panel address and login on this phone. Your servers on Crafty aren't touched.",
-            confirm = "Sign out and reset",
+            body = stringResource(R.string.lock_forgot_body),
+            confirm = stringResource(R.string.lock_forgot_confirm),
             onDismiss = { forgetting = false },
         ) {
             forgetting = false
@@ -404,9 +405,8 @@ fun PinRequestScreen(request: PinRequest, vm: AppLockViewModel) {
     when (request) {
         PinRequest.ENABLE -> PinSetupScreen(
             vault = vm.vault,
-            title = "Choose an app PIN",
-            intro = "At least $PIN_MIN digits, different from your phone's PIN. " +
-                "If you forget it, the only way back in is to sign out and sign in again.",
+            title = stringResource(R.string.lock_choose_title),
+            intro = stringResource(R.string.lock_choose_intro, PIN_MIN),
             verifyCurrent = false,
             cancellable = true,
             onDone = { pin -> withContext(Dispatchers.Default) { Lock.enable(app, pin) }; done() },
@@ -414,8 +414,8 @@ fun PinRequestScreen(request: PinRequest, vm: AppLockViewModel) {
         )
         PinRequest.CHANGE -> PinSetupScreen(
             vault = vm.vault,
-            title = "Change app PIN",
-            intro = "At least $PIN_MIN digits, different from your phone's PIN.",
+            title = stringResource(R.string.lock_change_title),
+            intro = stringResource(R.string.lock_change_intro, PIN_MIN),
             verifyCurrent = true,
             cancellable = true,
             onDone = { pin -> withContext(Dispatchers.Default) { check(vm.vault.changePin(pin)) }; done() },
@@ -423,8 +423,8 @@ fun PinRequestScreen(request: PinRequest, vm: AppLockViewModel) {
         )
         PinRequest.DISABLE -> PinSetupScreen(
             vault = vm.vault,
-            title = "Turn off app lock",
-            intro = "Enter your app PIN to turn the lock off.",
+            title = stringResource(R.string.lock_disable_title),
+            intro = stringResource(R.string.lock_disable_intro),
             verifyCurrent = true,
             verifyOnly = true,
             cancellable = true,
