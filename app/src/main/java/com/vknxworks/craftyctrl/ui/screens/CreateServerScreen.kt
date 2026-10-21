@@ -423,7 +423,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
                     value = version,
                     onValueChange = { version = it.trim().take(32) },
                     label = { Text(stringResource(R.string.minecraft_version)) },
-                    placeholder = { Text("e.g. 1.21.4") },
+                    placeholder = { Text(stringResource(R.string.version_example)) },
                     supportingText = {
                         Text(
                             if (versions.isEmpty() && !vm.catalogLoading) stringResource(R.string.couldn_t_load_the_version_list)
