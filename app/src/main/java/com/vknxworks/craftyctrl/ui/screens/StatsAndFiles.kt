@@ -114,14 +114,20 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.annotation.StringRes
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
+import androidx.compose.ui.res.stringResource
 
 // ---------------------------------------------------------------- stats tab
 
-private enum class Range(val label: String, val millis: Long?) {
-    HOUR("1 h", 3_600_000L),
-    SIX("6 h", 6 * 3_600_000L),
-    DAY("24 h", 24 * 3_600_000L),
-    ALL("All", null),
+private enum class Range(@StringRes private val labelRes: Int, private val hours: Int, val millis: Long?) {
+    HOUR(R.string.range_hours, 1, 3_600_000L),
+    SIX(R.string.range_hours, 6, 6 * 3_600_000L),
+    DAY(R.string.range_hours, 24, 24 * 3_600_000L),
+    ALL(R.string.level_all, 0, null);
+
+    val label: String get() = str(labelRes, hours)
 }
 
 @Composable
@@ -146,11 +152,11 @@ fun StatsTab(vm: ServerDetailViewModel) {
         verticalArrangement = Arrangement.spacedBy(22.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SectionLabel(if (useHistory) "History from Crafty" else "Live, since you opened this server", Modifier.weight(1f))
+            SectionLabel(if (useHistory) stringResource(R.string.history_from_crafty) else stringResource(R.string.live_since_you_opened_this_server), Modifier.weight(1f))
             if (vm.history.loading) {
                 CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
             } else {
-                IconButton(onClick = vm::loadHistory) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh") }
+                IconButton(onClick = vm::loadHistory) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.refresh)) }
             }
         }
         if (useHistory) {
@@ -175,7 +181,7 @@ fun StatsTab(vm: ServerDetailViewModel) {
             }
         } else if (vm.history.error != null) {
             Text(
-                "Crafty didn't return stored history (${vm.history.error}). Showing live samples instead.",
+                stringResource(R.string.crafty_didn_t_return_stored_history, vm.history.error),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -192,7 +198,7 @@ fun StatsTab(vm: ServerDetailViewModel) {
             format = { "%.0f%%".format(it) },
         )
         ChartCard(
-            title = "Memory",
+            title = stringResource(R.string.memory),
             current = vm.stats?.let { s -> listOfNotNull(s.mem, s.memPercent?.let { "%.0f%%".format(it) }).joinToString(" · ") }?.ifEmpty { null } ?: "—",
             values = points.map { it.memPercent?.toFloat() },
             color = ChartMem,
@@ -201,7 +207,7 @@ fun StatsTab(vm: ServerDetailViewModel) {
             format = { "%.0f%%".format(it) },
         )
         if (vm.stats?.playersKnown != false) ChartCard(
-            title = "Players",
+            title = stringResource(R.string.players),
             current = vm.stats?.let { playersText(it.online, it.max) } ?: "—",
             values = points.map { it.players?.toFloat() },
             color = ChartPlayers,
@@ -263,9 +269,9 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                 .padding(start = 8.dp, end = 8.dp, top = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = { vm.openFolder(null) }) { Icon(Icons.Filled.Home, contentDescription = "Server folder") }
+            IconButton(onClick = { vm.openFolder(null) }) { Icon(Icons.Filled.Home, contentDescription = stringResource(R.string.server_folder)) }
             IconButton(onClick = { vm.openFolder(parent) }, enabled = parent != null) {
-                Icon(Icons.Filled.SubdirectoryArrowLeft, contentDescription = "Up one folder")
+                Icon(Icons.Filled.SubdirectoryArrowLeft, contentDescription = stringResource(R.string.up_one_folder))
             }
             Text(
                 relativeLabel(vm.filePath, vm.rootPath),
@@ -276,24 +282,24 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = { vm.openFolder(vm.filePath) }) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh") }
+            IconButton(onClick = { vm.openFolder(vm.filePath) }) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.refresh)) }
             Box {
                 FilledTonalIconButton(onClick = { addMenu = true }, enabled = vm.filePath != null && vm.uploadProgress == null) {
-                    Icon(Icons.Filled.Add, contentDescription = "Add")
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add))
                 }
                 DropdownMenu(expanded = addMenu, onDismissRequest = { addMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("New file") },
+                        text = { Text(stringResource(R.string.new_file)) },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, contentDescription = null) },
                         onClick = { addMenu = false; newEntry = false },
                     )
                     DropdownMenuItem(
-                        text = { Text("New folder") },
+                        text = { Text(stringResource(R.string.new_folder)) },
                         leadingIcon = { Icon(Icons.Filled.CreateNewFolder, contentDescription = null) },
                         onClick = { addMenu = false; newEntry = true },
                     )
                     DropdownMenuItem(
-                        text = { Text("Upload file") },
+                        text = { Text(stringResource(R.string.upload_file)) },
                         leadingIcon = { Icon(Icons.Filled.Upload, contentDescription = null) },
                         onClick = { addMenu = false; com.vknxworks.craftyctrl.data.lock.Lock.expectReturn(); picker.launch(arrayOf("*/*")) },
                     )
@@ -302,7 +308,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
         }
         vm.uploadProgress?.let { p ->
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Uploading… ${(p * 100).toInt()}%", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.uploading_x, (p * 100).toInt()), style = MaterialTheme.typography.labelMedium)
                 LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth())
             }
         }
@@ -312,7 +318,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
         LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(bottom = 24.dp)) {
             val entries = vm.files.data.orEmpty()
             if (entries.isEmpty() && !vm.files.loading && vm.files.error == null) {
-                item { Text("This folder is empty.", Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                item { Text(stringResource(R.string.this_folder_is_empty), Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
             items(entries, key = { it.path }) { e ->
                 Row(
@@ -348,16 +354,16 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                     )
                     Box {
                         IconButton(onClick = { rowMenu = e.path }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = "More for ${e.name}")
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more_for_x, e.name))
                         }
                         DropdownMenu(expanded = rowMenu == e.path, onDismissRequest = { rowMenu = null }) {
                             DropdownMenuItem(
-                                text = { Text("Rename") },
+                                text = { Text(stringResource(R.string.rename)) },
                                 leadingIcon = { Icon(Icons.Filled.DriveFileRenameOutline, contentDescription = null) },
                                 onClick = { rowMenu = null; renaming = e },
                             )
                             DropdownMenuItem(
-                                text = { Text("Move…") },
+                                text = { Text(stringResource(R.string.move)) },
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = null) },
                                 onClick = { rowMenu = null; vm.startClip(e, copy = false) },
                             )
@@ -365,20 +371,20 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                             val copyable = !e.isDir && e.canOpen != false &&
                                 e.name.substringAfterLast('.', "").lowercase() !in binaryExt
                             DropdownMenuItem(
-                                text = { Text(if (copyable) "Copy…" else "Copy (text files only)") },
+                                text = { Text(if (copyable) stringResource(R.string.copy_2) else stringResource(R.string.copy_text_files_only)) },
                                 leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
                                 enabled = copyable,
                                 onClick = { rowMenu = null; vm.startClip(e, copy = true) },
                             )
                             if (!e.isDir && e.name.endsWith(".zip", ignoreCase = true)) {
                                 DropdownMenuItem(
-                                    text = { Text("Extract here") },
+                                    text = { Text(stringResource(R.string.extract_here)) },
                                     leadingIcon = { Icon(Icons.Filled.Unarchive, contentDescription = null) },
                                     onClick = { rowMenu = null; vm.unzip(e) },
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                                 onClick = { rowMenu = null; confirmDelete = e },
                             )
@@ -399,19 +405,19 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            (if (c.copy) "Copying " else "Moving ") + c.entry.name,
+                            (if (c.copy) stringResource(R.string.copying) else stringResource(R.string.moving)) + c.entry.name,
                             style = MaterialTheme.typography.titleSmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            "Open the destination folder, then paste",
+                            stringResource(R.string.open_the_destination_folder_then_paste),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
                         )
                     }
-                    TextButton(onClick = vm::cancelClip) { Text("Cancel") }
-                    FilledTonalButton(onClick = vm::pasteHere) { Text("Paste here") }
+                    TextButton(onClick = vm::cancelClip) { Text(stringResource(R.string.cancel)) }
+                    FilledTonalButton(onClick = vm::pasteHere) { Text(stringResource(R.string.paste_here)) }
                 }
             }
         }
@@ -419,10 +425,10 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
 
     renaming?.let { e ->
         NameDialog(
-            title = "Rename ${e.name}",
-            hint = "New name",
+            title = stringResource(R.string.rename_x, e.name),
+            hint = stringResource(R.string.new_name),
             initial = e.name,
-            confirmLabel = "Rename",
+            confirmLabel = stringResource(R.string.rename),
             onDismiss = { renaming = null },
             onConfirm = { name -> renaming = null; if (name != e.name) vm.renameEntry(e, name) },
         )
@@ -431,26 +437,26 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
     confirmDelete?.let { e ->
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text("Delete ${e.name}?") },
+            title = { Text(stringResource(R.string.delete_x_2, e.name)) },
             text = {
                 Text(
-                    if (e.isDir) "This folder and everything inside it will be permanently deleted. This can't be undone."
-                    else "This file will be permanently deleted. This can't be undone.",
+                    if (e.isDir) stringResource(R.string.this_folder_and_everything_inside_it)
+                    else stringResource(R.string.this_file_will_be_permanently_deleted),
                 )
             },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = null; vm.deleteEntry(e) }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
     newEntry?.let { folder ->
         NameDialog(
-            title = if (folder) "New folder" else "New file",
-            hint = if (folder) "Folder name" else "File name, e.g. notes.txt",
+            title = if (folder) stringResource(R.string.new_folder) else stringResource(R.string.new_file),
+            hint = if (folder) stringResource(R.string.folder_name) else stringResource(R.string.file_name_e_g_notes_txt),
             onDismiss = { newEntry = null },
             onConfirm = { name -> newEntry = null; vm.createEntry(name, folder) },
         )
@@ -459,9 +465,9 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
     binaryWarning?.let { e ->
         AlertDialog(
             onDismissRequest = { binaryWarning = null },
-            title = { Text("Can't edit ${e.name}") },
-            text = { Text("This looks like a binary file (world data, an archive or a program). Editing it as text would corrupt it.") },
-            confirmButton = { TextButton(onClick = { binaryWarning = null }) { Text("OK") } },
+            title = { Text(stringResource(R.string.can_t_edit_x, e.name)) },
+            text = { Text(stringResource(R.string.this_looks_like_a_binary_file)) },
+            confirmButton = { TextButton(onClick = { binaryWarning = null }) { Text(stringResource(R.string.ok)) } },
         )
     }
 }
@@ -499,18 +505,18 @@ class FileEditorViewModel(private val api: CraftyApi, private val serverId: Stri
                 when (val r = api.browse(serverId, path)) {
                     is FileResult.Text -> {
                         if (r.contents.length > MAX_EDIT_CHARS) {
-                            error = "This file is too large to edit on a phone (${r.contents.length / 1024} KB)."
+                            error = str(R.string.this_file_is_too_large_to, r.contents.length / 1024)
                         } else {
                             original = r.contents
                             text = r.contents
                         }
                     }
-                    is FileResult.Folder -> error = "Crafty returned a folder listing instead of the file's text."
+                    is FileResult.Folder -> error = str(R.string.crafty_returned_a_folder_listing_instead)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                error = e.message ?: "Couldn't open the file."
+                error = e.message ?: str(R.string.couldn_t_open_the_file)
             } finally {
                 loading = false
             }
@@ -525,7 +531,7 @@ class FileEditorViewModel(private val api: CraftyApi, private val serverId: Stri
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        e.message ?: "Couldn't save."
+        e.message ?: str(R.string.couldn_t_save)
     } finally {
         saving = false
     }
@@ -553,7 +559,7 @@ fun FileEditorScreen(api: CraftyApi, serverId: String, path: String, onBack: () 
     fun save() {
         scope.launch {
             val err = vm.save()
-            snackbar.showSnackbar(err ?: "Saved. Most settings apply after a server restart.")
+            snackbar.showSnackbar(err ?: str(R.string.saved_most_settings_apply_after_a))
         }
     }
 
@@ -580,14 +586,14 @@ fun FileEditorScreen(api: CraftyApi, serverId: String, path: String, onBack: () 
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) }
                 },
                 actions = {
-                    FilterChip(selected = wrap, onClick = { wrap = !wrap }, label = { Text("Wrap") })
+                    FilterChip(selected = wrap, onClick = { wrap = !wrap }, label = { Text(stringResource(R.string.wrap)) })
                     if (vm.saving) {
                         CircularProgressIndicator(Modifier.padding(horizontal = 14.dp).size(22.dp), strokeWidth = 2.dp)
                     } else {
-                        IconButton(onClick = ::save, enabled = vm.dirty) { Icon(Icons.Filled.Save, contentDescription = "Save") }
+                        IconButton(onClick = ::save, enabled = vm.dirty) { Icon(Icons.Filled.Save, contentDescription = stringResource(R.string.save)) }
                     }
                 },
             )
@@ -623,22 +629,22 @@ fun FileEditorScreen(api: CraftyApi, serverId: String, path: String, onBack: () 
     if (confirmLeave) {
         AlertDialog(
             onDismissRequest = { confirmLeave = false },
-            title = { Text("Discard changes?") },
-            text = { Text("You have unsaved edits to ${path.substringAfterLast('/')}.") },
+            title = { Text(stringResource(R.string.discard_changes)) },
+            text = { Text(stringResource(R.string.unsaved_edits_to_x, path.substringAfterLast('/'))) },
             confirmButton = {
-                TextButton(onClick = { confirmLeave = false; onBack() }) { Text("Discard", color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = { confirmLeave = false; onBack() }) { Text(stringResource(R.string.discard), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text("Keep editing") } },
+            dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text(stringResource(R.string.keep_editing)) } },
         )
     }
 }
 
 /** Names can't contain path separators or be "." / "..", so nothing lands outside the folder. */
 private fun validName(name: String): String? = when {
-    name.isBlank() -> "Enter a name"
-    name.trim() in listOf(".", "..") -> "That name isn't allowed"
-    name.any { it == '/' || it == '\\' || it.code < 32 } -> "Names can't contain / or \\"
-    name.length > 120 -> "That name is too long"
+    name.isBlank() -> str(R.string.enter_a_name)
+    name.trim() in listOf(".", "..") -> str(R.string.that_name_isn_t_allowed)
+    name.any { it == '/' || it == '\\' || it.code < 32 } -> str(R.string.names_can_t_contain_or)
+    name.length > 120 -> str(R.string.that_name_is_too_long)
     else -> null
 }
 
@@ -649,7 +655,7 @@ private fun NameDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
     initial: String = "",
-    confirmLabel: String = "Create",
+    confirmLabel: String = stringResource(R.string.create),
 ) {
     var name by remember { mutableStateOf(initial) }
     val error = if (name.isEmpty()) null else validName(name)
@@ -670,6 +676,6 @@ private fun NameDialog(
         confirmButton = {
             TextButton(onClick = { onConfirm(name.trim()) }, enabled = validName(name) == null) { Text(confirmLabel) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

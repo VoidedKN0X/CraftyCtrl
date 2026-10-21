@@ -161,7 +161,7 @@ private fun AppRoot(
                     onForgot = {
                         lockVm.forget()
                         MonitorService.sync(context)
-                        sessionVm.signOut("PIN removed. Sign in again to continue.")
+                        sessionVm.signOut(str(R.string.pin_removed_sign_in_again_to))
                     },
                 )
             }
@@ -178,7 +178,7 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
             CraftyApi(
                 session.baseUrl,
                 fixedToken = null,
-                onUnauthorized = { sessionVm.signOut("Your session expired. Sign in again.") },
+                onUnauthorized = { sessionVm.signOut(str(R.string.your_session_expired_sign_in_again)) },
                 // Wiped while the app is locked: the screens stay, but can't reach Crafty until you unlock.
                 tokenProvider = { com.vknxworks.craftyctrl.data.lock.Lock.liveToken },
             )

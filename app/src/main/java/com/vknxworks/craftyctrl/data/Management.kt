@@ -11,6 +11,9 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
+import androidx.annotation.StringRes
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
 
 // ---------------------------------------------------------------- Crafty's server config
 
@@ -101,11 +104,13 @@ fun withMemory(command: String, minMb: Int, maxMb: Int): String {
 // ---------------------------------------------------------------- player lists
 
 /** The player lists a server keeps as JSON files next to server.properties. */
-enum class PlayerList(val title: String, val singular: String) {
-    WHITELIST("Whitelist", "player"),
-    OPS("Operators", "operator"),
-    BANNED_PLAYERS("Banned players", "ban"),
-    BANNED_IPS("Banned IPs", "IP ban");
+enum class PlayerList(@StringRes private val titleRes: Int) {
+    WHITELIST(R.string.list_whitelist),
+    OPS(R.string.list_operators),
+    BANNED_PLAYERS(R.string.list_banned_players),
+    BANNED_IPS(R.string.list_banned_ips);
+
+    val title: String get() = str(titleRes)
 
     fun fileName(bedrock: Boolean): String? = when (this) {
         WHITELIST -> if (bedrock) "allowlist.json" else "whitelist.json"
@@ -114,7 +119,7 @@ enum class PlayerList(val title: String, val singular: String) {
         BANNED_IPS -> if (bedrock) null else "banned-ips.json"
     }
 
-    fun titleFor(bedrock: Boolean) = if (this == WHITELIST && bedrock) "Allowlist" else title
+    fun titleFor(bedrock: Boolean) = if (this == WHITELIST && bedrock) str(R.string.list_allowlist) else title
 
     companion object {
         fun forServer(bedrock: Boolean): List<PlayerList> =
@@ -130,7 +135,7 @@ data class PlayerEntry(
     val detail: String?,
     val raw: JsonObject,
 ) {
-    val label: String get() = name ?: ip ?: id ?: "Unknown"
+    val label: String get() = name ?: ip ?: id ?: str(R.string.unknown)
 }
 
 /** Null when the file isn't a JSON list, so callers never mistake a broken file for an empty one. */
@@ -139,7 +144,7 @@ fun parsePlayerList(text: String, list: PlayerList, bedrock: Boolean): List<Play
         ?: return null
     return arr.filterIsInstance<JsonObject>().map { o ->
         val detail = when (list) {
-            PlayerList.OPS -> if (bedrock) o.str("permission")?.replaceFirstChar { it.uppercase() } else o.str("level")?.let { "Level $it" }
+            PlayerList.OPS -> if (bedrock) o.str("permission")?.replaceFirstChar { it.uppercase() } else o.str("level")?.let { str(R.string.level_x, it) }
             PlayerList.BANNED_PLAYERS, PlayerList.BANNED_IPS -> listOfNotNull(
                 o.str("reason")?.takeIf { it.isNotBlank() },
                 o.str("expires")?.takeIf { it.isNotBlank() && !it.equals("forever", true) }?.let { "until $it" },
@@ -178,7 +183,7 @@ fun newPlayerEntry(list: PlayerList, bedrock: Boolean, name: String, id: String?
             }
             PlayerList.OPS -> {
                 // Bedrock's permissions.json needs an Xbox ID, which only the running server can look up.
-                require(!bedrock) { "Bedrock operators can only be added while the server runs." }
+                require(!bedrock) { str(R.string.bedrock_ops_need_running) }
                 put("uuid", id.orEmpty())
                 put("name", name)
                 put("level", 4)

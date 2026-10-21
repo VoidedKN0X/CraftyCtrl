@@ -52,8 +52,24 @@ import com.vknxworks.craftyctrl.ui.SectionLabel
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import androidx.annotation.StringRes
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
+import androidx.compose.ui.res.stringResource
 
-private enum class Timing(val label: String) { INTERVAL("Repeat"), DAILY("Daily at"), CRON("Cron") }
+private enum class Timing(@StringRes private val labelRes: Int) {
+    INTERVAL(R.string.timing_repeat), DAILY(R.string.timing_daily), CRON(R.string.timing_cron);
+
+    val label: String get() = str(labelRes)
+}
+
+@Composable
+private fun unitLabel(u: String): String = when (u) {
+    "minutes" -> stringResource(R.string.unit_minutes)
+    "hours" -> stringResource(R.string.unit_hours)
+    "days" -> stringResource(R.string.unit_days)
+    else -> u
+}
 
 private val timeRegex = Regex("""^([01]?\d|2[0-3]):([0-5]\d)$""")
 // Five space-separated cron fields of digits and * , - /
@@ -97,12 +113,12 @@ fun TaskEditorSheet(
     val unsupported = existing != null && (existing.kind == null || existing.intervalType == "reaction")
 
     val error: String? = when {
-        unsupported -> "This task type can only be edited in the web panel."
-        action == TaskAction.COMMAND && command.isBlank() -> "Enter the command to run"
-        timing == Timing.INTERVAL && (every.toIntOrNull() ?: 0) < 1 -> "Repeat interval must be at least 1"
+        unsupported -> stringResource(R.string.this_task_type_can_only_be)
+        action == TaskAction.COMMAND && command.isBlank() -> stringResource(R.string.enter_the_command_to_run)
+        timing == Timing.INTERVAL && (every.toIntOrNull() ?: 0) < 1 -> stringResource(R.string.repeat_interval_must_be_at_least)
         timing == Timing.DAILY && !timeRegex.matches(at.trim()) -> "Use 24-hour time, e.g. 03:00"
         timing == Timing.CRON && !cronRegex.matches(cron) -> "Cron needs 5 fields, e.g. 0 3 * * *"
-        (delay.toIntOrNull() ?: -1) < 0 -> "Delay must be 0 or more seconds"
+        (delay.toIntOrNull() ?: -1) < 0 -> stringResource(R.string.delay_must_be_0_or_more)
         else -> null
     }
 
@@ -146,16 +162,16 @@ fun TaskEditorSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(
-                if (existing == null) "New schedule" else "Edit schedule",
+                if (existing == null) stringResource(R.string.new_schedule) else stringResource(R.string.edit_schedule),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
             OutlinedTextField(
                 value = name, onValueChange = { name = it.take(64) },
-                label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
 
-            SectionLabel("Action")
+            SectionLabel(stringResource(R.string.action))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TaskAction.entries.forEach { a ->
                     FilterChip(
@@ -169,12 +185,12 @@ fun TaskEditorSheet(
             when (action) {
                 TaskAction.COMMAND -> OutlinedTextField(
                     value = command, onValueChange = { command = it.replace("\n", " ") },
-                    label = { Text("Command, without /") }, singleLine = true,
+                    label = { Text(stringResource(R.string.command_without)) }, singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = Mono),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 TaskAction.BACKUP -> if (backups.size > 1) {
-                    Text("Backup profile", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.backup_profile), style = MaterialTheme.typography.bodyMedium)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         backups.forEach { b ->
                             FilterChip(
@@ -188,7 +204,7 @@ fun TaskEditorSheet(
                 else -> Unit
             }
 
-            SectionLabel("When")
+            SectionLabel(stringResource(R.string.when))
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 Timing.entries.forEachIndexed { i, t ->
                     SegmentedButton(
@@ -200,7 +216,7 @@ fun TaskEditorSheet(
             }
             when (timing) {
                 Timing.INTERVAL -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Every", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.every), style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.width(10.dp))
                     OutlinedTextField(
                         value = every, onValueChange = { v -> every = v.filter { it.isDigit() }.take(4) },
@@ -210,46 +226,46 @@ fun TaskEditorSheet(
                     Spacer(Modifier.width(10.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf("minutes", "hours", "days").forEach { u ->
-                            FilterChip(selected = unit == u, onClick = { unit = u }, label = { Text(u) })
+                            FilterChip(selected = unit == u, onClick = { unit = u }, label = { Text(unitLabel(u)) })
                         }
                     }
                 }
                 Timing.DAILY -> OutlinedTextField(
                     value = at, onValueChange = { at = it.filter { c -> c.isDigit() || c == ':' }.take(5) },
-                    label = { Text("Time (24-hour, server's clock)") }, singleLine = true,
+                    label = { Text(stringResource(R.string.time_24_hour_server_s_clock)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Timing.CRON -> OutlinedTextField(
                     value = cron, onValueChange = { cron = it.take(64) },
-                    label = { Text("Cron (minute hour day month weekday)") }, singleLine = true,
+                    label = { Text(stringResource(R.string.cron_minute_hour_day_month_weekday)) }, singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = Mono),
-                    supportingText = { Text("Example: 0 3 * * * runs at 03:00 every day") },
+                    supportingText = { Text(stringResource(R.string.example_0_3_runs_at_03)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
 
             OutlinedTextField(
                 value = delay, onValueChange = { v -> delay = v.filter { it.isDigit() }.take(5) },
-                label = { Text("Delay before running (seconds)") }, singleLine = true,
+                label = { Text(stringResource(R.string.delay_before_running_seconds)) }, singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
-            ToggleRow("Enabled", enabled) { enabled = it }
-            ToggleRow("Run once, then delete", oneTime) { oneTime = it }
+            ToggleRow(stringResource(R.string.enabled), enabled) { enabled = it }
+            ToggleRow(stringResource(R.string.run_once_then_delete), oneTime) { oneTime = it }
 
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (onDelete != null) {
                     OutlinedButton(onClick = { confirmDelete = true }, enabled = !saving) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                 Button(onClick = { onSave(build()) }, enabled = error == null && !saving) {
-                    if (saving) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text("Save")
+                    if (saving) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.save))
                 }
             }
         }
@@ -258,14 +274,14 @@ fun TaskEditorSheet(
     if (confirmDelete && onDelete != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete this schedule?") },
-            text = { Text("\"${existing?.name}\" will stop running. This can't be undone.") },
+            title = { Text(stringResource(R.string.delete_this_schedule)) },
+            text = { Text(stringResource(R.string.x_will_stop_running_this_can, existing?.name)) },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; onDelete() }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -287,8 +303,8 @@ fun BackupEditorSheet(
     var after by remember { mutableStateOf(config.after) }
 
     val error = when {
-        name.trim().length < 3 -> "Name needs at least 3 characters"
-        keep.toIntOrNull() == null -> "Enter how many backups to keep (0 = keep all)"
+        name.trim().length < 3 -> stringResource(R.string.name_needs_at_least_3_characters)
+        keep.toIntOrNull() == null -> stringResource(R.string.enter_how_many_backups_to_keep)
         else -> null
     }
 
@@ -303,42 +319,42 @@ fun BackupEditorSheet(
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("Backup settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.backup_settings), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             OutlinedTextField(
                 value = name, onValueChange = { name = it.take(64) },
-                label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = keep, onValueChange = { v -> keep = v.filter { it.isDigit() }.take(4) },
-                label = { Text("Backups to keep") },
-                supportingText = { Text("Older backups are deleted beyond this. 0 keeps them all.") },
+                label = { Text(stringResource(R.string.backups_to_keep)) },
+                supportingText = { Text(stringResource(R.string.older_backups_are_deleted_beyond_this)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
-            ToggleRow("Compress backups", compress) { compress = it }
-            ToggleRow("Stop the server while backing up", shutdown) { shutdown = it }
+            ToggleRow(stringResource(R.string.compress_backups), compress) { compress = it }
+            ToggleRow(stringResource(R.string.stop_the_server_while_backing_up), shutdown) { shutdown = it }
             OutlinedTextField(
                 value = before, onValueChange = { before = it.replace("\n", " ") },
-                label = { Text("Console command before backup") }, singleLine = true,
+                label = { Text(stringResource(R.string.console_command_before_backup)) }, singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = Mono),
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = after, onValueChange = { after = it.replace("\n", " ") },
-                label = { Text("Console command after backup") }, singleLine = true,
+                label = { Text(stringResource(R.string.console_command_after_backup)) }, singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = Mono),
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                "Backup location and excluded folders can be changed in the Crafty web panel.",
+                stringResource(R.string.backup_location_and_excluded_folders_can),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                 Button(
                     enabled = error == null && !saving,
                     onClick = {
@@ -352,7 +368,7 @@ fun BackupEditorSheet(
                         })
                     },
                 ) {
-                    if (saving) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text("Save")
+                    if (saving) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.save))
                 }
             }
         }

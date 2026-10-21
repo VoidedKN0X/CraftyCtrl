@@ -40,6 +40,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.vknxworks.craftyctrl.data.ServerState
 import com.vknxworks.craftyctrl.ui.theme.stateColor
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
+import com.vknxworks.craftyctrl.R
 
 /** The in-app refresh interval from Settings, re-read whenever a screen comes back into view. */
 @Composable
@@ -90,7 +92,7 @@ fun StatusPill(state: ServerState?) {
         StatusDot(state, Modifier.size(7.dp))
         Spacer(Modifier.width(6.dp))
         Text(
-            state?.label ?: "Unknown",
+            state?.label ?: stringResource(R.string.unknown),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -155,7 +157,7 @@ fun ErrorBanner(
             Spacer(Modifier.width(10.dp))
             Text(message, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             if (onRetry != null) {
-                TextButton(onClick = onRetry) { Text("Retry") }
+                TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
             }
         }
     }

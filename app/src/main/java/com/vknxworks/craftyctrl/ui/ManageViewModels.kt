@@ -31,10 +31,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
 
 private fun Exception.msg(): String {
     if (this is CancellationException) throw this
-    return message?.takeIf { it.isNotBlank() } ?: "Something went wrong."
+    return message?.takeIf { it.isNotBlank() } ?: str(R.string.something_went_wrong)
 }
 
 /** Shared bits for the management screens: the server's folder/type, whether it runs, and snackbar messages. */
@@ -51,19 +53,19 @@ abstract class ManageBase(protected val api: CraftyApi, val serverId: String) : 
 
     protected suspend fun loadInfo(): ServerSummary {
         val i = info ?: api.serverInfo(serverId)?.also { info = it }
-            ?: throw CraftyException(0, "NO_SERVER", "Couldn't load this server.")
+            ?: throw CraftyException(0, "NO_SERVER", str(R.string.couldn_t_load_this_server))
         running = runCatching { api.stats(serverId).running }.getOrNull()
         return i
     }
 
     protected fun folder(): String = info?.path
-        ?: throw CraftyException(0, "NO_PATH", "Crafty didn't say where this server's files are.")
+        ?: throw CraftyException(0, "NO_PATH", str(R.string.crafty_didn_t_say_where_this))
 
     fun restartServer() {
         viewModelScope.launch {
             try {
                 api.action(serverId, "restart_server")
-                _messages.send("Restarting the server")
+                _messages.send(str(R.string.restarting_the_server))
             } catch (e: Exception) {
                 _messages.send(e.msg())
             }
@@ -117,7 +119,7 @@ class PropertiesViewModel(api: CraftyApi, serverId: String) : ManageBase(api, se
                 loadInfo()
                 val text = api.readText(serverId, join(folder(), "server.properties"))
                 if (text == null) {
-                    error = "This server has no server.properties yet. Start it once and the server creates one."
+                    error = str(R.string.this_server_has_no_server_properties)
                 } else {
                     val f = PropertiesFile(text)
                     file = f
@@ -144,7 +146,7 @@ class PropertiesViewModel(api: CraftyApi, serverId: String) : ManageBase(api, se
             try {
                 // Re-read first so changes made since opening (e.g. by the server) aren't overwritten.
                 val latest = api.readText(serverId, join(folder(), "server.properties"))?.let(::PropertiesFile)
-                    ?: throw CraftyException(0, "READ_FAILED", "Couldn't read server.properties just now. Nothing was changed.")
+                    ?: throw CraftyException(0, "READ_FAILED", str(R.string.couldn_t_read_server_properties_just))
                 api.saveFile(serverId, join(folder(), "server.properties"), latest.render(changes))
                 file = PropertiesFile(latest.render(changes))
                 original = file!!.values.mapValues { (_, v) -> if (isBedrock) v else unescapeProp(v) }
@@ -204,7 +206,7 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
         lists[list] = try {
             val text = api.readText(serverId, join(folder(), name))
             val parsed = parsePlayerList(text.orEmpty(), list, isBedrock)
-                ?: throw CraftyException(0, "BAD_FILE", "$name isn't valid JSON, so the app won't change it. Fix it in the Files tab.")
+                ?: throw CraftyException(0, "BAD_FILE", str(R.string.x_isn_t_valid_json_so, name))
             Loadable(parsed)
         } catch (e: Exception) {
             Loadable(lists[list]?.data, error = e.msg())
@@ -219,14 +221,14 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
         val name = list.fileName(isBedrock) ?: return
         val loaded = lists[list]
         if (loaded?.data == null || loaded.error != null) {
-            throw CraftyException(0, "NOT_LOADED", "The ${list.titleFor(isBedrock).lowercase()} hasn't loaded, so it can't be changed safely. Reload and try again.")
+            throw CraftyException(0, "NOT_LOADED", str(R.string.the_x_hasn_t_loaded_so, list.titleFor(isBedrock).lowercase()))
         }
         val text = api.readText(serverId, join(folder(), name))
         if (text == null && loaded.data.isNotEmpty()) {
-            throw CraftyException(0, "READ_FAILED", "Couldn't read $name just now. Nothing was changed.")
+            throw CraftyException(0, "READ_FAILED", str(R.string.couldn_t_read_x_just_now, name))
         }
         val fresh = parsePlayerList(text.orEmpty(), list, isBedrock)
-            ?: throw CraftyException(0, "BAD_FILE", "$name isn't valid JSON, so the app won't change it.")
+            ?: throw CraftyException(0, "BAD_FILE", str(R.string.x_isn_t_valid_json_so_2, name))
         api.writeText(serverId, folder(), name, renderPlayerList(change(fresh)), exists = text != null)
     }
 
@@ -234,7 +236,7 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
     private suspend fun uuidFor(name: String): String {
         if (!onlineMode) return offlineUuid(name)
         return CraftyApi.mojangUuid(name)
-            ?: throw CraftyException(0, "NO_PLAYER", "There's no Minecraft account named $name.")
+            ?: throw CraftyException(0, "NO_PLAYER", str(R.string.there_s_no_minecraft_account_named, name))
     }
 
     fun add(list: PlayerList, rawName: String, reason: String?) {
@@ -242,7 +244,7 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
         if (name.isEmpty() || busy) return
         val current = lists[list]?.data.orEmpty()
         if (current.any { it.label.equals(name, ignoreCase = true) }) {
-            viewModelScope.launch { _messages.send("$name is already on the list.") }
+            viewModelScope.launch { _messages.send(str(R.string.x_is_already_on_the_list, name)) }
             return
         }
         viewModelScope.launch {
@@ -252,14 +254,14 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
                 if (running == true) {
                     // A running server owns these files; the console applies it now and saves it.
                     api.sendCommand(serverId, listCommand(list, isBedrock, add = true, who = name, reason = reason))
-                    _messages.send("Sent to the server")
+                    _messages.send(str(R.string.sent_to_the_server))
                     delay(1500)
                 } else {
                     val id = when {
                         list == PlayerList.BANNED_IPS -> null
                         isBedrock && list == PlayerList.OPS -> throw CraftyException(
                             0, "NEEDS_RUNNING",
-                            "Bedrock operators are stored by Xbox ID. Start the server to op someone by name.",
+                            str(R.string.bedrock_operators_are_stored_by_xbox),
                         )
                         isBedrock -> null
                         else -> uuidFor(name)
@@ -268,7 +270,7 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
                         if (fresh.any { it.label.equals(name, ignoreCase = true) }) fresh
                         else fresh + newPlayerEntry(list, isBedrock, name, id, reason)
                     }
-                    _messages.send("Added $name. It takes effect when the server starts.")
+                    _messages.send(str(R.string.added_x_it_takes_effect_when, name))
                 }
                 load(list)
             } catch (e: Exception) {
@@ -288,12 +290,12 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
                 val who = if (list == PlayerList.BANNED_IPS) entry.ip else entry.name
                 if (running == true && who != null) {
                     api.sendCommand(serverId, listCommand(list, isBedrock, add = false, who = who))
-                    _messages.send("Sent to the server")
+                    _messages.send(str(R.string.sent_to_the_server))
                     delay(1500)
                 } else {
                     edit(list) { fresh -> fresh.filter { it.raw != entry.raw } }
                     _messages.send(
-                        if (running == true) "Removed. Restart the server to apply it." else "Removed ${entry.label}",
+                        if (running == true) str(R.string.removed_restart_the_server_to_apply) else str(R.string.removed_x, entry.label),
                     )
                 }
                 load(list)
@@ -318,11 +320,11 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
                 if (running != true || isBedrock) {
                     val path = join(folder(), "server.properties")
                     val text = api.readText(serverId, path)
-                        ?: throw CraftyException(0, "NO_PROPS", "This server has no server.properties yet.")
+                        ?: throw CraftyException(0, "NO_PROPS", str(R.string.this_server_has_no_server_properties_2))
                     api.saveFile(serverId, path, PropertiesFile(text).render(mapOf((if (isBedrock) "allow-list" else "white-list") to on.toString())))
                 }
                 whitelistOn = on
-                _messages.send(if (on) "${if (isBedrock) "Allowlist" else "Whitelist"} on" else "${if (isBedrock) "Allowlist" else "Whitelist"} off")
+                _messages.send(str(if (isBedrock) { if (on) R.string.allowlist_on else R.string.allowlist_off } else { if (on) R.string.whitelist_on else R.string.whitelist_off }))
             } catch (e: Exception) {
                 _messages.send(e.msg())
             } finally {
@@ -362,7 +364,7 @@ class OptionsViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
             saving = true
             try {
                 api.updateServer(serverId, fields)
-                _messages.send("Server options saved")
+                _messages.send(str(R.string.server_options_saved))
                 config = Loadable(api.serverConfig(serverId))
                 onDone()
             } catch (e: Exception) {
@@ -446,7 +448,7 @@ class AddonsViewModel(api: CraftyApi, serverId: String) : ManageBase(api, server
             busy = a.path
             try {
                 api.deleteEntry(serverId, a.path)
-                _messages.send("Removed ${a.name}. Restart the server to apply.")
+                _messages.send(str(R.string.removed_x_restart_the_server_to, a.name))
                 load()
             } catch (e: Exception) {
                 _messages.send(e.msg())
@@ -473,12 +475,12 @@ class AddonsViewModel(api: CraftyApi, serverId: String) : ManageBase(api, server
                     }
                 }
                 if (!name.endsWith(".jar", true)) {
-                    _messages.send("Pick a .jar file.")
+                    _messages.send(str(R.string.pick_a_jar_file))
                     return@launch
                 }
-                if (size < 0) throw CraftyException(0, "SIZE", "Couldn't read the file size.")
+                if (size < 0) throw CraftyException(0, "SIZE", str(R.string.couldn_t_read_the_file_size))
                 if (folderName !in folders) runCatching { api.createEntry(serverId, folder(), folderName, true) }
-                val input = resolver.openInputStream(uri) ?: throw CraftyException(0, "OPEN", "Couldn't open that file.")
+                val input = resolver.openInputStream(uri) ?: throw CraftyException(0, "OPEN", str(R.string.couldn_t_open_that_file))
                 input.use { stream ->
                     api.upload(serverId, join(folder(), folderName), name, size, { b, off, len -> stream.read(b, off, len) }) { p ->
                         uploadProgress = p
@@ -521,7 +523,7 @@ class LogsViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serverId
                 loadInfo()
                 val dir = join(folder(), "logs")
                 val r = api.browse(serverId, dir) as? com.vknxworks.craftyctrl.data.FileResult.Folder
-                    ?: throw CraftyException(0, "NO_LOGS", "This server has no logs folder.")
+                    ?: throw CraftyException(0, "NO_LOGS", str(R.string.this_server_has_no_logs_folder))
                 // latest.log first, then newest dated files (their names sort by date).
                 val list = r.entries.filter { !it.isDir }.map { LogFile(it.name, it.path) }
                     .sortedWith(compareBy<LogFile> { it.name != "latest.log" }.thenByDescending { it.name })
@@ -539,7 +541,7 @@ class LogsViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serverId
             lines = Loadable(loading = true)
             lines = try {
                 val text = api.readText(serverId, f.path)
-                    ?: throw CraftyException(0, "READ", "Couldn't read ${f.name}.")
+                    ?: throw CraftyException(0, "READ", str(R.string.couldn_t_read_x, f.name))
                 // Very long logs are cut to their last lines so the phone stays responsive.
                 Loadable(text.lines().dropLastWhile { it.isEmpty() }.takeLast(MAX_LINES))
             } catch (e: Exception) {

@@ -14,6 +14,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
+import com.vknxworks.craftyctrl.plural
 
 /**
  * Asks for the phone's fingerprint, face or other biometric (or its PIN, pattern or password)
@@ -65,23 +68,23 @@ object Countdowns {
 
     fun start(api: CraftyApi, serverId: String, action: PowerAction, seconds: Int, note: String?, onError: (String) -> Unit) {
         cancel(api, serverId, announce = false)
-        val verb = if (action == PowerAction.RESTART) "restarting" else "shutting down"
+        val restart = action == PowerAction.RESTART
         val endsAt = System.currentTimeMillis() + seconds * 1000L
         val job = scope.launch {
             try {
                 suspend fun say(text: String) = runCatching { api.sendCommand(serverId, "say $text") }
                 val extra = note?.takeIf { it.isNotBlank() }?.let { " $it" }.orEmpty()
-                say("Server $verb in ${human(seconds)}.$extra")
+                say(str(if (restart) R.string.say_restarting_in else R.string.say_stopping_in, human(seconds)) + extra)
                 for (m in marks.filter { it < seconds }) {
                     delay((endsAt - m * 1000L) - System.currentTimeMillis())
-                    say("Server $verb in ${human(m)}.")
+                    say(str(if (restart) R.string.say_restarting_in else R.string.say_stopping_in, human(m)))
                 }
                 delay((endsAt - System.currentTimeMillis()).coerceAtLeast(0))
                 api.action(serverId, action.apiName)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                onError(e.message ?: "The ${action.label.lowercase()} failed.")
+                onError(e.message ?: str(R.string.action_failed_x, action.label))
             } finally {
                 active.remove(serverId)
             }
@@ -93,16 +96,14 @@ object Countdowns {
         val c = active.remove(serverId) ?: return
         c.job.cancel()
         if (announce) {
-            val what = if (c.action == PowerAction.RESTART) "restart" else "shutdown"
-            scope.launch { runCatching { api.sendCommand(serverId, "say The $what was cancelled.") } }
+            val text = str(if (c.action == PowerAction.RESTART) R.string.say_restart_cancelled else R.string.say_shutdown_cancelled)
+            scope.launch { runCatching { api.sendCommand(serverId, "say $text") } }
         }
     }
 
     fun human(s: Int): String = when {
-        s >= 120 && s % 60 == 0 -> "${s / 60} minutes"
-        s == 60 -> "1 minute"
-        s > 60 -> "${s / 60} min ${s % 60} s"
-        s == 1 -> "1 second"
-        else -> "$s seconds"
+        s >= 60 && s % 60 == 0 -> plural(R.plurals.x_minutes, s / 60, s / 60)
+        s > 60 -> str(R.string.x_min_x_s, s / 60, s % 60)
+        else -> plural(R.plurals.x_seconds, s, s)
     }
 }

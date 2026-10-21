@@ -50,6 +50,10 @@ import com.vknxworks.craftyctrl.ui.SectionLabel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import com.vknxworks.craftyctrl.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.vknxworks.craftyctrl.str
 
 // ================================================================ server.properties
 
@@ -74,10 +78,10 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
     fun save() = vm.save { needsRestart ->
         scope.launch {
             if (needsRestart) {
-                val r = snackbar.showSnackbar("Saved. Restart the server to apply.", actionLabel = "Restart", duration = SnackbarDuration.Long)
+                val r = snackbar.showSnackbar(str(R.string.saved_restart_the_server_to_apply), actionLabel = str(R.string.power_restart), duration = SnackbarDuration.Long)
                 if (r == SnackbarResult.ActionPerformed) vm.restartServer()
             } else {
-                snackbar.showSnackbar("Saved. It applies when the server starts.")
+                snackbar.showSnackbar(str(R.string.saved_it_applies_when_the_server))
             }
         }
     }
@@ -89,16 +93,16 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
             TopAppBar(
                 title = {
                     Column {
-                        Text("Server settings", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.page_properties), fontWeight = FontWeight.Bold)
                         Text("server.properties", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
-                navigationIcon = { IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
+                navigationIcon = { IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) } },
                 actions = {
                     if (vm.saving) {
                         CircularProgressIndicator(Modifier.padding(horizontal = 14.dp).size(22.dp), strokeWidth = 2.dp)
                     } else {
-                        IconButton(onClick = vm::load) { Icon(Icons.Filled.Refresh, contentDescription = "Reload") }
+                        IconButton(onClick = vm::load) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.reload)) }
                     }
                 },
             )
@@ -112,12 +116,12 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
                     ) {
                         val n = vm.edits.count { (k, v) -> vm.original[k] != v }
                         Text(
-                            if (invalid.isNotEmpty()) "Fix ${invalid.size} invalid value${if (invalid.size == 1) "" else "s"}" else "$n unsaved change${if (n == 1) "" else "s"}",
+                            if (invalid.isNotEmpty()) pluralStringResource(R.plurals.fix_invalid_values, invalid.size, invalid.size) else pluralStringResource(R.plurals.unsaved_changes, n, n),
                             modifier = Modifier.weight(1f),
                             color = if (invalid.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                         )
-                        TextButton(onClick = vm::discard, enabled = !vm.saving) { Text("Discard") }
-                        Button(onClick = ::save, enabled = !vm.saving && invalid.isEmpty()) { Text("Save") }
+                        TextButton(onClick = vm::discard, enabled = !vm.saving) { Text(stringResource(R.string.discard)) }
+                        Button(onClick = ::save, enabled = !vm.saving && invalid.isEmpty()) { Text(stringResource(R.string.save)) }
                     }
                 }
             }
@@ -130,9 +134,9 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    placeholder = { Text("Search settings") },
+                    placeholder = { Text(stringResource(R.string.search_settings)) },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, contentDescription = "Clear") } },
+                    trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.clear)) } },
                     singleLine = true,
                     shape = RoundedCornerShape(50),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -150,8 +154,8 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
                 ) {
                     item(key = "note") {
                         Text(
-                            if (vm.isBedrock) "Bedrock server. Settings marked \"not in file\" use the server's default until you change them."
-                            else "Settings marked \"not in file\" use the default. Some only exist in older or newer Minecraft versions.",
+                            if (vm.isBedrock) stringResource(R.string.bedrock_server_settings_marked_not_in)
+                            else stringResource(R.string.settings_marked_not_in_file_use),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -171,7 +175,7 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
                         }
                     }
                     if (grouped.isEmpty() && !vm.loading) {
-                        item(key = "none") { Text("No settings match \"$query\".", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        item(key = "none") { Text(stringResource(R.string.no_settings_match_x, query), color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
                 }
             }
@@ -181,18 +185,18 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
     if (confirmLeave) {
         AlertDialog(
             onDismissRequest = { confirmLeave = false },
-            title = { Text("Discard changes?") },
-            text = { Text("Your changes to server.properties haven't been saved.") },
-            confirmButton = { TextButton(onClick = { confirmLeave = false; onBack() }) { Text("Discard", color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text("Keep editing") } },
+            title = { Text(stringResource(R.string.discard_changes)) },
+            text = { Text(stringResource(R.string.your_changes_to_server_properties_haven)) },
+            confirmButton = { TextButton(onClick = { confirmLeave = false; onBack() }) { Text(stringResource(R.string.discard), color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text(stringResource(R.string.keep_editing)) } },
         )
     }
 }
 
 private fun intError(def: PropDef, v: String): String? {
-    val n = v.trim().toLongOrNull() ?: return "Enter a whole number"
-    def.min?.let { if (n < it) return "At least $it" }
-    def.max?.let { if (n > it) return "At most $it" }
+    val n = v.trim().toLongOrNull() ?: return str(R.string.enter_a_whole_number)
+    def.min?.let { if (n < it) return str(R.string.at_least_x, it) }
+    def.max?.let { if (n > it) return str(R.string.at_most_x, it) }
     return null
 }
 
@@ -205,7 +209,7 @@ private fun PropertyRow(def: PropDef, value: String, inFile: Boolean, changed: B
         Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val caption = buildString {
                 append(def.key)
-                if (!inFile && !changed) append(" · not in file")
+                if (!inFile && !changed) append(stringResource(R.string.not_in_file))
             }
             if (def.kind == PropKind.BOOL) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -241,7 +245,7 @@ private fun PropertyRow(def: PropDef, value: String, inFile: Boolean, changed: B
                             visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {
                                 IconButton(onClick = { show = !show }) {
-                                    Icon(if (show) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, contentDescription = if (show) "Hide" else "Show")
+                                    Icon(if (show) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, contentDescription = if (show) stringResource(R.string.hide) else stringResource(R.string.show))
                                 }
                             },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -301,11 +305,11 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                title = { Text("Players & bans", fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
+                title = { Text(stringResource(R.string.page_players), fontWeight = FontWeight.Bold) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) } },
                 actions = {
                     if (vm.busy) CircularProgressIndicator(Modifier.padding(horizontal = 14.dp).size(22.dp), strokeWidth = 2.dp)
-                    else IconButton(onClick = vm::loadAll) { Icon(Icons.Filled.Refresh, contentDescription = "Reload") }
+                    else IconButton(onClick = vm::loadAll) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.reload)) }
                 },
             )
         },
@@ -313,7 +317,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
             ExtendedFloatingActionButton(
                 onClick = { adding = current },
                 icon = { Icon(Icons.Filled.PersonAdd, contentDescription = null) },
-                text = { Text(if (current == PlayerList.BANNED_IPS) "Ban an IP" else if (current.name.startsWith("BANNED")) "Ban a player" else "Add") },
+                text = { Text(if (current == PlayerList.BANNED_IPS) stringResource(R.string.ban_an_ip) else if (current.name.startsWith("BANNED")) stringResource(R.string.ban_a_player) else stringResource(R.string.add)) },
             )
         },
     ) { padding ->
@@ -335,9 +339,9 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                 item(key = "how") {
                     Text(
                         when (vm.running) {
-                            true -> "The server is running, so changes are sent as console commands and apply right away."
-                            false -> "The server is stopped, so the app edits the list file directly. It applies on the next start."
-                            null -> "Changes apply through the console while the server runs, or to the list file while it's stopped."
+                            true -> stringResource(R.string.the_server_is_running_so_changes)
+                            false -> stringResource(R.string.the_server_is_stopped_so_the)
+                            null -> stringResource(R.string.changes_apply_through_the_console_while)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -348,9 +352,9 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                         Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
                             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(if (vm.isBedrock) "Allowlist on" else "Whitelist on", style = MaterialTheme.typography.bodyLarge)
+                                    Text(if (vm.isBedrock) stringResource(R.string.allowlist_on) else stringResource(R.string.whitelist_on), style = MaterialTheme.typography.bodyLarge)
                                     Text(
-                                        "Only listed players can join.",
+                                        stringResource(R.string.only_listed_players_can_join),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -365,7 +369,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                 val entries = state?.data
                 if (entries != null && entries.isEmpty()) {
                     item(key = "empty") {
-                        Text("Nobody here yet.", Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.nobody_here_yet), Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 itemsIndexed(entries.orEmpty(), key = { i, e -> "$i:${e.raw}" }) { _, e ->
@@ -384,7 +388,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                                 }
                             }
                             IconButton(onClick = { removing = current to e }, enabled = !vm.busy) {
-                                Icon(Icons.Filled.RemoveCircleOutline, contentDescription = "Remove ${e.label}")
+                                Icon(Icons.Filled.RemoveCircleOutline, contentDescription = stringResource(R.string.remove_x, e.label))
                             }
                         }
                     }
@@ -402,10 +406,10 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
             title = {
                 Text(
                     when (list) {
-                        PlayerList.WHITELIST -> if (vm.isBedrock) "Add to allowlist" else "Add to whitelist"
-                        PlayerList.OPS -> "Make operator"
-                        PlayerList.BANNED_PLAYERS -> "Ban a player"
-                        PlayerList.BANNED_IPS -> "Ban an IP address"
+                        PlayerList.WHITELIST -> if (vm.isBedrock) stringResource(R.string.add_to_allowlist) else stringResource(R.string.add_to_whitelist)
+                        PlayerList.OPS -> stringResource(R.string.make_operator)
+                        PlayerList.BANNED_PLAYERS -> stringResource(R.string.ban_a_player)
+                        PlayerList.BANNED_IPS -> stringResource(R.string.ban_an_ip_address)
                     },
                 )
             },
@@ -414,7 +418,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text(if (list == PlayerList.BANNED_IPS) "IP address" else if (vm.isBedrock) "Gamertag" else "Player name") },
+                        label = { Text(if (list == PlayerList.BANNED_IPS) stringResource(R.string.ip_address) else if (vm.isBedrock) stringResource(R.string.gamertag) else stringResource(R.string.player_name)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -422,13 +426,13 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                         OutlinedTextField(
                             value = reason,
                             onValueChange = { reason = it },
-                            label = { Text("Reason (optional)") },
+                            label = { Text(stringResource(R.string.reason_optional)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     if (list == PlayerList.OPS && !vm.isBedrock) {
-                        Text("Operators get permission level 4 (full access).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.operators_get_permission_level_4_full), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             },
@@ -436,23 +440,23 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                 TextButton(
                     onClick = { vm.add(list, name, reason); adding = null },
                     enabled = name.isNotBlank(),
-                ) { Text(if (ban) "Ban" else "Add", color = if (ban) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) }
+                ) { Text(if (ban) stringResource(R.string.ban) else stringResource(R.string.add), color = if (ban) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) }
             },
-            dismissButton = { TextButton(onClick = { adding = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { adding = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
     removing?.let { (list, e) ->
         val verb = when (list) {
-            PlayerList.WHITELIST -> "Remove ${e.label} from the ${list.titleFor(vm.isBedrock).lowercase()}?"
-            PlayerList.OPS -> "Remove operator rights from ${e.label}?"
-            PlayerList.BANNED_PLAYERS, PlayerList.BANNED_IPS -> "Unban ${e.label}?"
+            PlayerList.WHITELIST -> stringResource(R.string.remove_x_from_the_x, e.label, list.titleFor(vm.isBedrock).lowercase())
+            PlayerList.OPS -> stringResource(R.string.remove_operator_rights_from_x, e.label)
+            PlayerList.BANNED_PLAYERS, PlayerList.BANNED_IPS -> stringResource(R.string.unban_x, e.label)
         }
         AlertDialog(
             onDismissRequest = { removing = null },
             title = { Text(verb) },
-            confirmButton = { TextButton(onClick = { vm.remove(list, e); removing = null }) { Text(if (list.name.startsWith("BANNED")) "Unban" else "Remove") } },
-            dismissButton = { TextButton(onClick = { removing = null }) { Text("Cancel") } },
+            confirmButton = { TextButton(onClick = { vm.remove(list, e); removing = null }) { Text(if (list.name.startsWith("BANNED")) stringResource(R.string.unban) else stringResource(R.string.remove)) } },
+            dismissButton = { TextButton(onClick = { removing = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -472,12 +476,12 @@ fun ServerOptionsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Server options", fontWeight = FontWeight.Bold)
-                        Text("Crafty's settings for this server", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.page_options), fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.crafty_s_settings_for_this_server), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
-                actions = { IconButton(onClick = vm::load) { Icon(Icons.Filled.Refresh, contentDescription = "Reload") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) } },
+                actions = { IconButton(onClick = vm::load) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.reload)) } },
             )
         },
     ) { padding ->
@@ -517,14 +521,14 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
     val memChanged = (minN to maxN) != memoryOf(command)
     val memError = when {
         !hasMemory || !memChanged -> null
-        minN == null || maxN == null -> "Enter both values in MB"
-        minN < 128 -> "Minimum must be at least 128 MB"
-        maxN < minN -> "Maximum must be at least the minimum"
+        minN == null || maxN == null -> stringResource(R.string.enter_both_values_in_mb)
+        minN < 128 -> stringResource(R.string.minimum_must_be_at_least_128)
+        maxN < minN -> stringResource(R.string.maximum_must_be_at_least_the)
         else -> null
     }
     val portError = when {
         port.isBlank() -> null
-        port.toIntOrNull() == null -> "Enter a number"
+        port.toIntOrNull() == null -> stringResource(R.string.enter_a_number)
         port.toInt() !in 1..65535 -> "1–65535"
         else -> null
     }
@@ -555,57 +559,57 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SectionLabel("General")
-        OutlinedTextField(name, { name = it }, label = { Text("Server name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        SwitchRow("Start with Crafty", "Starts this server when Crafty starts.", autoStart) { autoStart = it }
-        if (autoStart) NumberField("Start delay (seconds)", autoDelay) { autoDelay = it }
-        SwitchRow("Crash detection", "Crafty restarts the server if it crashes.", crash) { crash = it }
+        SectionLabel(stringResource(R.string.general))
+        OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.server_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        SwitchRow(stringResource(R.string.start_with_crafty), stringResource(R.string.starts_this_server_when_crafty_starts), autoStart) { autoStart = it }
+        if (autoStart) NumberField(stringResource(R.string.start_delay_seconds), autoDelay) { autoDelay = it }
+        SwitchRow(stringResource(R.string.crash_detection), stringResource(R.string.crafty_restarts_the_server_if_it), crash) { crash = it }
 
         if (hasMemory) {
-            SectionLabel("Memory")
+            SectionLabel(stringResource(R.string.memory))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                NumberField("Min (MB)", minMem, Modifier.weight(1f)) { minMem = it }
-                NumberField("Max (MB)", maxMem, Modifier.weight(1f)) { maxMem = it }
+                NumberField(stringResource(R.string.min_mb), minMem, Modifier.weight(1f)) { minMem = it }
+                NumberField(stringResource(R.string.max_mb), maxMem, Modifier.weight(1f)) { maxMem = it }
             }
             Text(
-                memError ?: "Sets -Xms and -Xmx in the start command. Restart the server to apply.",
+                memError ?: stringResource(R.string.sets_xms_and_xmx_in_the),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (memError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        SectionLabel("Stopping")
-        OutlinedTextField(stopCmd, { stopCmd = it }, label = { Text("Stop command") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        NumberField("Shutdown timeout (seconds)", timeout) { timeout = it }
+        SectionLabel(stringResource(R.string.stopping))
+        OutlinedTextField(stopCmd, { stopCmd = it }, label = { Text(stringResource(R.string.stop_command)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        NumberField(stringResource(R.string.shutdown_timeout_seconds), timeout) { timeout = it }
 
-        SectionLabel("Network")
+        SectionLabel(stringResource(R.string.group_network))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(ip, { ip = it }, label = { Text("Address Crafty checks") }, singleLine = true, modifier = Modifier.weight(1.4f))
+            OutlinedTextField(ip, { ip = it }, label = { Text(stringResource(R.string.address_crafty_checks)) }, singleLine = true, modifier = Modifier.weight(1.4f))
             OutlinedTextField(
                 port, { port = it.filter(Char::isDigit) },
-                label = { Text("Port") }, singleLine = true, isError = portError != null,
+                label = { Text(stringResource(R.string.port)) }, singleLine = true, isError = portError != null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
             )
         }
         Text(
-            "Where Crafty pings the server for players and version. It doesn't change the game port; set that in Server settings too.",
+            stringResource(R.string.where_crafty_pings_the_server_for),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (c.showStatus != null) SwitchRow("Show on status page", "List this server on Crafty's public status page.", showStatus) { showStatus = it }
-        if (c.countPlayers != null) SwitchRow("Count players", "Include its players in Crafty's totals.", countPlayers) { countPlayers = it }
+        if (c.showStatus != null) SwitchRow(stringResource(R.string.show_on_status_page), stringResource(R.string.list_this_server_on_crafty_s), showStatus) { showStatus = it }
+        if (c.countPlayers != null) SwitchRow(stringResource(R.string.count_players), stringResource(R.string.include_its_players_in_crafty_s), countPlayers) { countPlayers = it }
 
-        SectionLabel("Maintenance")
-        NumberField("Delete logs after (days)", logsDays) { logsDays = it }
+        SectionLabel(stringResource(R.string.maintenance))
+        NumberField(stringResource(R.string.delete_logs_after_days), logsDays) { logsDays = it }
         OutlinedTextField(
             updateUrl, { updateUrl = it },
-            label = { Text("Server jar update URL") },
-            supportingText = { Text("Used by Update server software. Point it at the new jar's download link.") },
+            label = { Text(stringResource(R.string.server_jar_update_url)) },
+            supportingText = { Text(stringResource(R.string.used_by_update_server_software_point)) },
             singleLine = true, modifier = Modifier.fillMaxWidth(),
         )
 
-        SectionLabel("Start command")
+        SectionLabel(stringResource(R.string.start_command))
         OutlinedTextField(
             value = finalCommand,
             onValueChange = { edited ->
@@ -614,7 +618,7 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
                 memoryOf(edited).let { (lo, hi) -> minMem = lo?.toString().orEmpty(); maxMem = hi?.toString().orEmpty() }
             },
             textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = Mono),
-            supportingText = { Text("Advanced. Crafty may only let admins change this.") },
+            supportingText = { Text(stringResource(R.string.advanced_crafty_may_only_let_admins)) },
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -623,7 +627,7 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(8.dp))
             }
-            Text(if (fields.isEmpty()) "No changes" else "Save ${fields.size} change${if (fields.size == 1) "" else "s"}")
+            Text(if (fields.isEmpty()) stringResource(R.string.no_changes) else pluralStringResource(R.plurals.save_changes, fields.size, fields.size))
         }
         Spacer(Modifier.height(24.dp))
     }
