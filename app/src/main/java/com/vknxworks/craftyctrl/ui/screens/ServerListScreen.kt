@@ -15,15 +15,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Memory
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -50,6 +47,7 @@ import com.vknxworks.craftyctrl.ui.EmptyState
 import com.vknxworks.craftyctrl.ui.ErrorBanner
 import com.vknxworks.craftyctrl.ui.Meter
 import com.vknxworks.craftyctrl.ui.PollWhileVisible
+import com.vknxworks.craftyctrl.ui.ProfileButton
 import com.vknxworks.craftyctrl.ui.ServerListViewModel
 import com.vknxworks.craftyctrl.ui.ServerRow
 import com.vknxworks.craftyctrl.ui.StatRow
@@ -65,9 +63,9 @@ import dev.chrisbanes.haze.hazeSource
 @Composable
 fun ServerListScreen(
     api: CraftyApi,
+    username: String?,
     onOpen: (ServerSummary) -> Unit,
-    onSettings: () -> Unit,
-    onSignOut: () -> Unit,
+    onYou: () -> Unit,
     onCreate: () -> Unit,
 ) {
     val vm: ServerListViewModel = viewModel(factory = viewModelFactory { initializer { ServerListViewModel(api) } })
@@ -99,9 +97,9 @@ fun ServerListScreen(
                 when (t) {
                     0 -> ServersTab(
                         vm, host, islandSpace, onOpen,
-                        onBroadcast = { broadcastOpen = true }, onSettings = onSettings, onSignOut = onSignOut,
+                        onBroadcast = { broadcastOpen = true }, username = username, onYou = onYou,
                     )
-                    else -> HostTab(vm, host, islandSpace)
+                    else -> HostTab(vm, host, islandSpace, username, onYou)
                 }
             }
         }
@@ -167,10 +165,9 @@ private fun ServersTab(
     bottomPadding: Dp,
     onOpen: (ServerSummary) -> Unit,
     onBroadcast: () -> Unit,
-    onSettings: () -> Unit,
-    onSignOut: () -> Unit,
+    username: String?,
+    onYou: () -> Unit,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
     val bars = WindowInsets.statusBars.asPaddingValues()
     val running = vm.rows.count { it.stats?.running == true }
 
@@ -199,27 +196,8 @@ private fun ServersTab(
                     ).joinToString(" · "),
                     modifier = Modifier.padding(bottom = 4.dp),
                 ) {
-                    Box {
-                        FilledTonalIconButton(onClick = { menuOpen = true }) { Icon(Icons.Outlined.MoreVert, "More") }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Broadcast") },
-                                leadingIcon = { Icon(Icons.Outlined.Campaign, contentDescription = null) },
-                                onClick = { menuOpen = false; onBroadcast() },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Settings") },
-                                leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
-                                onClick = { menuOpen = false; onSettings() },
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("Sign out") },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null) },
-                                onClick = { menuOpen = false; onSignOut() },
-                            )
-                        }
-                    }
+                    FilledTonalIconButton(onClick = onBroadcast) { Icon(Icons.Outlined.Campaign, "Broadcast") }
+                    ProfileButton(username, onYou)
                 }
             }
             when {
@@ -289,7 +267,7 @@ private fun ServerCard(row: ServerRow, modifier: Modifier, onClick: () -> Unit) 
 }
 
 @Composable
-private fun HostTab(vm: ServerListViewModel, host: String, bottomPadding: Dp) {
+private fun HostTab(vm: ServerListViewModel, host: String, bottomPadding: Dp, username: String?, onYou: () -> Unit) {
     val h = vm.host
     val cs = MaterialTheme.colorScheme
     Column(Modifier.fillMaxSize().background(cs.background)) {
@@ -304,7 +282,7 @@ private fun HostTab(vm: ServerListViewModel, host: String, bottomPadding: Dp) {
             },
             subtitleColor = if (vm.hostError != null && h != null) cs.error else cs.onSurfaceVariant,
             modifier = Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-        )
+        ) { ProfileButton(username, onYou) }
         if (h == null) {
             Box(Modifier.fillMaxSize().padding(bottom = bottomPadding), Alignment.Center) {
                 if (vm.hostError != null) EmptyState("Host stats unavailable", vm.hostError!!, icon = Icons.Outlined.Memory)

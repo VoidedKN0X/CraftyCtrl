@@ -58,6 +58,7 @@ import com.vknxworks.craftyctrl.ui.screens.ServerPropertiesScreen
 import com.vknxworks.craftyctrl.ui.screens.ServerDetailScreen
 import com.vknxworks.craftyctrl.ui.screens.ServerListScreen
 import com.vknxworks.craftyctrl.ui.screens.SettingsScreen
+import com.vknxworks.craftyctrl.ui.screens.YouScreen
 import com.vknxworks.craftyctrl.ui.theme.CraftyTheme
 import com.vknxworks.craftyctrl.ui.theme.ThemePrefs
 
@@ -135,7 +136,7 @@ private fun AppRoot(
         Box(Modifier.fillMaxSize().then(if (lockVm.locked) Modifier.clearAndSetSemantics {} else Modifier)) {
             AppContent(session, sessionVm)
         }
-        // Turning the lock on or off, or changing the PIN (from Settings), on top of the app.
+        // Turning the lock on or off, or changing the PIN (from Settings, behind the profile picture), on top of the app.
         val request = PinRequests.request
         if (!lockVm.locked && request != null) PinRequestScreen(request, lockVm)
         if (lockVm.locked) {
@@ -195,9 +196,9 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
             composable("servers") { entry ->
                 ServerListScreen(
                     api = api,
+                    username = session.username,
                     onOpen = { s -> nav.go(entry, "server/${Uri.encode(s.id)}?name=${Uri.encode(s.name)}") },
-                    onSettings = { nav.go(entry, "settings") },
-                    onSignOut = { sessionVm.signOut() },
+                    onYou = { nav.go(entry, "you") },
                     onCreate = { nav.go(entry, "create") },
                 )
             }
@@ -264,6 +265,15 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
                     serverId = entry.arguments?.getString("id").orEmpty(),
                     path = entry.arguments?.getString("path").orEmpty(),
                     onBack = { nav.back(entry) },
+                )
+            }
+            // The profile picture opens the You page; Settings opens from there.
+            composable("you") { entry ->
+                YouScreen(
+                    session = session,
+                    onBack = { nav.back(entry) },
+                    onSettings = { nav.go(entry, "settings") },
+                    onSignOut = { sessionVm.signOut() },
                 )
             }
             composable("settings") { entry ->

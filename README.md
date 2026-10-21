@@ -58,9 +58,11 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 2. Sign in with an **API key** (in Crafty: your profile → *API Keys* → *Generate*) or your **username and password**, plus your 2FA code if you use one.
 3. Tap **Connect**. Your login is stored encrypted on the phone; with a password, only the token Crafty sends back is kept, never the password itself.
 
+Settings, signing out and About are behind your profile picture at the top right of the Servers and Host tabs: tap it to open the You page, then **Settings**. **Broadcast** (a chat message to every running server) is the megaphone button next to it.
+
 ## App lock
 
-Turn it on under **⋮ > Settings > Privacy and security > App lock**. It's off until you turn it on.
+Turn it on under **Settings > Privacy and security > App lock** (tap your profile picture at the top right, then **Settings**). It's off until you turn it on.
 
 - **Its own app PIN** of at least 6 digits, separate from your phone's screen lock. Very obvious PINs such as 111111 or 123456 are refused.
 - **Unlock with fingerprint** (optional) only accepts strong biometrics, such as the fingerprint sensor, checked by the phone's secure hardware. Face unlock that only uses the camera isn't accepted. The PIN is still needed after the phone restarts and at least every 72 hours, and adding a new fingerprint to the phone turns fingerprint unlock off until you turn it on again.
@@ -81,7 +83,7 @@ Turn it on under **⋮ > Settings > Privacy and security > App lock**. It's off 
 - Adding someone to the whitelist, operators or bans of an online-mode Java server looks the player name up at Mojang (`api.mojang.com`) to get the account's ID, as Minecraft itself does.
 - The **Create server** screen loads the list of available server versions from Crafty's download catalog (`jars.arcadiatech.org`).
 
-The Support, Report a bug, Source code and Licence links in Settings, and the Minecraft EULA link, open in your browser only when you tap them.
+The Support, Report a bug, Source code and Licence links on the You page (tap your profile picture), and the Minecraft EULA link, open in your browser only when you tap them.
 
 ## Build from source
 
@@ -103,7 +105,7 @@ Or open the folder in Android Studio and press **Run** with your phone connected
 
 ## Support the project
 
-CraftyCtrl is free and open source. If it's useful to you, you can support development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). In the app, **⋮ → Settings → About** has **Support CraftyCtrl** and **Report a bug**, which opens the [issue tracker](https://github.com/VoidedKN0X/CraftyCtrl/issues). Starring the repo helps too.
+CraftyCtrl is free and open source. If it's useful to you, you can support development on [GitHub Sponsors](https://github.com/sponsors/VoidedKN0X). In the app, tap your profile picture: **About** at the bottom of the You page has **Support CraftyCtrl** and **Report a bug**, which opens the [issue tracker](https://github.com/VoidedKN0X/CraftyCtrl/issues). Starring the repo helps too.
 
 ## The Ctrl series
 

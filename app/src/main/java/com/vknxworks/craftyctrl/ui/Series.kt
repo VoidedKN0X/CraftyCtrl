@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
@@ -21,6 +23,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,14 +34,42 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vknxworks.craftyctrl.R
 import com.vknxworks.craftyctrl.ui.theme.LocalStatusColors
 import com.vknxworks.craftyctrl.ui.theme.Mono
 
 // Building blocks shared with the other Ctrl apps, so the screens look and behave alike.
+
+/**
+ * The round profile picture at the top right of the main screens. Tapping it opens the You page, the only
+ * way into Settings (like every Ctrl app). Shows the first letter of the signed-in user, or the series'
+ * placeholder avatar when signed in with an API key (Crafty doesn't host profile pictures of its own).
+ */
+@Composable
+fun ProfileButton(username: String?, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val label = stringResource(R.string.account_and_settings)
+    IconButton(onClick = onClick, modifier = Modifier.semantics { contentDescription = label }) {
+        Box(
+            Modifier.size(34.dp).clip(CircleShape).background(cs.primary.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            val initial = username?.trim()?.take(1)?.uppercase()
+            if (initial.isNullOrBlank()) {
+                Icon(Icons.Filled.AccountCircle, null, tint = cs.primary)
+            } else {
+                Text(initial, style = MaterialTheme.typography.titleMedium, color = cs.primary)
+            }
+        }
+    }
+}
 
 /** Compact screen header: icon tile, title, one line of context and action buttons. */
 @Composable
