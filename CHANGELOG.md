@@ -3,7 +3,11 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## Unreleased
+## [2.6.2] - 2026-10-21
+
+### Privacy
+
+- **No hidden dependency list in the APK**: Android's build tools used to tuck an encrypted list of the app's libraries, readable only by Google, into the APK's signature block. It's no longer added, so the APK holds nothing that only Google can read and passes F-Droid's check for it. Nothing changes in the app itself.
 
 ### Changed
 
