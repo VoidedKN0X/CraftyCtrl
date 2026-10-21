@@ -55,6 +55,7 @@ import com.vknxworks.craftyctrl.data.AuthMode
 import com.vknxworks.craftyctrl.ui.ErrorBanner
 import com.vknxworks.craftyctrl.ui.SecureScreen
 import com.vknxworks.craftyctrl.ui.SessionViewModel
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,7 +84,7 @@ fun LoginScreen(vm: SessionViewModel) {
         IconButton(onClick = { reveal = !reveal }) {
             Icon(
                 if (reveal) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                contentDescription = if (reveal) "Hide" else "Show",
+                contentDescription = if (reveal) stringResource(R.string.hide) else stringResource(R.string.show),
             )
         }
     }
@@ -111,7 +112,7 @@ fun LoginScreen(vm: SessionViewModel) {
                     style = MaterialTheme.typography.displaySmall,
                 )
                 Text(
-                    "Connect to your Crafty Controller panel.",
+                    stringResource(R.string.connect_to_your_crafty_controller_panel),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -122,7 +123,7 @@ fun LoginScreen(vm: SessionViewModel) {
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
-                label = { Text("Panel address") },
+                label = { Text(stringResource(R.string.panel_address)) },
                 placeholder = { Text("https://crafty.example.com") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
@@ -144,7 +145,7 @@ fun LoginScreen(vm: SessionViewModel) {
                     OutlinedTextField(
                         value = apiKey,
                         onValueChange = { apiKey = it },
-                        label = { Text("API key") },
+                        label = { Text(stringResource(R.string.you_api_key_user)) },
                         singleLine = true,
                         visualTransformation = secretTransform,
                         trailingIcon = revealToggle,
@@ -153,7 +154,7 @@ fun LoginScreen(vm: SessionViewModel) {
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Text(
-                        "In Crafty, open your profile → API Keys → Generate. Give the key only the servers and permissions you want this phone to have.",
+                        stringResource(R.string.in_crafty_open_your_profile_api),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -163,7 +164,7 @@ fun LoginScreen(vm: SessionViewModel) {
                     OutlinedTextField(
                         value = username,
                         onValueChange = { username = it },
-                        label = { Text("Username") },
+                        label = { Text(stringResource(R.string.username)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth(),
@@ -171,7 +172,7 @@ fun LoginScreen(vm: SessionViewModel) {
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Password") },
+                        label = { Text(stringResource(R.string.auth_password)) },
                         singleLine = true,
                         visualTransformation = secretTransform,
                         trailingIcon = revealToggle,
@@ -181,14 +182,14 @@ fun LoginScreen(vm: SessionViewModel) {
                     OutlinedTextField(
                         value = totp,
                         onValueChange = { v -> totp = v.filter { it.isDigit() }.take(8) },
-                        label = { Text("2FA code (if enabled)") },
+                        label = { Text(stringResource(R.string.s_2fa_code_if_enabled)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { submit() }),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Text(
-                        "Your password isn't stored — only the session token Crafty returns. You'll sign in again when it expires.",
+                        stringResource(R.string.your_password_isn_t_stored_only),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -209,7 +210,7 @@ fun LoginScreen(vm: SessionViewModel) {
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                 } else {
-                    Text("Connect")
+                    Text(stringResource(R.string.connect))
                 }
             }
         }

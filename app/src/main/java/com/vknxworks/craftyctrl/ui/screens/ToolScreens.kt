@@ -43,6 +43,10 @@ import com.vknxworks.craftyctrl.ui.LogsViewModel
 import com.vknxworks.craftyctrl.ui.theme.ConsoleBackground
 import com.vknxworks.craftyctrl.ui.theme.ConsoleDim
 import com.vknxworks.craftyctrl.ui.theme.Mono
+import androidx.annotation.StringRes
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
+import androidx.compose.ui.res.stringResource
 
 // ================================================================ plugins & mods
 
@@ -70,9 +74,9 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                title = { Text("Plugins & mods") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
-                actions = { IconButton(onClick = vm::load) { Icon(Icons.Filled.Refresh, contentDescription = "Reload") } },
+                title = { Text(stringResource(R.string.page_addons)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) } },
+                actions = { IconButton(onClick = vm::load) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.reload)) } },
             )
         },
     ) { padding ->
@@ -85,14 +89,14 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
             vm.uploadProgress?.let { p ->
                 item(key = "upload") {
                     Column(Modifier.padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Uploading… ${(p * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.uploading_x, (p * 100).toInt()), style = MaterialTheme.typography.bodySmall)
                         LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }
             item(key = "note") {
                 Text(
-                    "Turning one off renames its .jar to .jar.disabled so the server skips it. Changes apply after a restart.",
+                    stringResource(R.string.turning_one_off_renames_its_jar),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 16.dp),
@@ -102,15 +106,15 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                 item(key = "none") {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
-                            if (vm.isBedrock) "Bedrock servers use add-on packs instead of plugins or mods. Manage them in the Files tab."
-                            else "This server has no plugins or mods folder. Plugin servers (Paper, Purpur, Spigot) use plugins; Fabric and Forge use mods.",
+                            if (vm.isBedrock) stringResource(R.string.bedrock_servers_use_add_on_packs)
+                            else stringResource(R.string.this_server_has_no_plugins_or),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         if (!vm.isBedrock) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(onClick = { pick("plugins") }) { Text("Add a plugin") }
-                                OutlinedButton(onClick = { pick("mods") }) { Text("Add a mod") }
+                                OutlinedButton(onClick = { pick("plugins") }) { Text(stringResource(R.string.add_a_plugin)) }
+                                OutlinedButton(onClick = { pick("mods") }) { Text(stringResource(R.string.add_a_mod)) }
                             }
                         }
                     }
@@ -120,11 +124,11 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                 item(key = "h:$folder") {
                     Column {
                         Row(Modifier.padding(top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Caption("$folder · ${list.count { it.enabled }} on", Modifier.weight(1f))
+                            Caption(stringResource(R.string.x_x_on, folder, list.count { it.enabled }), Modifier.weight(1f))
                             TextButton(onClick = { pick(folder) }, enabled = vm.uploadProgress == null) {
                                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(if (folder == "mods") "Add mod" else "Add plugin")
+                                Text(if (folder == "mods") stringResource(R.string.add_mod) else stringResource(R.string.add_plugin))
                             }
                         }
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -132,7 +136,7 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                 }
                 if (list.isEmpty()) {
                     item(key = "e:$folder") {
-                        Text("Empty.", Modifier.padding(vertical = 14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.empty), Modifier.padding(vertical = 14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 items(list, key = { it.path }) { a ->
@@ -147,7 +151,7 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    if (a.enabled) a.fileName else "Off · ${a.fileName}",
+                                    if (a.enabled) a.fileName else stringResource(R.string.off_x, a.fileName),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontFamily = Mono,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -156,7 +160,7 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                                 )
                             }
                             IconButton(onClick = { removing = a }, enabled = vm.busy == null) {
-                                Icon(Icons.Filled.DeleteOutline, contentDescription = "Remove ${a.name}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Icon(Icons.Filled.DeleteOutline, contentDescription = stringResource(R.string.remove_x, a.name), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             if (vm.busy == a.path) {
                                 CircularProgressIndicator(Modifier.padding(horizontal = 14.dp).size(22.dp), strokeWidth = 2.dp)
@@ -174,17 +178,21 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
     removing?.let { a ->
         AlertDialog(
             onDismissRequest = { removing = null },
-            title = { Text("Remove ${a.name}?") },
-            text = { Text("Deletes ${a.fileName} from the ${a.folder.substringAfterLast('/')} folder. Its config folder stays. To keep it but stop it loading, turn it off instead.") },
-            confirmButton = { TextButton(onClick = { vm.delete(a); removing = null }) { Text("Remove", color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { removing = null }) { Text("Cancel") } },
+            title = { Text(stringResource(R.string.remove_x_2, a.name)) },
+            text = { Text(stringResource(R.string.addon_delete_body, a.fileName, a.folder.substringAfterLast('/'))) },
+            confirmButton = { TextButton(onClick = { vm.delete(a); removing = null }) { Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { removing = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
 
 // ================================================================ logs
 
-private enum class Level(val label: String) { ALL("All"), WARN("Warnings"), ERROR("Errors") }
+private enum class Level(@StringRes private val labelRes: Int) {
+    ALL(R.string.level_all), WARN(R.string.level_warnings), ERROR(R.string.level_errors);
+
+    val label: String get() = str(labelRes)
+}
 
 @Composable
 fun LogsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
@@ -198,20 +206,20 @@ fun LogsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
             TopAppBar(
                 title = {
                     Column {
-                        Text(open?.name ?: "Logs", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(open?.name ?: stringResource(R.string.page_logs), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (open == null) {
-                            Text("logs folder", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.logs_folder), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = { if (open != null) vm.openFile(null) else onBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { if (open != null) vm.openFile(open) else vm.loadList() }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Reload")
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.reload))
                     }
                 },
             )
@@ -231,7 +239,7 @@ private fun LogList(vm: LogsViewModel) {
         st.error?.let { item { ErrorBanner(it, onRetry = vm::loadList) } }
         val list = st.data.orEmpty()
         if (st.data != null && list.isEmpty()) {
-            item { Text("No log files yet.", Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            item { Text(stringResource(R.string.no_log_files_yet), Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         items(list, key = { it.path }) { f ->
             Column(
@@ -249,9 +257,9 @@ private fun LogList(vm: LogsViewModel) {
                         )
                         Text(
                             when {
-                                f.name == "latest.log" -> "Current session"
-                                f.compressed -> "Compressed: download it from the web panel to read it"
-                                else -> "Older log"
+                                f.name == "latest.log" -> stringResource(R.string.current_session)
+                                f.compressed -> stringResource(R.string.compressed_download_it_from_the_web)
+                                else -> stringResource(R.string.older_log)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -291,9 +299,9 @@ private fun LogViewer(vm: LogsViewModel) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("Search this log") },
+                placeholder = { Text(stringResource(R.string.search_this_log)) },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, contentDescription = "Clear") } },
+                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.clear)) } },
                 singleLine = true,
                 shape = RoundedCornerShape(50),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -306,7 +314,7 @@ private fun LogViewer(vm: LogsViewModel) {
                 Level.entries.forEach { l -> FilterChip(selected = level == l, onClick = { level = l }, label = { Text(l.label) }) }
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "${shown.size} of ${all.size} lines",
+                    stringResource(R.string.x_of_x_lines, shown.size, all.size),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -315,7 +323,7 @@ private fun LogViewer(vm: LogsViewModel) {
             vm.lines.error?.let { ErrorBanner(it, Modifier.padding(16.dp)) }
             if (all.size >= LogsViewModel.MAX_LINES) {
                 Text(
-                    "Showing the last ${LogsViewModel.MAX_LINES} lines.",
+                    stringResource(R.string.showing_the_last_x_lines, LogsViewModel.MAX_LINES),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -342,13 +350,13 @@ private fun LogViewer(vm: LogsViewModel) {
                                     onLongClick = {
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                         clipboard.copy(line)
-                                        scope.launch { snackbar.showSnackbar("Line copied") }
+                                        scope.launch { snackbar.showSnackbar(str(R.string.line_copied)) }
                                     },
                                 ),
                         )
                     }
                     if (shown.isEmpty() && all.isNotEmpty()) {
-                        item { Text("No lines match.", color = ConsoleDim, fontSize = 12.sp) }
+                        item { Text(stringResource(R.string.no_lines_match), color = ConsoleDim, fontSize = 12.sp) }
                     }
                 }
             }

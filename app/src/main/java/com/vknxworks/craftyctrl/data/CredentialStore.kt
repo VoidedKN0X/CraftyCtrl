@@ -11,10 +11,15 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import androidx.annotation.StringRes
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
 
-enum class AuthMode(val label: String) {
-    API_KEY("API key"),
-    PASSWORD("Password"),
+enum class AuthMode(@StringRes private val labelRes: Int) {
+    API_KEY(R.string.auth_api_key),
+    PASSWORD(R.string.auth_password);
+
+    val label: String get() = str(labelRes)
 }
 
 /**
@@ -74,7 +79,7 @@ class CredentialStore(context: Context) {
     }
 
     private fun wrap(token: String): String =
-        if (vault.enabled) vault.seal(token) ?: error("Unlock CraftyCtrl first") else token
+        if (vault.enabled) vault.seal(token) ?: error(str(R.string.unlock_craftyctrl_first)) else token
 
     /** The app lock was turned on (vault open): encrypt the saved token with its key too. */
     fun sealToken() {

@@ -186,14 +186,20 @@ import com.vknxworks.craftyctrl.ui.theme.ConsoleDim
 import com.vknxworks.craftyctrl.ui.theme.ConsoleError
 import com.vknxworks.craftyctrl.ui.theme.ConsoleText
 import com.vknxworks.craftyctrl.ui.theme.ConsoleWarn
+import androidx.annotation.StringRes
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
+import androidx.compose.ui.res.stringResource
 
-private enum class DetailTab(val title: String, val icon: ImageVector) {
-    OVERVIEW("Overview", Icons.Filled.Dashboard),
-    CONSOLE("Console", Icons.Filled.Terminal),
-    STATS("Stats", Icons.AutoMirrored.Filled.ShowChart),
-    FILES("Files", Icons.Filled.FolderOpen),
-    BACKUPS("Backups", Icons.Filled.Backup),
-    SCHEDULES("Schedules", Icons.Filled.Schedule),
+private enum class DetailTab(@StringRes private val titleRes: Int, val icon: ImageVector) {
+    OVERVIEW(R.string.tab_overview, Icons.Filled.Dashboard),
+    CONSOLE(R.string.tab_console, Icons.Filled.Terminal),
+    STATS(R.string.tab_stats, Icons.AutoMirrored.Filled.ShowChart),
+    FILES(R.string.tab_files, Icons.Filled.FolderOpen),
+    BACKUPS(R.string.tab_backups, Icons.Filled.Backup),
+    SCHEDULES(R.string.tab_schedules, Icons.Filled.Schedule);
+
+    val title: String get() = str(titleRes)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -229,7 +235,7 @@ fun ServerDetailScreen(
                 title = {
                     Column {
                         Text(
-                            serverName.ifBlank { "Server" },
+                            serverName.ifBlank { stringResource(R.string.server) },
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -246,13 +252,13 @@ fun ServerDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     Box {
                         IconButton(onClick = { overflow = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = "More")
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more))
                         }
                         DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
                             ManagePage.entries.forEach { page ->
@@ -264,24 +270,24 @@ fun ServerDetailScreen(
                             }
                             HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text("Update server software") },
+                                text = { Text(stringResource(R.string.update_server_software)) },
                                 leadingIcon = { Icon(Icons.Filled.SystemUpdateAlt, contentDescription = null) },
                                 enabled = vm.info?.isBedrock != true,
                                 onClick = { overflow = false; vm.loadConfig(); confirmUpdate = true },
                             )
                             DropdownMenuItem(
-                                text = { Text("Clone server") },
+                                text = { Text(stringResource(R.string.clone_server)) },
                                 leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
                                 onClick = { overflow = false; confirmClone = true },
                             )
                             HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text("Diagnostics") },
+                                text = { Text(stringResource(R.string.diagnostics)) },
                                 leadingIcon = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
                                 onClick = { overflow = false; vm.runDiagnostics() },
                             )
                             DropdownMenuItem(
-                                text = { Text("Delete server", color = MaterialTheme.colorScheme.error) },
+                                text = { Text(stringResource(R.string.delete_server), color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = { Icon(Icons.Filled.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                                 onClick = { overflow = false; confirmDeleteServer = true },
                             )
@@ -338,27 +344,27 @@ fun ServerDetailScreen(
         AlertDialog(
             onDismissRequest = { confirmUpdate = false },
             icon = { Icon(Icons.Filled.SystemUpdateAlt, contentDescription = null) },
-            title = { Text("Update server software?") },
+            title = { Text(stringResource(R.string.update_server_software_2)) },
             text = {
                 Text(
                     if (url == null) {
-                        "This server has no update URL set, so Crafty has nothing to download. Add the new jar's download link in Server options first."
+                        stringResource(R.string.this_server_has_no_update_url)
                     } else {
-                        "Crafty downloads the server jar again from:\n$url\n\nThe server is stopped first and the old jar is replaced. Back up the world before a big version jump."
+                        stringResource(R.string.crafty_downloads_the_server_jar_again, url)
                     },
                 )
             },
             confirmButton = {
                 if (url == null) {
-                    TextButton(onClick = { confirmUpdate = false; onManage(ManagePage.OPTIONS) }) { Text("Open Server options") }
+                    TextButton(onClick = { confirmUpdate = false; onManage(ManagePage.OPTIONS) }) { Text(stringResource(R.string.open_server_options)) }
                 } else {
                     TextButton(onClick = {
                         confirmUpdate = false
-                        verifyUser(activity, "Update ${vm.info?.name ?: "server"}", "The server is stopped first", onSuccess = vm::updateExecutable)
-                    }) { Text("Update") }
+                        verifyUser(activity, vm.info?.name?.let { str(R.string.update_x, it) } ?: str(R.string.update_server), str(R.string.the_server_is_stopped_first), onSuccess = vm::updateExecutable)
+                    }) { Text(stringResource(R.string.update)) }
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmUpdate = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmUpdate = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -366,10 +372,10 @@ fun ServerDetailScreen(
         AlertDialog(
             onDismissRequest = { if (!vm.managing) confirmClone = false },
             icon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
-            title = { Text("Clone this server?") },
+            title = { Text(stringResource(R.string.clone_this_server)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Crafty copies the whole server folder (world, configs, jar) and its settings into a new server. Large worlds take a while and use the same disk space again.")
+                    Text(stringResource(R.string.crafty_copies_the_whole_server_folder))
                     if (vm.managing) LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
             },
@@ -377,9 +383,9 @@ fun ServerDetailScreen(
                 TextButton(
                     enabled = !vm.managing,
                     onClick = { vm.cloneServer { id, name -> confirmClone = false; onOpenServer(id, name) } },
-                ) { Text("Clone") }
+                ) { Text(stringResource(R.string.clone)) }
             },
-            dismissButton = { TextButton(onClick = { confirmClone = false }, enabled = !vm.managing) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmClone = false }, enabled = !vm.managing) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -390,7 +396,7 @@ fun ServerDetailScreen(
             busy = vm.deletingServer,
             onDismiss = { if (!vm.deletingServer) confirmDeleteServer = false },
             onConfirm = { files ->
-                verifyUser(activity, "Delete ${vm.info?.name ?: "server"}", "Confirm it's you", onSuccess = {
+                verifyUser(activity, vm.info?.name?.let { str(R.string.delete_x, it) } ?: str(R.string.delete_server), str(R.string.confirm_it_s_you), onSuccess = {
                     vm.deleteServer(files) { confirmDeleteServer = false; onDeleted() }
                 })
             },
@@ -412,15 +418,11 @@ private fun DeleteServerDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Filled.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-        title = { Text("Delete $serverName?") },
+        title = { Text(stringResource(R.string.delete_x_2, serverName)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    buildString {
-                        append("The server is removed from Crafty")
-                        if (running) append(" (it will be stopped first)")
-                        append(". This can't be undone.")
-                    },
+                    if (running) stringResource(R.string.delete_server_body_running) else stringResource(R.string.delete_server_body),
                 )
                 Row(
                     Modifier
@@ -430,10 +432,10 @@ private fun DeleteServerDialog(
                 ) {
                     Checkbox(checked = deleteFiles, onCheckedChange = { deleteFiles = it }, enabled = !busy)
                     Column {
-                        Text("Also delete its files", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.also_delete_its_files), style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            if (deleteFiles) "The server folder (world, configs, server jar) is permanently deleted."
-                            else "Files stay on the Crafty machine; only the server entry is removed.",
+                            if (deleteFiles) stringResource(R.string.the_server_folder_world_configs_server)
+                            else stringResource(R.string.files_stay_on_the_crafty_machine),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -442,7 +444,7 @@ private fun DeleteServerDialog(
                 OutlinedTextField(
                     value = typed,
                     onValueChange = { typed = it },
-                    label = { Text("Type the server name to confirm") },
+                    label = { Text(stringResource(R.string.type_the_server_name_to_confirm)) },
                     placeholder = { Text(serverName) },
                     singleLine = true,
                     enabled = !busy,
@@ -453,10 +455,10 @@ private fun DeleteServerDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(deleteFiles) }, enabled = matches && !busy) {
-                Text("Delete server", color = if (matches && !busy) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.delete_server), color = if (matches && !busy) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -466,11 +468,11 @@ private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
     var copied by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onClose,
-        title = { Text("Diagnostics") },
+        title = { Text(stringResource(R.string.diagnostics)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Raw replies from Crafty for backups and schedules. Copy and send them over to get these tabs fixed.",
+                    stringResource(R.string.raw_replies_from_crafty_for_backups),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -495,12 +497,12 @@ private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
         confirmButton = {
             TextButton(
                 onClick = {
-                    clipboard.copy(report, "CraftyCtrl diagnostics")
+                    clipboard.copy(report, str(R.string.craftyctrl_diagnostics))
                     copied = true
                 },
-            ) { Text(if (copied) "Copied" else "Copy") }
+            ) { Text(if (copied) stringResource(R.string.copied) else stringResource(R.string.copy)) }
         },
-        dismissButton = { TextButton(onClick = onClose) { Text("Close") } },
+        dismissButton = { TextButton(onClick = onClose) { Text(stringResource(R.string.close)) } },
     )
 }
 
@@ -538,8 +540,8 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
         }
 
         if (s != null && s.running) {
-            CtrlCard("Players") {
-                if (s.playersKnown) StatRow("Online", playersText(s.online, s.max))
+            CtrlCard(stringResource(R.string.players)) {
+                if (s.playersKnown) StatRow(stringResource(R.string.online), playersText(s.online, s.max))
                 if (s.players.isNotEmpty()) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -555,7 +557,7 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
                     }
                 } else if ((s.online ?: 0) > 0) {
                     Text(
-                        "This server doesn't share player names with Crafty.",
+                        stringResource(R.string.this_server_doesn_t_share_player),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -563,7 +565,7 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
                 OutlinedButton(onClick = { playerSheet = "" }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.ManageAccounts, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Manage a player by name…")
+                    Text(stringResource(R.string.manage_a_player_by_name))
                 }
             }
         }
@@ -571,19 +573,19 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
         if (s != null) {
             // Only facts Crafty actually reported; unknown ones are left out rather than shown as "—".
             val facts = listOfNotNull(
-                vm.version?.let { "Version" to it },
-                s.port?.let { "Port" to it.toString() },
-                s.worldName?.let { "World" to it },
-                s.worldSize?.let { "World size" to it },
-                s.mem?.let { "Memory" to it },
+                vm.version?.let { stringResource(R.string.fact_version) to it },
+                s.port?.let { stringResource(R.string.fact_port) to it.toString() },
+                s.worldName?.let { stringResource(R.string.fact_world) to it },
+                s.worldSize?.let { stringResource(R.string.world_size) to it },
+                s.mem?.let { stringResource(R.string.memory) to it },
             )
             if (facts.isNotEmpty()) {
-                CtrlCard("Details") { facts.forEach { (k, v) -> StatRow(k, v) } }
+                CtrlCard(stringResource(R.string.details)) { facts.forEach { (k, v) -> StatRow(k, v) } }
             }
         }
 
         Text(
-            "Manage",
+            stringResource(R.string.manage),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(start = 16.dp, top = 6.dp),
@@ -611,18 +613,17 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
         val uri = LocalUriHandler.current
         AlertDialog(
             onDismissRequest = vm::dismissEula,
-            title = { Text("Accept the Minecraft EULA?") },
+            title = { Text(stringResource(R.string.accept_the_minecraft_eula)) },
             text = {
                 Text(
-                    "This server won't start until its EULA is accepted. Accepting writes eula=true " +
-                        "to the server's eula.txt, the same as accepting it in Crafty's web panel.",
+                    stringResource(R.string.this_server_won_t_start_until),
                 )
             },
-            confirmButton = { TextButton(onClick = vm::acceptEulaAndStart) { Text("Accept & start") } },
+            confirmButton = { TextButton(onClick = vm::acceptEulaAndStart) { Text(stringResource(R.string.accept_start)) } },
             dismissButton = {
                 Row {
-                    TextButton(onClick = { com.vknxworks.craftyctrl.data.lock.Lock.expectReturn(); uri.openUri("https://aka.ms/MinecraftEULA") }) { Text("Read EULA") }
-                    TextButton(onClick = vm::dismissEula) { Text("Cancel") }
+                    TextButton(onClick = { com.vknxworks.craftyctrl.data.lock.Lock.expectReturn(); uri.openUri("https://aka.ms/MinecraftEULA") }) { Text(stringResource(R.string.read_eula)) }
+                    TextButton(onClick = vm::dismissEula) { Text(stringResource(R.string.cancel)) }
                 }
             },
         )
@@ -645,7 +646,7 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
             onConfirm = { delaySeconds, note ->
                 confirm = null
                 val title = "${action.label} ${vm.info?.name ?: "server"}"
-                val subtitle = if (delaySeconds > 0) "After a ${Countdowns.human(delaySeconds)} warning" else "Confirm it's you"
+                val subtitle = if (delaySeconds > 0) str(R.string.after_a_x_warning, Countdowns.human(delaySeconds)) else str(R.string.confirm_it_s_you)
                 verifyUser(
                     activity, title, subtitle,
                     onSuccess = {
@@ -666,11 +667,11 @@ private fun StatusHero(s: ServerStats) {
             Column(Modifier.weight(1f)) {
                 Text(s.state.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 val detail = when (s.state) {
-                    ServerState.RUNNING -> s.started?.let { uptimeShort(it) }?.let { "Up $it" }
-                    ServerState.CRASHED -> "Crafty detected a crash"
-                    ServerState.STARTING -> "Coming up…"
-                    ServerState.UPDATING -> "Updating the server jar…"
-                    ServerState.STOPPED -> "Not running"
+                    ServerState.RUNNING -> s.started?.let { uptimeShort(it) }?.let { stringResource(R.string.up_x, it) }
+                    ServerState.CRASHED -> stringResource(R.string.crafty_detected_a_crash)
+                    ServerState.STARTING -> stringResource(R.string.coming_up)
+                    ServerState.UPDATING -> stringResource(R.string.updating_the_server_jar)
+                    ServerState.STOPPED -> stringResource(R.string.not_running)
                 }
                 detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
@@ -681,8 +682,8 @@ private fun StatusHero(s: ServerStats) {
         if (s.running || s.state == ServerState.STARTING) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 BigStat("CPU", s.cpu?.let { "%.0f%%".format(it) } ?: "—", Modifier.weight(1f))
-                BigStat("Memory", s.memPercent?.let { "%.0f%%".format(it) } ?: s.mem?.replace(" ", "") ?: "—", Modifier.weight(1f))
-                if (s.playersKnown) BigStat("Players", playersText(s.online, s.max).replace(" ", ""), Modifier.weight(1f))
+                BigStat(stringResource(R.string.memory), s.memPercent?.let { "%.0f%%".format(it) } ?: s.mem?.replace(" ", "") ?: "—", Modifier.weight(1f))
+                if (s.playersKnown) BigStat(stringResource(R.string.players), playersText(s.online, s.max).replace(" ", ""), Modifier.weight(1f))
             }
         }
     }
@@ -690,17 +691,17 @@ private fun StatusHero(s: ServerStats) {
 
 /** "Up 1 d 3 h" from Crafty's start timestamp; falls back to the raw text. */
 private fun uptimeText(started: String): String {
-    val t = parseTimestamp(started) ?: return "Up since $started"
+    val t = parseTimestamp(started) ?: return str(R.string.up_since_x, started)
     val mins = ((System.currentTimeMillis() - t) / 60_000).coerceAtLeast(0)
     val d = mins / 1440
     val h = (mins % 1440) / 60
     val m = mins % 60
     val span = when {
-        d > 0 -> "$d d $h h"
-        h > 0 -> "$h h $m min"
-        else -> "$m min"
+        d > 0 -> str(R.string.x_d_x_h, d, h)
+        h > 0 -> str(R.string.x_h_x_min, h, m)
+        else -> str(R.string.x_min, m)
     }
-    return "Up $span"
+    return str(R.string.up_x, span)
 }
 
 @Composable
@@ -741,7 +742,7 @@ private fun PowerControls(state: ServerState?, pending: PowerAction?, onAction: 
                 Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
             }
             Spacer(Modifier.width(8.dp))
-            Text("Start server")
+            Text(stringResource(R.string.task_start))
         }
     }
 }
@@ -794,7 +795,11 @@ internal fun lineColor(line: String): Color = when {
     else -> ConsoleText
 }
 
-private enum class LogLevel(val label: String) { ALL("All"), WARN("Warnings"), ERROR("Errors") }
+private enum class LogLevel(@StringRes private val labelRes: Int) {
+    ALL(R.string.level_all), WARN(R.string.level_warnings), ERROR(R.string.level_errors);
+
+    val label: String get() = str(labelRes)
+}
 
 internal fun isError(line: String) = "ERROR" in line || "SEVERE" in line || "Exception" in line
 internal fun isWarn(line: String) = "WARN" in line
@@ -855,23 +860,23 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                 Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                FilterChip(selected = follow, onClick = { follow = !follow }, label = { Text("Follow") })
+                FilterChip(selected = follow, onClick = { follow = !follow }, label = { Text(stringResource(R.string.follow)) })
                 LogLevel.entries.forEach { l ->
                     FilterChip(selected = level == l, onClick = { level = l }, label = { Text(l.label) })
                 }
             }
             IconButton(onClick = { searching = !searching; if (!searching) query = "" }) {
-                Icon(if (searching) Icons.Filled.Close else Icons.Filled.Search, contentDescription = if (searching) "Close search" else "Search")
+                Icon(if (searching) Icons.Filled.Close else Icons.Filled.Search, contentDescription = if (searching) stringResource(R.string.close_search) else stringResource(R.string.search))
             }
         }
         if (searching) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("Search the console") },
+                placeholder = { Text(stringResource(R.string.search_the_console)) },
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                supportingText = { Text("${shown.size} of ${vm.logs.size} lines") },
+                supportingText = { Text(stringResource(R.string.x_of_x_lines, shown.size, vm.logs.size)) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             )
         }
@@ -903,18 +908,18 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                                 onLongClick = {
                                     haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
                                     clipboard.copy(line)
-                                    vm.notify("Line copied")
+                                    vm.notify(str(R.string.line_copied))
                                 },
                             ),
                     )
                 }
                 if (shown.isEmpty() && vm.logs.isNotEmpty()) {
-                    item { Text("No lines match.", color = ConsoleDim, fontSize = 12.sp) }
+                    item { Text(stringResource(R.string.no_lines_match), color = ConsoleDim, fontSize = 12.sp) }
                 }
             }
         }
         Text(
-            "Long-press a line to copy it.",
+            stringResource(R.string.long_press_a_line_to_copy),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, top = 6.dp),
@@ -952,7 +957,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it },
-                placeholder = { Text("Command, without /") },
+                placeholder = { Text(stringResource(R.string.command_without)) },
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = Mono),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send, autoCorrectEnabled = false),
@@ -968,7 +973,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                 if (vm.sending) {
                     CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                 } else {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.send))
                 }
             }
         }
@@ -992,7 +997,7 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item(key = "header") {
-            TabHeader("Backup profiles", state.loading) {
+            TabHeader(stringResource(R.string.backup_profiles), state.loading) {
                 vm.loadBackups()
                 vm.loadTasks()
             }
@@ -1003,9 +1008,9 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
         if (list != null && list.isEmpty()) {
             item(key = "empty") {
                 EmptyCard(
-                    title = "No backup profiles found",
-                    body = "You can still trigger the server's default backup.",
-                    action = "Back up now",
+                    title = stringResource(R.string.no_backup_profiles_found),
+                    body = stringResource(R.string.you_can_still_trigger_the_server),
+                    action = stringResource(R.string.back_up_now),
                     busy = vm.backupInFlight != null,
                     onAction = { vm.runBackup(null) },
                 )
@@ -1033,7 +1038,7 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
         }
         item(key = "note") {
             Text(
-                "Backups run on the Crafty host. Downloading backup archives stays in the web panel.",
+                stringResource(R.string.backups_run_on_the_crafty_host),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1049,7 +1054,7 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
             running = vm.stats?.running == true,
             onDismiss = { if (!vm.managing) restoring = null },
             onRestore = { name, inPlace ->
-                verifyUser(activity, "Restore $name", "The server is stopped first", onSuccess = {
+                verifyUser(activity, str(R.string.restore_x, name), str(R.string.the_server_is_stopped_first), onSuccess = {
                     vm.restoreBackup(b, name, inPlace) { restoring = null }
                 })
             },
@@ -1099,7 +1104,7 @@ private fun BackupCard(
                 if (b.isDefault) {
                     Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
                         Text(
-                            "Default",
+                            stringResource(R.string.default),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                         )
@@ -1120,7 +1125,7 @@ private fun BackupCard(
             b.status?.let { status ->
                 Row {
                     Text(
-                        "Last result",
+                        stringResource(R.string.last_result),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(120.dp),
@@ -1135,7 +1140,7 @@ private fun BackupCard(
                 }
             }
             HorizontalDivider(Modifier.padding(vertical = 2.dp))
-            Text("Schedule", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.schedule), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
             when {
                 schedules.isNotEmpty() -> schedules.forEach { t ->
                     Row(
@@ -1160,10 +1165,10 @@ private fun BackupCard(
                         Switch(checked = t.enabled, onCheckedChange = { onToggle(t, it) })
                     }
                 }
-                schedulesLoading -> Text("Loading schedule…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                schedulesError != null -> Text("Couldn't load schedules: $schedulesError", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                schedulesLoading -> Text(stringResource(R.string.loading_schedule), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                schedulesError != null -> Text(stringResource(R.string.couldn_t_load_schedules_x, schedulesError), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 else -> Text(
-                    "Not scheduled yet.",
+                    stringResource(R.string.not_scheduled_yet),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1172,25 +1177,25 @@ private fun BackupCard(
                 OutlinedButton(onClick = onAddSchedule, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Add schedule")
+                    Text(stringResource(R.string.add_schedule))
                 }
                 OutlinedButton(onClick = onEdit, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Settings")
+                    Text(stringResource(R.string.settings))
                 }
             }
             OutlinedButton(onClick = onRestore, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Filled.SettingsBackupRestore, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Restore a backup…")
+                Text(stringResource(R.string.restore_a_backup))
             }
             FilledTonalButton(onClick = onRun, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
                 if (busy) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
                 }
-                Text("Back up now")
+                Text(stringResource(R.string.back_up_now))
             }
         }
     }
@@ -1214,12 +1219,12 @@ private fun SchedulesTab(vm: ServerDetailViewModel) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(key = "header") { TabHeader("Scheduled tasks", state.loading, vm::loadTasks) }
+        item(key = "header") { TabHeader(stringResource(R.string.scheduled_tasks), state.loading, vm::loadTasks) }
         item(key = "new") {
             FilledTonalButton(onClick = { editing = TaskEdit(null, null) }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("New schedule")
+                Text(stringResource(R.string.new_schedule))
             }
         }
         state.error?.let { item(key = "error") { ErrorBanner(it, onRetry = vm::loadTasks) } }
@@ -1228,8 +1233,8 @@ private fun SchedulesTab(vm: ServerDetailViewModel) {
         if (list != null && list.isEmpty()) {
             item(key = "empty") {
                 EmptyCard(
-                    title = "No scheduled tasks",
-                    body = "Tap New schedule to restart, back up, or run a command automatically.",
+                    title = stringResource(R.string.no_scheduled_tasks),
+                    body = stringResource(R.string.tap_new_schedule_to_restart_back),
                 )
             }
         }
@@ -1244,10 +1249,10 @@ private fun SchedulesTab(vm: ServerDetailViewModel) {
     confirmRun?.let { t ->
         AlertDialog(
             onDismissRequest = { confirmRun = null },
-            title = { Text("Run ${t.name} now?") },
+            title = { Text(stringResource(R.string.run_x_now, t.name)) },
             text = { Text(t.command?.let { "${t.actionLabel}: $it" } ?: t.actionLabel) },
-            confirmButton = { TextButton(onClick = { confirmRun = null; vm.runTaskNow(t) }) { Text("Run now") } },
-            dismissButton = { TextButton(onClick = { confirmRun = null }) { Text("Cancel") } },
+            confirmButton = { TextButton(onClick = { confirmRun = null; vm.runTaskNow(t) }) { Text(stringResource(R.string.run_now)) } },
+            dismissButton = { TextButton(onClick = { confirmRun = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -1294,7 +1299,7 @@ private fun TaskCard(t: ScheduledTask, onClick: () -> Unit, onRun: () -> Unit, o
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            IconButton(onClick = onRun) { Icon(Icons.Filled.PlayArrow, contentDescription = "Run now") }
+            IconButton(onClick = onRun) { Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.run_now)) }
             Switch(checked = t.enabled, onCheckedChange = onToggle)
         }
     }
@@ -1310,7 +1315,7 @@ private fun TabHeader(title: String, loading: Boolean, onRefresh: () -> Unit) {
             CircularProgressIndicator(Modifier.size(20.dp).padding(2.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(14.dp))
         } else {
-            IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh") }
+            IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.refresh)) }
         }
     }
 }
@@ -1337,12 +1342,15 @@ private fun EmptyCard(
 // ---------------------------------------------------------------- management pages
 
 /** The full-screen management pages reachable from a server. */
-enum class ManagePage(val route: String, val title: String, val subtitle: String, val icon: ImageVector) {
-    PROPERTIES("properties", "Server settings", "Everything in server.properties", Icons.Filled.Tune),
-    PLAYERS("players", "Players & bans", "Whitelist, operators and bans", Icons.Filled.Group),
-    OPTIONS("options", "Server options", "Name, memory, auto-start, crash detection", Icons.Filled.Settings),
-    ADDONS("addons", "Plugins & mods", "Turn them on or off, add new ones", Icons.Filled.Extension),
-    LOGS("logs", "Logs", "Browse and search older log files", Icons.Filled.Description),
+enum class ManagePage(val route: String, @StringRes private val titleRes: Int, @StringRes private val subtitleRes: Int, val icon: ImageVector) {
+    PROPERTIES("properties", R.string.page_properties, R.string.page_properties_sub, Icons.Filled.Tune),
+    PLAYERS("players", R.string.page_players, R.string.page_players_sub, Icons.Filled.Group),
+    OPTIONS("options", R.string.page_options, R.string.page_options_sub, Icons.Filled.Settings),
+    ADDONS("addons", R.string.page_addons, R.string.page_addons_sub, Icons.Filled.Extension),
+    LOGS("logs", R.string.page_logs, R.string.page_logs_sub, Icons.Filled.Description);
+
+    val title: String get() = str(titleRes)
+    val subtitle: String get() = str(subtitleRes)
 }
 
 @Composable
@@ -1365,7 +1373,7 @@ private fun RestoreDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Filled.SettingsBackupRestore, contentDescription = null) },
-        title = { Text("Restore from ${config.name}") },
+        title = { Text(stringResource(R.string.restore_from_x, config.name)) },
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
@@ -1374,7 +1382,7 @@ private fun RestoreDialog(
                 when {
                     files.loading -> LinearProgressIndicator(Modifier.fillMaxWidth())
                     list.isNotEmpty() -> {
-                        Text("Pick a backup", style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.pick_a_backup), style = MaterialTheme.typography.labelLarge)
                         list.take(30).forEach { f ->
                             Row(
                                 Modifier
@@ -1391,15 +1399,14 @@ private fun RestoreDialog(
                     }
                     else -> {
                         Text(
-                            "Crafty doesn't list backup files through its API, so type the archive's file name " +
-                                "(see the Backups page in the web panel, e.g. 2026-10-14_03-00-00.zip).",
+                            stringResource(R.string.crafty_doesn_t_list_backup_files),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         OutlinedTextField(
                             value = typed,
                             onValueChange = { typed = it },
-                            label = { Text("Backup file name") },
+                            label = { Text(stringResource(R.string.backup_file_name)) },
                             singleLine = true,
                             enabled = !busy,
                             modifier = Modifier.fillMaxWidth(),
@@ -1412,18 +1419,17 @@ private fun RestoreDialog(
                 ) {
                     Checkbox(checked = inPlace, onCheckedChange = { inPlace = it }, enabled = !busy)
                     Column {
-                        Text("Restore in place", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.restore_in_place), style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            if (inPlace) "Backup files overwrite the current ones; files not in the backup stay."
-                            else "The server folder is cleared first, so it ends up exactly like the backup.",
+                            if (inPlace) stringResource(R.string.backup_files_overwrite_the_current_ones)
+                            else stringResource(R.string.the_server_folder_is_cleared_first),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
                 Text(
-                    (if (running) "The server is stopped first. " else "") +
-                        "Everything since this backup is lost. Type RESTORE to confirm.",
+                    if (running) stringResource(R.string.restore_warning_running) else stringResource(R.string.everything_since_this_backup_is_lost),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -1440,10 +1446,10 @@ private fun RestoreDialog(
         },
         confirmButton = {
             TextButton(onClick = { onRestore(name, inPlace) }, enabled = name.isNotEmpty() && armed && !busy) {
-                Text("Restore", color = if (name.isNotEmpty() && armed && !busy) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.restore), color = if (name.isNotEmpty() && armed && !busy) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -1462,15 +1468,15 @@ private fun CountdownBanner(c: Countdown, onCancel: () -> Unit) {
             Dot(MaterialTheme.colorScheme.tertiary)
             Spacer(Modifier.width(10.dp))
             Text(
-                (if (c.action == PowerAction.RESTART) "Restarting in " else "Stopping in ") + "%d:%02d".format(left / 60, left % 60),
+                (if (c.action == PowerAction.RESTART) stringResource(R.string.restarting_in) else stringResource(R.string.stopping_in)) + "%d:%02d".format(left / 60, left % 60),
                 style = MaterialTheme.typography.bodyLarge,
                 fontFamily = Mono,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = onCancel) { Text("Cancel") }
+            TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
         }
         Text(
-            "Players get chat warnings as it counts down. Keep the app open until it's done.",
+            stringResource(R.string.players_get_chat_warnings_as_it),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1495,9 +1501,9 @@ private fun PowerDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(action.confirmText.orEmpty())
                 if (canWarn) {
-                    Text("When", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.when), style = MaterialTheme.typography.labelLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(0 to "Now", 60 to "1 min", 300 to "5 min", 600 to "10 min").forEach { (sec, label) ->
+                        listOf(0 to stringResource(R.string.now)) + listOf(1, 5, 10).map { it * 60 to stringResource(R.string.x_min, it) }.forEach { (sec, label) ->
                             FilterChip(selected = delay == sec, onClick = { delay = sec }, label = { Text(label) })
                         }
                     }
@@ -1505,20 +1511,20 @@ private fun PowerDialog(
                         OutlinedTextField(
                             value = note,
                             onValueChange = { note = it },
-                            label = { Text("Reason (optional)") },
-                            placeholder = { Text("e.g. Updating plugins") },
+                            label = { Text(stringResource(R.string.reason_optional)) },
+                            placeholder = { Text(stringResource(R.string.e_g_updating_plugins)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Text(
-                            "Players are warned in chat at the start and as it counts down.",
+                            stringResource(R.string.players_are_warned_in_chat_at),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
                 Text(
-                    "You'll confirm with your fingerprint, face or screen lock.",
+                    stringResource(R.string.you_ll_confirm_with_your_fingerprint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1527,11 +1533,11 @@ private fun PowerDialog(
         confirmButton = {
             TextButton(onClick = { onConfirm(delay, note.trim().ifEmpty { null }) }) {
                 Text(
-                    if (delay > 0) "Warn & ${action.label.lowercase()}" else action.label,
+                    if (delay > 0) stringResource(R.string.warn_x, action.label.lowercase()) else action.label,
                     color = if (action.dangerous || action == PowerAction.STOP) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 )
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

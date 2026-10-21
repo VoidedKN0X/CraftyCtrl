@@ -35,10 +35,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import androidx.annotation.StringRes
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
+import com.vknxworks.craftyctrl.plural
 
 private fun Exception.userMessage(): String {
     if (this is CancellationException) throw this
-    return message?.takeIf { it.isNotBlank() } ?: "Something went wrong."
+    return message?.takeIf { it.isNotBlank() } ?: str(R.string.something_went_wrong)
 }
 
 // ---------------------------------------------------------------- session
@@ -81,7 +85,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val base = CraftyApi.normalizeUrl(url)
                 if (base.startsWith("http://", ignoreCase = true)) {
-                    loginError = "Use an https:// address — this app only talks to Crafty over HTTPS."
+                    loginError = str(R.string.use_an_https_address_this_app)
                     return@launch
                 }
                 val token = when (mode) {
@@ -98,7 +102,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
                 session = s
             } catch (e: Exception) {
                 loginError = if (e is CraftyException && e.httpCode in listOf(401, 403) && mode == AuthMode.API_KEY) {
-                    "Crafty rejected that API key."
+                    str(R.string.crafty_rejected_that_api_key)
                 } else {
                     e.userMessage()
                 }
@@ -217,9 +221,9 @@ class ServerListViewModel(private val api: CraftyApi) : ViewModel() {
             onDone()
             messages.send(
                 when {
-                    targets.isEmpty() -> "No servers are running."
-                    failed.isEmpty() -> "Sent to ${targets.size} server${if (targets.size == 1) "" else "s"}"
-                    else -> "Couldn't send to ${failed.joinToString()}"
+                    targets.isEmpty() -> str(R.string.no_servers_are_running)
+                    failed.isEmpty() -> plural(R.plurals.sent_to_servers, targets.size, targets.size)
+                    else -> str(R.string.couldn_t_send_to_x, failed.joinToString())
                 },
             )
         }
@@ -238,11 +242,14 @@ private const val HOST_SAMPLES = 60
 
 // ---------------------------------------------------------------- server detail
 
-enum class PowerAction(val apiName: String, val label: String, val confirmText: String?, val dangerous: Boolean) {
-    START("start_server", "Start", null, false),
-    RESTART("restart_server", "Restart", "Players will be disconnected while the server restarts.", false),
-    STOP("stop_server", "Stop", "Sends the server's stop command. Players will be disconnected.", false),
-    KILL("kill_server", "Kill", "Force-kills the process without saving. Use only if the server is stuck.", true),
+enum class PowerAction(val apiName: String, @StringRes private val labelRes: Int, @StringRes private val confirmRes: Int?, val dangerous: Boolean) {
+    START("start_server", R.string.power_start, null, false),
+    RESTART("restart_server", R.string.power_restart, R.string.power_restart_confirm, false),
+    STOP("stop_server", R.string.power_stop, R.string.power_stop_confirm, false),
+    KILL("kill_server", R.string.power_kill, R.string.power_kill_confirm, true);
+
+    val label: String get() = str(labelRes)
+    val confirmText: String? get() = confirmRes?.let { str(it) }
 }
 
 data class Loadable<T>(val data: T? = null, val loading: Boolean = false, val error: String? = null)
@@ -274,7 +281,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         private set
 
     fun runDiagnostics() {
-        diagnostics = "Running…"
+        diagnostics = str(R.string.running)
         viewModelScope.launch {
             val root = info?.path.orEmpty()
             val checks = listOf(
@@ -361,7 +368,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                         files = Loadable(r.entries)
                     }
                     is FileResult.Text -> {
-                        files = files.copy(loading = false, error = "That's a file, not a folder.")
+                        files = files.copy(loading = false, error = str(R.string.that_s_a_file_not_a))
                     }
                 }
             } catch (e: Exception) {
@@ -390,13 +397,13 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         val folder = filePath ?: return
         if (!inServerFolder(folder)) return
         if (!com.vknxworks.craftyctrl.data.isSafeEntryName(name.trim())) {
-            viewModelScope.launch { _messages.send("Use a plain name, without / or \\.") }
+            viewModelScope.launch { _messages.send(str(R.string.use_a_plain_name_without_or)) }
             return
         }
         viewModelScope.launch {
             try {
                 api.createEntry(serverId, folder, name, directory)
-                _messages.send(if (directory) "Folder created" else "File created")
+                _messages.send(if (directory) str(R.string.folder_created) else str(R.string.file_created))
                 openFolder(folder)
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
@@ -437,13 +444,13 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         if (!insideServer(entry.path)) return
         // A rename stays in the same folder: a name with a separator or ".." would move the item elsewhere.
         if (!com.vknxworks.craftyctrl.data.isSafeEntryName(newName.trim())) {
-            viewModelScope.launch { _messages.send("Use a plain name, without / or \\.") }
+            viewModelScope.launch { _messages.send(str(R.string.use_a_plain_name_without_or)) }
             return
         }
         viewModelScope.launch {
             try {
                 api.renameEntry(serverId, entry.path, newName)
-                _messages.send("Renamed to $newName")
+                _messages.send(str(R.string.renamed_to_x, newName))
                 openFolder(folder)
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
@@ -464,29 +471,29 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                     val target = uniqueName(c.entry.name, existing)
                     val text = when (val r = api.browse(serverId, c.entry.path)) {
                         is FileResult.Text -> r.contents
-                        is FileResult.Folder -> throw IllegalStateException("Folders can't be copied.")
+                        is FileResult.Folder -> throw IllegalStateException(str(R.string.folders_can_t_be_copied))
                     }
                     api.createEntry(serverId, dest, target, false)
                     api.saveFile(serverId, join(dest, target), text)
-                    _messages.send("Copied to $target")
+                    _messages.send(str(R.string.copied_to_x, target))
                 } else {
                     val destTrim = dest.trimEnd('/')
                     when {
                         destTrim == c.fromFolder.trimEnd('/') -> {
-                            _messages.send("It's already in this folder.")
+                            _messages.send(str(R.string.it_s_already_in_this_folder))
                             return@launch
                         }
                         c.entry.isDir && (destTrim == c.entry.path.trimEnd('/') || destTrim.startsWith(c.entry.path.trimEnd('/') + "/")) -> {
-                            _messages.send("A folder can't be moved into itself.")
+                            _messages.send(str(R.string.a_folder_can_t_be_moved))
                             return@launch
                         }
                         files.data.orEmpty().any { it.name == c.entry.name } -> {
-                            _messages.send("This folder already has an item called ${c.entry.name}.")
+                            _messages.send(str(R.string.this_folder_already_has_an_item, c.entry.name))
                             return@launch
                         }
                     }
                     api.renameEntry(serverId, c.entry.path, relativePath(c.fromFolder, dest) + c.entry.name)
-                    _messages.send("Moved ${c.entry.name}")
+                    _messages.send(str(R.string.moved_x, c.entry.name))
                 }
                 clip = null
                 openFolder(dest)
@@ -500,13 +507,13 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         val folder = filePath ?: return
         // Never delete the server's own folder or anything outside it.
         if (!insideServer(entry.path)) {
-            viewModelScope.launch { _messages.send("That item isn't inside this server's folder.") }
+            viewModelScope.launch { _messages.send(str(R.string.that_item_isn_t_inside_this)) }
             return
         }
         viewModelScope.launch {
             try {
                 api.deleteEntry(serverId, entry.path)
-                _messages.send("Deleted ${entry.name}")
+                _messages.send(str(R.string.deleted_x, entry.name))
                 openFolder(folder)
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
@@ -532,11 +539,11 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                     }
                 }
                 if (size < 0) {
-                    _messages.send("Couldn't read the file size.")
+                    _messages.send(str(R.string.couldn_t_read_the_file_size))
                     return@launch
                 }
                 val input = resolver.openInputStream(uri) ?: run {
-                    _messages.send("Couldn't open that file.")
+                    _messages.send(str(R.string.couldn_t_open_that_file))
                     return@launch
                 }
                 input.use { stream ->
@@ -544,7 +551,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                         uploadProgress = p
                     }
                 }
-                _messages.send("Uploaded $name")
+                _messages.send(str(R.string.uploaded_x, name))
                 openFolder(folder)
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
@@ -649,7 +656,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
             try {
                 api.acceptEula(serverId, path)
             } catch (e: Exception) {
-                _messages.send("Couldn't write eula.txt: ${e.userMessage()}")
+                _messages.send(str(R.string.couldn_t_write_eula_txt_x, e.userMessage()))
                 return@launch
             }
             runAction(PowerAction.START, skipEulaCheck = true)
@@ -670,7 +677,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                     return@launch
                 }
                 api.action(serverId, action.apiName)
-                _messages.send("${action.label} sent")
+                _messages.send(str(R.string.x_sent, action.label))
                 delay(1500)
                 refreshStats()
             } catch (e: Exception) {
@@ -729,7 +736,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                     if (config?.id == null || e.httpCode !in listOf(400, 404, 405)) throw e
                     api.action(serverId, "backup_server")
                 }
-                _messages.send("Backup started: ${config?.name ?: "default"}")
+                _messages.send(str(R.string.backup_started_x, config?.name ?: str(R.string.backup_default)))
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
             } finally {
@@ -759,7 +766,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
             savingEdit = true
             try {
                 if (existing == null) api.createTask(serverId, fields) else api.updateTask(serverId, existing.id, fields)
-                _messages.send(if (existing == null) "Schedule created" else "Schedule saved")
+                _messages.send(if (existing == null) str(R.string.schedule_created) else str(R.string.schedule_saved))
                 onDone()
                 loadTasks()
             } catch (e: Exception) {
@@ -776,7 +783,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
             savingEdit = true
             try {
                 api.deleteTask(serverId, task.id)
-                _messages.send("Schedule deleted")
+                _messages.send(str(R.string.schedule_deleted))
                 onDone()
                 loadTasks()
             } catch (e: Exception) {
@@ -793,7 +800,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
             savingEdit = true
             try {
                 api.updateBackup(serverId, config.id, fields)
-                _messages.send("Backup settings saved")
+                _messages.send(str(R.string.backup_settings_saved))
                 onDone()
                 loadBackups()
             } catch (e: Exception) {
@@ -826,12 +833,12 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         Countdowns.start(api, serverId, action, seconds, note) { err ->
             viewModelScope.launch { _messages.send(err) }
         }
-        viewModelScope.launch { _messages.send("Players warned: ${action.label.lowercase()} in ${Countdowns.human(seconds)}") }
+        viewModelScope.launch { _messages.send(str(R.string.players_warned_x_in_x, action.label.lowercase(), Countdowns.human(seconds))) }
     }
 
     fun cancelCountdown() {
         Countdowns.cancel(api, serverId)
-        viewModelScope.launch { _messages.send("Cancelled") }
+        viewModelScope.launch { _messages.send(str(R.string.cancelled)) }
     }
 
     // ------------------------------------------------------------ run now, unzip, update, clone, restore
@@ -853,7 +860,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                         null -> throw e
                     }
                 }
-                _messages.send("Ran ${task.name}")
+                _messages.send(str(R.string.ran_x, task.name))
                 delay(1200)
                 refreshStats()
             } catch (e: Exception) {
@@ -867,9 +874,9 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         if (!insideServer(entry.path)) return
         viewModelScope.launch {
             try {
-                _messages.send("Extracting ${entry.name}…")
+                _messages.send(str(R.string.extracting_x, entry.name))
                 api.unzip(serverId, entry.path)
-                _messages.send("Extracted ${entry.name}")
+                _messages.send(str(R.string.extracted_x, entry.name))
                 delay(800)
                 openFolder(folder)
             } catch (e: Exception) {
@@ -894,7 +901,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 delay(2_000)
                 if (runCatching { !api.stats(serverId).running }.getOrDefault(false)) return
             }
-            throw CraftyException(0, "STILL_RUNNING", "The server didn't stop within a minute. Try again, or kill it first.")
+            throw CraftyException(0, "STILL_RUNNING", str(R.string.the_server_didn_t_stop_within))
         }
     }
 
@@ -906,7 +913,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
             try {
                 stopAndWait()
                 api.action(serverId, "update_executable")
-                _messages.send("Update started. Crafty downloads the new server jar; start the server when it's done.")
+                _messages.send(str(R.string.update_started_crafty_downloads_the_new))
                 delay(1500)
                 refreshStats()
             } catch (e: Exception) {
@@ -928,9 +935,9 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 val id = (data?.get("new_server_id") as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
                     ?: (data?.get("new_server_uuid") as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
                 if (id == null) {
-                    _messages.send("Clone started. It appears in the server list when Crafty is done.")
+                    _messages.send(str(R.string.clone_started_it_appears_in_the))
                 } else {
-                    val name = runCatching { api.serverInfo(id)?.name }.getOrNull() ?: "Copy of ${info?.name.orEmpty()}"
+                    val name = runCatching { api.serverInfo(id)?.name }.getOrNull() ?: str(R.string.copy_of_x, info?.name.orEmpty())
                     onCloned(id, name)
                 }
             } catch (e: Exception) {
@@ -948,7 +955,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     fun loadBackupFiles(config: BackupConfig) {
         viewModelScope.launch {
             backupFiles = Loadable(loading = true)
-            val location = config.details.firstOrNull { it.first == "Location" }?.second
+            val location = config.details.firstOrNull { it.first == str(R.string.backup_field_location) }?.second
             backupFiles = try {
                 Loadable(api.backupFiles(serverId, config.id, location) ?: emptyList())
             } catch (e: Exception) {
@@ -964,7 +971,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
             try {
                 stopAndWait()
                 api.restoreBackup(serverId, config.id, fileName.trim(), inPlace)
-                _messages.send("Restoring $fileName. Start the server when Crafty is done.")
+                _messages.send(str(R.string.restoring_x_start_the_server_when, fileName))
                 onDone()
                 delay(1500)
                 refreshStats()

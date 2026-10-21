@@ -3,6 +3,18 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.6.1] - 2026-10-21
+
+A tidy-up release: all of CraftyCtrl's text now lives in one place.
+
+### Changed
+
+- **All text is now in one place, ready for translations.** Every label, message, notification and error the app shows now comes from a single list instead of being written into the code
+- **Counts read properly for one and for more than one**: "1 server" and "3 servers", "1 player online", "Save 1 change", "Fix 1 invalid value", "1 core", "1 day", "1 minute" and "15 seconds" in the alert and refresh intervals, and "Every hour" or "Every 5 hours" for schedules (also for seconds, days and weeks)
+- **Delete server** now says "The server is removed from Crafty (it will be stopped first). This can't be undone." as one sentence, and the **Restore** warning reads as one message too
+- **The countdown warnings sent to players** ("Server restarting in 5 minutes.") and the in-app message when a countdown action fails ("Restart failed.") are worded the same way as the rest of the app
+- The repeat units in the schedule editor (minutes, hours, days) and the min, avg and max under the stats charts now come from the same text list, ready for translation
+
 ## [2.6.0] - 2026-10-21
 
 Settings now open from your profile picture, the same in every Ctrl app.

@@ -58,6 +58,10 @@ import com.vknxworks.craftyctrl.ui.IslandTab
 import com.vknxworks.craftyctrl.ui.TabIsland
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
+import androidx.compose.ui.res.stringResource
+import com.vknxworks.craftyctrl.R
+import androidx.compose.ui.res.pluralStringResource
+import com.vknxworks.craftyctrl.str
 
 /** Home: Servers and Host as bottom tabs, like the other Ctrl apps. */
 @Composable
@@ -107,15 +111,15 @@ fun ServerListScreen(
             ExtendedFloatingActionButton(
                 onClick = onCreate,
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text("New server") },
+                text = { Text(stringResource(R.string.new_server)) },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = islandSpace + 12.dp),
             )
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = islandSpace))
         TabIsland(
             tabs = listOf(
-                IslandTab(0, if (tab == 0) Icons.Filled.Dns else Icons.Outlined.Dns, "Servers"),
-                IslandTab(1, if (tab == 1) Icons.Filled.Memory else Icons.Outlined.Memory, "Host"),
+                IslandTab(0, if (tab == 0) Icons.Filled.Dns else Icons.Outlined.Dns, stringResource(R.string.servers)),
+                IslandTab(1, if (tab == 1) Icons.Filled.Memory else Icons.Outlined.Memory, stringResource(R.string.host)),
             ),
             selected = tab,
             hazeState = haze,
@@ -131,18 +135,18 @@ fun ServerListScreen(
         AlertDialog(
             onDismissRequest = { if (!vm.broadcasting) broadcastOpen = false },
             icon = { Icon(Icons.Outlined.Campaign, contentDescription = null) },
-            title = { Text("Broadcast") },
+            title = { Text(stringResource(R.string.broadcast)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        "Sends a chat message to every running server ($running now).",
+                        stringResource(R.string.sends_a_chat_message_to_every, running),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     OutlinedTextField(
                         value = text,
                         onValueChange = { text = it },
-                        label = { Text("Message") },
+                        label = { Text(stringResource(R.string.message)) },
                         enabled = !vm.broadcasting,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -150,10 +154,10 @@ fun ServerListScreen(
             },
             confirmButton = {
                 TextButton(onClick = { vm.broadcast(text) { broadcastOpen = false } }, enabled = text.isNotBlank() && !vm.broadcasting && running > 0) {
-                    Text("Send")
+                    Text(stringResource(R.string.send))
                 }
             },
-            dismissButton = { TextButton(onClick = { broadcastOpen = false }, enabled = !vm.broadcasting) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { broadcastOpen = false }, enabled = !vm.broadcasting) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -188,27 +192,27 @@ private fun ServersTab(
             item(key = "header") {
                 CtrlHeader(
                     icon = Icons.Outlined.Dns,
-                    title = "Servers",
+                    title = stringResource(R.string.servers),
                     subtitle = listOfNotNull(
                         host,
-                        vm.rows.takeIf { it.isNotEmpty() }?.let { "${it.size} servers" },
-                        vm.rows.takeIf { it.isNotEmpty() }?.let { "$running running" },
+                        vm.rows.takeIf { it.isNotEmpty() }?.let { pluralStringResource(R.plurals.count_servers, it.size, it.size) },
+                        vm.rows.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.x_running, running) },
                     ).joinToString(" · "),
                     modifier = Modifier.padding(bottom = 4.dp),
                 ) {
-                    FilledTonalIconButton(onClick = onBroadcast) { Icon(Icons.Outlined.Campaign, "Broadcast") }
+                    FilledTonalIconButton(onClick = onBroadcast) { Icon(Icons.Outlined.Campaign, stringResource(R.string.broadcast)) }
                     ProfileButton(username, onYou)
                 }
             }
             when {
                 vm.error != null && vm.rows.isEmpty() -> item(key = "error") {
-                    EmptyState("Can't reach Crafty", vm.error!!, "Retry", onAction = vm::refreshNow)
+                    EmptyState(stringResource(R.string.can_t_reach_crafty), vm.error!!, stringResource(R.string.retry), onAction = vm::refreshNow)
                 }
                 vm.loading && vm.rows.isEmpty() -> item(key = "loading") {
                     Box(Modifier.fillMaxWidth().height(320.dp), Alignment.Center) { CircularProgressIndicator() }
                 }
                 vm.rows.isEmpty() -> item(key = "empty") {
-                    EmptyState("No servers yet", "This account can't see any servers. Check its role in Crafty, or create one.", icon = Icons.Outlined.Dns)
+                    EmptyState(stringResource(R.string.no_servers_yet), stringResource(R.string.this_account_can_t_see_any), icon = Icons.Outlined.Dns)
                 }
                 else -> {
                     vm.error?.let { message -> item(key = "error-banner") { ErrorBanner(message, onRetry = vm::refreshNow) } }
@@ -245,19 +249,19 @@ private fun ServerCard(row: ServerRow, modifier: Modifier, onClick: () -> Unit) 
                 Dot(stateColor(s?.state))
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    s?.state?.label ?: "Unknown",
+                    s?.state?.label ?: stringResource(R.string.unknown),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
         when {
-            s == null -> Text("Stats unavailable", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            s == null -> Text(stringResource(R.string.stats_unavailable), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             live -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 BigStat("CPU", s.cpu?.let { "%.0f%%".format(it) } ?: "—", Modifier.weight(1f))
-                BigStat("Memory", s.mem?.replace(" ", "") ?: "—", Modifier.weight(1f))
+                BigStat(stringResource(R.string.memory), s.mem?.replace(" ", "") ?: "—", Modifier.weight(1f))
                 BigStat(
-                    if (s.playersKnown) "Players" else "Uptime",
+                    if (s.playersKnown) stringResource(R.string.players) else stringResource(R.string.uptime),
                     if (s.playersKnown) playersText(s.online, s.max).replace(" ", "") else s.started?.let { uptimeShort(it) } ?: "—",
                     Modifier.weight(1f),
                 )
@@ -273,19 +277,19 @@ private fun HostTab(vm: ServerListViewModel, host: String, bottomPadding: Dp, us
     Column(Modifier.fillMaxSize().background(cs.background)) {
         CtrlHeader(
             icon = Icons.Outlined.Memory,
-            title = "Host",
+            title = stringResource(R.string.host),
             subtitle = when {
-                vm.hostError != null && h != null -> "Offline · showing last data"
+                vm.hostError != null && h != null -> stringResource(R.string.offline_showing_last_data)
                 h == null && vm.hostError != null -> host
-                h == null -> "Loading…"
-                else -> listOfNotNull(host, h.cpuCores?.let { "$it cores" }, "live").joinToString(" · ")
+                h == null -> stringResource(R.string.loading)
+                else -> listOfNotNull(host, h.cpuCores?.let { pluralStringResource(R.plurals.cpu_cores, it, it) }, stringResource(R.string.live)).joinToString(" · ")
             },
             subtitleColor = if (vm.hostError != null && h != null) cs.error else cs.onSurfaceVariant,
             modifier = Modifier.statusBarsPadding().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
         ) { ProfileButton(username, onYou) }
         if (h == null) {
             Box(Modifier.fillMaxSize().padding(bottom = bottomPadding), Alignment.Center) {
-                if (vm.hostError != null) EmptyState("Host stats unavailable", vm.hostError!!, icon = Icons.Outlined.Memory)
+                if (vm.hostError != null) EmptyState(stringResource(R.string.host_stats_unavailable), vm.hostError!!, icon = Icons.Outlined.Memory)
                 else CircularProgressIndicator()
             }
             return@Column
@@ -296,23 +300,23 @@ private fun HostTab(vm: ServerListViewModel, host: String, bottomPadding: Dp, us
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             HostOverview(vm, h)
-            CtrlCard("System") {
+            CtrlCard(stringResource(R.string.system)) {
                 Meter("CPU", h.cpuPercent, h.cpuPercent?.let { "%.0f %%".format(it) + (h.cpuFreq?.let { f -> " · $f" } ?: "") })
-                Meter("Memory", h.memPercent, listOfNotNull(h.memUsed, h.memTotal).joinToString(" of ").ifEmpty { null })
+                Meter(stringResource(R.string.memory), h.memPercent, usedOf(h.memUsed, h.memTotal))
             }
             if (h.disks.isNotEmpty()) {
-                CtrlCard("Storage") {
+                CtrlCard(stringResource(R.string.storage)) {
                     h.disks.forEach { d ->
-                        Meter(d.mount, d.percent, listOfNotNull(d.used, d.total).joinToString(" of ").ifEmpty { null })
+                        Meter(d.mount, d.percent, usedOf(d.used, d.total))
                     }
                 }
             }
             h.bootTime?.let { boot ->
-                CtrlCard("Machine") {
-                    StatRow("Up since", boot.substringBefore('.'))
+                CtrlCard(stringResource(R.string.machine)) {
+                    StatRow(stringResource(R.string.up_since), boot.substringBefore('.'))
                     parseTimestamp(boot)?.let { t ->
                         val days = (System.currentTimeMillis() - t) / 86_400_000
-                        StatRow("Uptime", if (days > 0) "$days days" else "under a day")
+                        StatRow(stringResource(R.string.uptime), if (days > 0) pluralStringResource(R.plurals.x_days, days.toInt(), days.toInt()) else stringResource(R.string.under_a_day))
                     }
                 }
             }
@@ -326,8 +330,8 @@ private fun HostOverview(vm: ServerListViewModel, h: HostStats) {
     val players = vm.rows.sumOf { r -> r.stats?.takeIf { it.running }?.online ?: 0 }
     CtrlCard {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BigStat("Servers running", "$running/${vm.rows.size}", Modifier.weight(1f))
-            BigStat("Players online", "$players", Modifier.weight(1f))
+            BigStat(stringResource(R.string.servers_running), "$running/${vm.rows.size}", Modifier.weight(1f))
+            BigStat(stringResource(R.string.players_online_2), "$players", Modifier.weight(1f))
             BigStat("CPU", h.cpuPercent?.let { "%.0f%%".format(it) } ?: "—", Modifier.weight(1f))
         }
     }
@@ -347,6 +351,13 @@ internal fun prettyType(type: String): String? = when (type) {
 }
 
 /** "2d 4h", "6h 12m", "8m" since [started], or null if it can't be read. */
+/** "3.1 GB of 8 GB", or whichever of the two is known. */
+@Composable
+private fun usedOf(used: String?, total: String?): String? = when {
+    used != null && total != null -> stringResource(R.string.x_of_x, used, total)
+    else -> used ?: total
+}
+
 internal fun uptimeShort(started: String): String? {
     val t = parseTimestamp(started) ?: return null
     val mins = ((System.currentTimeMillis() - t) / 60_000).coerceAtLeast(0)
@@ -354,8 +365,8 @@ internal fun uptimeShort(started: String): String? {
     val h = (mins % 1440) / 60
     val m = mins % 60
     return when {
-        d > 0 -> "${d}d ${h}h"
-        h > 0 -> "${h}h ${m}m"
-        else -> "${m}m"
+        d > 0 -> str(R.string.short_d_h, d, h)
+        h > 0 -> str(R.string.short_h_m, h, m)
+        else -> str(R.string.short_m, m)
     }
 }

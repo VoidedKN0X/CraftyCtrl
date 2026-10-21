@@ -37,6 +37,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicInteger
+import com.vknxworks.craftyctrl.str
+import com.vknxworks.craftyctrl.plural
 
 /**
  * Polls Crafty in the background and notifies when a server stops or crashes.
@@ -66,7 +68,7 @@ class MonitorService : Service() {
         ensureChannels(this)
         // Must come first: Android kills the app if a foreground start isn't confirmed quickly.
         try {
-            startInForeground(status("Starting…"))
+            startInForeground(status(str(R.string.starting)))
         } catch (e: Exception) {
             // e.g. restarted by the system while the app is in the background (Android 12+).
             stopSelf()
@@ -119,13 +121,13 @@ class MonitorService : Service() {
                 throw e
             } catch (e: CraftyException) {
                 if (e.httpCode == 401) {
-                    alert("Server alerts paused", "Crafty signed this phone out. Open the app to sign in again.", CHANNEL_SHUTDOWN)
+                    alert(str(R.string.alerts_paused), str(R.string.alerts_paused_body), CHANNEL_SHUTDOWN)
                     stopSelf()
                     return
                 }
-                notifyStatus(status("Can't reach Crafty: ${e.message}"))
+                notifyStatus(status(str(R.string.can_t_reach_crafty_x, e.message)))
             } catch (e: Exception) {
-                notifyStatus(status("Can't reach Crafty"))
+                notifyStatus(status(str(R.string.can_t_reach_crafty)))
             }
             delay(settings.alertIntervalSeconds.coerceAtLeast(10) * 1000L)
         }
@@ -164,14 +166,18 @@ class MonitorService : Service() {
             when {
                 // Crashes are reported straight away.
                 now.crashed && !before.crashed ->
-                    alert("${server.name} crashed", "Crafty detected a crash.", CHANNEL_SHUTDOWN)
+                    alert(str(R.string.x_crashed, server.name), str(R.string.crafty_detected_a_crash), CHANNEL_SHUTDOWN)
                 // A plain stop must hold for two polls, so restarts don't alert.
                 !now.crashed && now.stoppedPolls == 2 && now.wasRunningBeforeStop ->
-                    alert("${server.name} stopped", "The server is no longer running.", CHANNEL_SHUTDOWN)
+                    alert(str(R.string.x_stopped, server.name), str(R.string.the_server_is_no_longer_running), CHANNEL_SHUTDOWN)
             }
         }
-        val summary = "Watching ${servers.size} server${if (servers.size == 1) "" else "s"} · " +
-            "$running running · $playersOnline player${if (playersOnline == 1) "" else "s"} online"
+        val summary = str(
+            R.string.monitor_summary,
+            plural(R.plurals.watching_servers, servers.size, servers.size),
+            str(R.string.x_running, running),
+            plural(R.plurals.players_online, playersOnline, playersOnline),
+        )
         notifyStatus(status(summary))
     }
 
@@ -196,12 +202,12 @@ class MonitorService : Service() {
             PendingIntent.FLAG_IMMUTABLE,
         )
         // Turning alerts off from the lock screen needs the phone unlocked first.
-        val turnOff = NotificationCompat.Action.Builder(0, "Turn off", stop)
+        val turnOff = NotificationCompat.Action.Builder(0, str(R.string.turn_off), stop)
             .setAuthenticationRequired(true)
             .build()
         return NotificationCompat.Builder(this, CHANNEL_STATUS)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Server alerts on")
+            .setContentTitle(str(R.string.server_alerts_on))
             .setContentText(text)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -209,7 +215,7 @@ class MonitorService : Service() {
             .setContentIntent(openAppIntent())
             .addAction(turnOff)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setPublicVersion(publicVersion(CHANNEL_STATUS, "Server alerts on"))
+            .setPublicVersion(publicVersion(CHANNEL_STATUS, str(R.string.server_alerts_on)))
             .build()
     }
 
@@ -237,7 +243,7 @@ class MonitorService : Service() {
             .setContentIntent(openAppIntent())
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setPublicVersion(publicVersion(channel, "A server needs attention"))
+            .setPublicVersion(publicVersion(channel, str(R.string.a_server_needs_attention)))
             .build()
         NotificationManagerCompat.from(this).notify(nextId.incrementAndGet(), n)
     }
@@ -250,7 +256,7 @@ class MonitorService : Service() {
         NotificationCompat.Builder(this, channel)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
-            .setContentText("Unlock to see details")
+            .setContentText(str(R.string.unlock_to_see_details))
             .build()
 
     @SuppressLint("WakelockTimeout")
@@ -285,12 +291,12 @@ class MonitorService : Service() {
         fun ensureChannels(context: Context) {
             val nm = context.getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_STATUS, "Alerts service", NotificationManager.IMPORTANCE_MIN).apply {
-                    description = "Quiet notification shown while server alerts are on"
+                NotificationChannel(CHANNEL_STATUS, str(R.string.channel_alerts_service), NotificationManager.IMPORTANCE_MIN).apply {
+                    description = str(R.string.channel_alerts_service_desc)
                 },
             )
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_SHUTDOWN, "Server stopped or crashed", NotificationManager.IMPORTANCE_HIGH),
+                NotificationChannel(CHANNEL_SHUTDOWN, str(R.string.channel_shutdown), NotificationManager.IMPORTANCE_HIGH),
             )
             // Player-join and backup alerts were removed; drop their channels from Android's settings too.
             nm.deleteNotificationChannel("alerts_players")

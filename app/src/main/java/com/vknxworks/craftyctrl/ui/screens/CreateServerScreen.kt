@@ -90,6 +90,9 @@ import kotlinx.serialization.json.putJsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
+import androidx.compose.ui.res.stringResource
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
 
 enum class Edition { JAVA, BEDROCK }
 
@@ -157,7 +160,7 @@ class CreateServerViewModel(private val api: CraftyApi) : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                error = e.message ?: "Crafty couldn't create the server."
+                error = e.message ?: str(R.string.crafty_couldn_t_create_the_server)
                 step = CreateStep.Form
                 return@launch
             }
@@ -175,7 +178,7 @@ class CreateServerViewModel(private val api: CraftyApi) : ViewModel() {
                 delay(2_000)
             }
             if (!ready) {
-                step = CreateStep.Done(id, name, false, "Crafty is still preparing the server. Start it from its page once it's ready.")
+                step = CreateStep.Done(id, name, false, str(R.string.crafty_is_still_preparing_the_server))
                 return@launch
             }
             if (!startAfter) {
@@ -192,7 +195,7 @@ class CreateServerViewModel(private val api: CraftyApi) : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                "Created, but starting failed: ${e.message}"
+                str(R.string.created_but_starting_failed_x, e.message)
             }
             step = CreateStep.Done(id, name, note == null, note)
         }
@@ -259,10 +262,10 @@ fun CreateServerScreen(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
-                title = { Text("New server", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.new_server), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack, enabled = !busy) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -276,12 +279,12 @@ fun CreateServerScreen(
         ) {
             when (val s = vm.step) {
                 CreateStep.Form -> CreateForm(vm)
-                CreateStep.Creating -> Progress("Creating the server…", null)
+                CreateStep.Creating -> Progress(stringResource(R.string.creating_the_server), null)
                 is CreateStep.Downloading -> Progress(
-                    "Downloading server files…",
-                    "Crafty is fetching the server software. This usually takes under a minute (${s.seconds}s so far).",
+                    stringResource(R.string.downloading_server_files),
+                    stringResource(R.string.crafty_is_fetching_the_server_software, s.seconds),
                 )
-                CreateStep.Starting -> Progress("Starting the server…", null)
+                CreateStep.Starting -> Progress(stringResource(R.string.starting_the_server), null)
                 is CreateStep.Done -> DoneView(s, onBack = onBack, onOpen = { onOpenServer(s.id, s.name) })
             }
         }
@@ -319,13 +322,13 @@ private fun CreateForm(vm: CreateServerViewModel) {
     val maxGb = memMax.replace(',', '.').toDoubleOrNull()
 
     val problem = when {
-        name.trim().length < 2 -> "Give the server a name"
-        vm.existing.any { it.name.equals(name.trim(), ignoreCase = true) } -> "A server with that name already exists"
-        portNum == null || portNum !in 1024..65535 -> "Port must be between 1024 and 65535"
-        edition == Edition.JAVA && version.isBlank() -> "Choose a version"
+        name.trim().length < 2 -> stringResource(R.string.give_the_server_a_name)
+        vm.existing.any { it.name.equals(name.trim(), ignoreCase = true) } -> stringResource(R.string.a_server_with_that_name_already_exists)
+        portNum == null || portNum !in 1024..65535 -> stringResource(R.string.port_must_be_between_1024_and)
+        edition == Edition.JAVA && version.isBlank() -> stringResource(R.string.choose_a_version)
         edition == Edition.JAVA && (minGb == null || maxGb == null || minGb <= 0 || maxGb < minGb) ->
-            "Memory: max must be at least min, and both above 0"
-        !eula -> "Accept the Minecraft EULA to continue"
+            stringResource(R.string.memory_max_must_be_at_least)
+        !eula -> stringResource(R.string.accept_the_minecraft_eula_to_continue)
         else -> null
     }
 
@@ -376,7 +379,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
     ) {
         vm.error?.let { ErrorBanner(it, onRetry = vm::clearError) }
 
-        SectionLabel("Edition")
+        SectionLabel(stringResource(R.string.edition))
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             Edition.entries.forEachIndexed { i, e ->
                 SegmentedButton(
@@ -397,13 +400,13 @@ private fun CreateForm(vm: CreateServerViewModel) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it.take(48) },
-            label = { Text("Server name") },
+            label = { Text(stringResource(R.string.server_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
 
         if (edition == Edition.JAVA) {
-            SectionLabel("Server software")
+            SectionLabel(stringResource(R.string.server_software))
             if (vm.catalogLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 types.forEach { t ->
@@ -419,12 +422,12 @@ private fun CreateForm(vm: CreateServerViewModel) {
                 OutlinedTextField(
                     value = version,
                     onValueChange = { version = it.trim().take(32) },
-                    label = { Text("Minecraft version") },
+                    label = { Text(stringResource(R.string.minecraft_version)) },
                     placeholder = { Text("e.g. 1.21.4") },
                     supportingText = {
                         Text(
-                            if (versions.isEmpty() && !vm.catalogLoading) "Couldn't load the version list, so type the exact version."
-                            else "Pick from the list or type a version.",
+                            if (versions.isEmpty() && !vm.catalogLoading) stringResource(R.string.couldn_t_load_the_version_list)
+                            else stringResource(R.string.pick_from_the_list_or_type),
                         )
                     },
                     singleLine = true,
@@ -440,17 +443,17 @@ private fun CreateForm(vm: CreateServerViewModel) {
                 }
             }
 
-            SectionLabel("Memory (GB)")
+            SectionLabel(stringResource(R.string.memory_gb))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = memMin, onValueChange = { memMin = it.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(5) },
-                    label = { Text("Minimum") }, singleLine = true,
+                    label = { Text(stringResource(R.string.minimum)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
                     value = memMax, onValueChange = { memMax = it.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(5) },
-                    label = { Text("Maximum") }, singleLine = true,
+                    label = { Text(stringResource(R.string.maximum)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.weight(1f),
                 )
@@ -460,15 +463,15 @@ private fun CreateForm(vm: CreateServerViewModel) {
         OutlinedTextField(
             value = port,
             onValueChange = { port = it.filter(Char::isDigit).take(5) },
-            label = { Text("Game port") },
+            label = { Text(stringResource(R.string.game_port)) },
             singleLine = true,
             isError = portTaken,
             supportingText = {
                 Text(
                     when {
-                        portTaken -> "Another server already uses this port."
-                        edition == Edition.BEDROCK -> "Crafty checks this port. If you change it, set the same server-port in server.properties after creating."
-                        else -> "Suggested: the first port none of your servers use."
+                        portTaken -> stringResource(R.string.another_server_already_uses_this_port)
+                        edition == Edition.BEDROCK -> stringResource(R.string.crafty_checks_this_port_if_you)
+                        else -> stringResource(R.string.suggested_the_first_port_none_of)
                     },
                 )
             },
@@ -486,8 +489,8 @@ private fun CreateForm(vm: CreateServerViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(checked = eula, onCheckedChange = { eula = it })
-                    Text("I agree to the Minecraft EULA", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { com.vknxworks.craftyctrl.data.lock.Lock.expectReturn(); uri.openUri("https://www.minecraft.net/eula") }) { Text("Read") }
+                    Text(stringResource(R.string.i_agree_to_the_minecraft_eula), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { com.vknxworks.craftyctrl.data.lock.Lock.expectReturn(); uri.openUri("https://www.minecraft.net/eula") }) { Text(stringResource(R.string.read)) }
                 }
                 Row(
                     Modifier
@@ -495,7 +498,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
                         .padding(start = 18.dp, end = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Start the server when it's ready", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.start_the_server_when_it_s), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     Switch(checked = startAfter, onCheckedChange = { startAfter = it })
                 }
             }
@@ -508,9 +511,9 @@ private fun CreateForm(vm: CreateServerViewModel) {
             onClick = { vm.create(body(), name.trim(), startAfter) },
             enabled = problem == null,
             modifier = Modifier.fillMaxWidth().height(56.dp),
-        ) { Text("Create server") }
+        ) { Text(stringResource(R.string.create_server)) }
         Text(
-            "Needs an API key or account with permission to create servers in Crafty.",
+            stringResource(R.string.needs_an_api_key_or_account),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -549,7 +552,7 @@ private fun DoneView(s: CreateStep.Done, onBack: () -> Unit, onOpen: () -> Unit)
         Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp))
         Spacer(Modifier.height(16.dp))
         Text(
-            if (s.started) "${s.name} is starting" else "${s.name} was created",
+            if (s.started) stringResource(R.string.x_is_starting, s.name) else stringResource(R.string.x_was_created, s.name),
             style = MaterialTheme.typography.headlineSmall,
         )
         s.note?.let {
@@ -557,8 +560,8 @@ private fun DoneView(s: CreateStep.Done, onBack: () -> Unit, onOpen: () -> Unit)
             Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onOpen, modifier = Modifier.fillMaxWidth()) { Text("Open server") }
+        Button(onClick = onOpen, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.open_server)) }
         Spacer(Modifier.width(8.dp))
-        TextButton(onClick = onBack) { Text("Back to servers") }
+        TextButton(onClick = onBack) { Text(stringResource(R.string.back_to_servers)) }
     }
 }

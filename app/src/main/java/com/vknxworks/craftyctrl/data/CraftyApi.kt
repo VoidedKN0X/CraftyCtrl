@@ -26,6 +26,8 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLException
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
 
 class CraftyException(
     val httpCode: Int,
@@ -54,7 +56,7 @@ class CraftyApi(
         get() {
             if (tokenProvider == null) return fixedToken
             return tokenProvider.invoke()
-                ?: throw CraftyException(0, "LOCKED", "CraftyCtrl is locked.")
+                ?: throw CraftyException(0, "LOCKED", str(R.string.craftyctrl_is_locked))
         }
 
     suspend fun servers(): List<ServerSummary> =
@@ -65,7 +67,7 @@ class CraftyApi(
     suspend fun createServer(body: JsonObject): String {
         val res = call("POST", "/servers", jsonBody(body)) as? JsonObject
         return res?.obj("data")?.let { it.str("new_server_id") ?: it.str("new_server_uuid") }
-            ?: throw CraftyException(0, "NO_ID", "Crafty created the server but didn't say which one it is. Pull to refresh the list.")
+            ?: throw CraftyException(0, "NO_ID", str(R.string.crafty_created_the_server_but_didn))
     }
 
     /**
@@ -117,7 +119,7 @@ class CraftyApi(
             val m = HostStats.fromMetrics(body)
             if (!m.isEmpty) return m
         }
-        throw CraftyException(code, "HOST_STATS", "Host stats need an account with full panel access.")
+        throw CraftyException(code, "HOST_STATS", str(R.string.host_stats_need_an_account_with))
     }
 
     /**
@@ -227,7 +229,7 @@ class CraftyApi(
         val chunkSize = UPLOAD_CHUNK
         val total = maxOf(1L, (size + chunkSize - 1) / chunkSize).toInt()
         val url = "$baseUrl/api/v2/servers/$serverId/files/upload/".toHttpUrlOrNull()
-            ?: throw CraftyException(0, "BAD_URL", "That panel address isn't a valid URL.")
+            ?: throw CraftyException(0, "BAD_URL", str(R.string.that_panel_address_isn_t_a))
 
         fun request(extra: Map<String, String>, body: ByteArray): Pair<Int, String> {
             val b = Request.Builder().url(url).header("Accept", "application/json")
@@ -324,7 +326,7 @@ class CraftyApi(
         if (e.httpCode in listOf(401, 403) || e.httpCode == 0) throw e
         probeTasks(serverId) ?: throw CraftyException(
             e.httpCode, e.errorCode,
-            "This Crafty version can't list schedules through its API (${e.message})",
+            str(R.string.this_crafty_version_can_t_list, e.message),
         )
     }
 
@@ -364,7 +366,7 @@ class CraftyApi(
                     lookupsWork = true
                 } else if (code == 401) {
                     main.post { onUnauthorized() }
-                    throw CraftyException(401, "HTTP_401", "Not signed in, or the session expired.")
+                    throw CraftyException(401, "HTTP_401", str(R.string.not_signed_in_or_the_session))
                 }
             }
             start += TASK_PROBE_BATCH
@@ -375,7 +377,7 @@ class CraftyApi(
     /** Status code and body of an authenticated GET; code 0 means a network failure. */
     private suspend fun getRaw(path: String, apiPrefix: Boolean = true): Pair<Int, String> = withContext(Dispatchers.IO) {
         val prefix = if (apiPrefix) "/api/v2" else ""
-        val url = "$baseUrl$prefix$path".toHttpUrlOrNull() ?: return@withContext 0 to "Invalid URL"
+        val url = "$baseUrl$prefix$path".toHttpUrlOrNull() ?: return@withContext 0 to str(R.string.invalid_url)
         val request = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
@@ -384,7 +386,7 @@ class CraftyApi(
         try {
             http.newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
         } catch (e: IOException) {
-            0 to "Network error: ${networkMessage(e)}"
+            0 to str(R.string.network_error_x, networkMessage(e))
         }
     }
 
@@ -392,12 +394,12 @@ class CraftyApi(
     suspend fun raw(path: String, postJson: String? = null): String {
         val (code, body) = if (postJson == null) getRaw(path) else postRaw(path, postJson)
         if (code == 0) return body
-        val shown = if (body.length > RAW_LIMIT) body.take(RAW_LIMIT) + "\n…(${body.length} chars total)" else body
+        val shown = if (body.length > RAW_LIMIT) body.take(RAW_LIMIT) + str(R.string.x_chars_total, body.length) else body
         return "HTTP $code\n$shown"
     }
 
     private suspend fun postRaw(path: String, json: String): Pair<Int, String> = withContext(Dispatchers.IO) {
-        val url = "$baseUrl/api/v2$path".toHttpUrlOrNull() ?: return@withContext 0 to "Invalid URL"
+        val url = "$baseUrl/api/v2$path".toHttpUrlOrNull() ?: return@withContext 0 to str(R.string.invalid_url)
         val request = Request.Builder()
             .url(url)
             .header("Accept", "application/json")
@@ -407,7 +409,7 @@ class CraftyApi(
         try {
             http.newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
         } catch (e: IOException) {
-            0 to "Network error: ${networkMessage(e)}"
+            0 to str(R.string.network_error_x, networkMessage(e))
         }
     }
 
@@ -449,7 +451,7 @@ class CraftyApi(
     /** Crafty's settings for the server (name, auto-start, start command, ...) and its live status flags. */
     suspend fun serverConfig(serverId: String): ServerConfig =
         ServerConfig.from(call("GET", "/servers/$serverId"))
-            ?: throw CraftyException(0, "BAD_RESPONSE", "Crafty didn't send this server's settings.")
+            ?: throw CraftyException(0, "BAD_RESPONSE", str(R.string.crafty_didn_t_send_this_server))
 
     /** Changes Crafty's settings for the server; only the given fields change. */
     suspend fun updateServer(serverId: String, fields: JsonObject) {
@@ -539,7 +541,7 @@ class CraftyApi(
         body: RequestBody? = null,
     ): JsonElement = withContext(Dispatchers.IO) {
         val url = "$baseUrl/api/v2$path".toHttpUrlOrNull()
-            ?: throw CraftyException(0, "BAD_URL", "That panel address isn't a valid URL.")
+            ?: throw CraftyException(0, "BAD_URL", str(R.string.that_panel_address_isn_t_a))
 
         val request = Request.Builder()
             .url(url)
@@ -571,7 +573,7 @@ class CraftyApi(
 
             root ?: throw CraftyException(
                 resp.code, "BAD_RESPONSE",
-                "Got a response that isn't from Crafty. Check the panel address.",
+                str(R.string.got_a_response_that_isn_t),
             )
         }
     }
@@ -651,11 +653,11 @@ class CraftyApi(
                         resp.code == 200 -> (json.parseToJsonElement(resp.body?.string().orEmpty()) as? JsonObject)
                             ?.str("id")?.let(::dashedUuid)
                         resp.code == 204 || resp.code == 404 -> null
-                        else -> throw CraftyException(resp.code, "MOJANG", "Mojang's name lookup failed (HTTP ${resp.code}).")
+                        else -> throw CraftyException(resp.code, "MOJANG", str(R.string.mojang_s_name_lookup_failed_http, resp.code))
                     }
                 }
             } catch (e: IOException) {
-                throw CraftyException(0, "NETWORK", "Couldn't reach Mojang to look the player up: ${networkMessage(e)}")
+                throw CraftyException(0, "NETWORK", str(R.string.couldn_t_reach_mojang_to_look, networkMessage(e)))
             }
         }
 
@@ -668,30 +670,30 @@ class CraftyApi(
             }
             val res = CraftyApi(baseUrl, null).call("POST", "/auth/login", jsonBody(body))
             return (res as? JsonObject)?.obj("data")?.str("token")
-                ?: throw CraftyException(0, "NO_TOKEN", "Crafty didn't return a token.")
+                ?: throw CraftyException(0, "NO_TOKEN", str(R.string.crafty_didn_t_return_a_token))
         }
 
         private fun describeError(code: Int, err: String, data: String?): String {
             val upper = err.uppercase()
             val base = when {
-                "TOTP" in upper || "MFA" in upper || "2FA" in upper -> "A valid 2FA code is required."
-                "CRED" in upper || "PASSWORD" in upper || "INCORRECT" in upper -> "Wrong username or password."
-                code == 401 -> "Not signed in, or the session expired."
-                code == 403 || "NOT_AUTHORIZED" in upper -> "Crafty refused this — the key or user lacks permission."
-                code == 404 -> "Not found. This Crafty version may not support it."
-                code == 429 -> "Too many attempts. Wait a bit and try again."
-                code >= 500 -> "Crafty hit an internal error."
+                "TOTP" in upper || "MFA" in upper || "2FA" in upper -> str(R.string.a_valid_2fa_code_is_required)
+                "CRED" in upper || "PASSWORD" in upper || "INCORRECT" in upper -> str(R.string.wrong_username_or_password)
+                code == 401 -> str(R.string.not_signed_in_or_the_session)
+                code == 403 || "NOT_AUTHORIZED" in upper -> str(R.string.crafty_refused_this_the_key_or)
+                code == 404 -> str(R.string.not_found_this_crafty_version_may)
+                code == 429 -> str(R.string.too_many_attempts_wait_a_bit)
+                code >= 500 -> str(R.string.crafty_hit_an_internal_error)
                 else -> err.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }
             }
             return if (!data.isNullOrBlank() && data != err) "$base ($data)" else base
         }
 
         private fun networkMessage(e: IOException): String = when (e) {
-            is UnknownHostException -> "Can't find that host. Check the address and your connection."
-            is SSLException -> "Secure connection failed — Android doesn't trust the panel's certificate."
-            is SocketTimeoutException -> "Crafty took too long to respond."
-            is ConnectException -> "Couldn't connect. Is Crafty reachable from this network?"
-            else -> e.message?.takeIf { it.isNotBlank() } ?: "Network error."
+            is UnknownHostException -> str(R.string.can_t_find_that_host_check)
+            is SSLException -> str(R.string.secure_connection_failed_android_doesn_t)
+            is SocketTimeoutException -> str(R.string.crafty_took_too_long_to_respond)
+            is ConnectException -> str(R.string.couldn_t_connect_is_crafty_reachable)
+            else -> e.message?.takeIf { it.isNotBlank() } ?: str(R.string.network_error)
         }
     }
 }

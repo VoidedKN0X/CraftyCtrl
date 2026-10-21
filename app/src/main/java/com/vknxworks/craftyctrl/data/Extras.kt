@@ -10,6 +10,8 @@ import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
 
 // Parsers for the endpoints that the official API docs don't describe in detail.
 // Every one of them reads several plausible shapes and ignores what it doesn't recognise.
@@ -139,7 +141,7 @@ data class HostStats(
             }
             return list.map { d ->
                 DiskUsage(
-                    mount = d.str("mount") ?: d.str("device") ?: "Disk",
+                    mount = d.str("mount") ?: d.str("device") ?: str(R.string.disk),
                     percent = d.num("percent"),
                     used = d.str("used")?.let(::prettySize),
                     total = d.str("total")?.let(::prettySize),

@@ -68,6 +68,7 @@ import com.vknxworks.craftyctrl.ui.settings.GroupRow
 import com.vknxworks.craftyctrl.ui.settings.GroupSwitch
 import com.vknxworks.craftyctrl.ui.theme.ThemeMode
 import com.vknxworks.craftyctrl.ui.theme.ThemePrefs
+import androidx.compose.ui.res.pluralStringResource
 
 /** When the app lock asks again after you leave the app (seconds; -1 = only when the app restarts). */
 private val LOCK_AGAIN = listOf(
@@ -120,9 +121,9 @@ fun SettingsScreen(onBack: () -> Unit) {
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             androidx.compose.material3.LargeTopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.settings), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) }
                 },
                 scrollBehavior = scroll,
             )
@@ -151,12 +152,12 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
 
             Group(
-                "Notifications",
-                footer = if (notifDenied) "Notifications are blocked for this app. Allow them in Android settings to get alerts." else null,
+                stringResource(R.string.notifications),
+                footer = if (notifDenied) stringResource(R.string.notifications_are_blocked_for_this_app) else null,
             ) {
                 GroupSwitch(
-                    "Server alerts",
-                    "Get notified when a server stops or crashes, even with the app closed. Shows a quiet ongoing notification while on",
+                    stringResource(R.string.server_alerts),
+                    stringResource(R.string.get_notified_when_a_server_stops),
                     alerts,
                     icon = Icons.Outlined.NotificationsActive,
                 ) { on ->
@@ -174,14 +175,14 @@ fun SettingsScreen(onBack: () -> Unit) {
                     }
                 }
                 GroupChoice(
-                    "Check every",
-                    listOf(15 to "15 seconds", 30 to "30 seconds", 60 to "1 minute", 300 to "5 minutes"),
+                    stringResource(R.string.check_every),
+                    listOf(15, 30).map { it to pluralStringResource(R.plurals.x_seconds, it, it) } + listOf(1, 5).map { it * 60 to pluralStringResource(R.plurals.x_minutes, it, it) },
                     interval,
                     icon = Icons.Outlined.Schedule,
                 ) { settings.alertIntervalSeconds = it; interval = it }
                 GroupSwitch(
-                    "Keep checking while the screen is off",
-                    "Without this, Android may pause checks while the phone sleeps, so alerts can arrive late. Uses more battery",
+                    stringResource(R.string.keep_checking_while_the_screen_is),
+                    stringResource(R.string.without_this_android_may_pause_checks),
                     keepAwake,
                     icon = Icons.Outlined.BatteryChargingFull,
                 ) { on ->
@@ -262,13 +263,12 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
 
             Group(
-                "Live stats",
-                footer = "Only while the app is open. Crafty itself recalculates server stats on its own timer " +
-                    "(\"status_update_frequency_seconds\" in Crafty's config.json), so numbers can't change faster than that.",
+                stringResource(R.string.live_stats),
+                footer = stringResource(R.string.only_while_the_app_is_open),
             ) {
                 GroupChoice(
-                    "Refresh open screens every",
-                    listOf(1 to "1 second", 2 to "2 seconds", 5 to "5 seconds", 10 to "10 seconds"),
+                    stringResource(R.string.refresh_open_screens_every),
+                    listOf(1, 2, 5, 10).map { it to pluralStringResource(R.plurals.x_seconds, it, it) },
                     liveRefresh,
                     icon = Icons.Outlined.Refresh,
                 ) { settings.liveRefreshSeconds = it; liveRefresh = it }

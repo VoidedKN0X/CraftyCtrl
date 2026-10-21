@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.HorizontalDivider
 import com.vknxworks.craftyctrl.ui.theme.Mono
+import androidx.compose.ui.res.stringResource
+import com.vknxworks.craftyctrl.R
 
 /** One line series. Null values leave a gap. [maxY] fixes the top of the scale (e.g. 100 for %). */
 @Composable
@@ -122,13 +124,13 @@ fun ChartCard(
         if (present.size >= 2) {
             LineChart(values, color, maxY = maxY, height = 110.dp, fill = true, gridLines = 3)
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                listOf("min" to present.min(), "avg" to present.average().toFloat(), "max" to present.max()).forEach { (k, v) ->
-                    Text("$k ${format(v)}", style = MaterialTheme.typography.labelSmall, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                listOf(R.string.chart_min to present.min(), R.string.chart_avg to present.average().toFloat(), R.string.chart_max to present.max()).forEach { (k, v) ->
+                    Text(stringResource(k, format(v)), style = MaterialTheme.typography.labelSmall, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
             Box(Modifier.fillMaxWidth().height(110.dp), contentAlignment = Alignment.Center) {
-                Text("Collecting data…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.collecting_data), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         footer?.let {

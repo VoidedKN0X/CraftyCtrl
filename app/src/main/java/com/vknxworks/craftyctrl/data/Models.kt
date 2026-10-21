@@ -5,6 +5,10 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import androidx.annotation.StringRes
+import com.vknxworks.craftyctrl.R
+import com.vknxworks.craftyctrl.str
+import com.vknxworks.craftyctrl.plural
 
 // Crafty's responses vary between versions (numbers sent as strings, "True"/"False",
 // lists sent as Python reprs), so everything is read leniently from JsonElement trees.
@@ -94,7 +98,7 @@ data class ServerSummary(
             val id = o.str("server_id") ?: o.str("server_uuid") ?: return null
             return ServerSummary(
                 id = id,
-                name = o.str("server_name").meaningful() ?: "Unnamed server",
+                name = o.str("server_name").meaningful() ?: str(R.string.unnamed_server),
                 type = o.str("type").orEmpty(),
                 path = o.str("path").meaningful(),
                 executable = o.str("executable").meaningful(),
@@ -104,12 +108,14 @@ data class ServerSummary(
     }
 }
 
-enum class ServerState(val label: String) {
-    RUNNING("Running"),
-    STARTING("Starting"),
-    UPDATING("Updating"),
-    STOPPED("Stopped"),
-    CRASHED("Crashed"),
+enum class ServerState(@StringRes private val labelRes: Int) {
+    RUNNING(R.string.state_running),
+    STARTING(R.string.state_starting),
+    UPDATING(R.string.state_updating),
+    STOPPED(R.string.state_stopped),
+    CRASHED(R.string.state_crashed);
+
+    val label: String get() = str(labelRes)
 }
 
 data class ServerStats(
@@ -222,26 +228,27 @@ data class BackupConfig(
             return obj.str("status").meaningful() to obj.str("message").meaningful()
         }
 
-        private val shownFields = listOf(
-            "backup_type" to "Type",
-            "enabled" to "Enabled",
-            "backup_location" to "Location",
-            "max_backups" to "Keep",
-            "compress" to "Compressed",
-            "shutdown" to "Stops server",
-            "before" to "Command before",
-            "after" to "Command after",
-        )
+        private val shownFields: List<Pair<String, String>>
+            get() = listOf(
+                "backup_type" to str(R.string.backup_field_type),
+                "enabled" to str(R.string.backup_field_enabled),
+                "backup_location" to str(R.string.backup_field_location),
+                "max_backups" to str(R.string.backup_field_keep),
+                "compress" to str(R.string.backup_field_compressed),
+                "shutdown" to str(R.string.backup_field_stops_server),
+                "before" to str(R.string.backup_field_command_before),
+                "after" to str(R.string.backup_field_command_after),
+            )
 
         fun from(o: JsonObject): BackupConfig = BackupConfig(
             id = o.str("backup_id").meaningful(),
-            name = o.str("backup_name").meaningful() ?: "Backup",
+            name = o.str("backup_name").meaningful() ?: str(R.string.task_backup),
             isDefault = o.bool("default") ?: false,
             details = shownFields.mapNotNull { (key, label) ->
                 val value = o.str(key)?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
                 val pretty = when (value.lowercase()) {
-                    "true" -> "Yes"
-                    "false" -> "No"
+                    "true" -> str(R.string.yes)
+                    "false" -> str(R.string.no)
                     else -> value
                 }
                 label to pretty
@@ -259,12 +266,14 @@ data class BackupConfig(
 }
 
 /** The kinds of task Crafty can schedule, with the value its API uses. */
-enum class TaskAction(val api: String, val label: String) {
-    COMMAND("command", "Console command"),
-    BACKUP("backup", "Backup"),
-    RESTART("restart", "Restart server"),
-    START("start", "Start server"),
-    STOP("stop", "Stop server");
+enum class TaskAction(val api: String, @StringRes private val labelRes: Int) {
+    COMMAND("command", R.string.task_command),
+    BACKUP("backup", R.string.task_backup),
+    RESTART("restart", R.string.task_restart),
+    START("start", R.string.task_start),
+    STOP("stop", R.string.task_stop);
+
+    val label: String get() = str(labelRes)
 
     companion object {
         /** Accepts both the short names and the *_server / custom_command spellings. */
@@ -324,22 +333,36 @@ data class ScheduledTask(
 
         private fun humanAction(action: String): String =
             TaskAction.of(action)?.label
-                ?: if (action.isEmpty()) "Task" else action.replace('_', ' ').replaceFirstChar { it.uppercase() }
+                ?: if (action.isEmpty()) str(R.string.task) else action.replace('_', ' ').replaceFirstChar { it.uppercase() }
+
+        /** "Every 5 hours", worded for the units Crafty uses; other units are shown as Crafty names them. */
+        private fun everyLabel(interval: String, type: String): String {
+            val n = interval.toIntOrNull()
+            val id = when (type) {
+                "seconds" -> R.plurals.every_seconds
+                "minutes" -> R.plurals.every_minutes
+                "hours" -> R.plurals.every_hours
+                "days" -> R.plurals.every_days
+                "weeks" -> R.plurals.every_weeks
+                else -> null
+            }
+            return if (n != null && id != null) plural(id, n, n) else str(R.string.every_x_x, interval, type)
+        }
 
         private fun describe(o: JsonObject): String {
             val cron = o.str("cron_string").meaningful()
-            if (cron != null) return "Cron · $cron"
+            if (cron != null) return str(R.string.cron_x, cron)
             val type = o.str("interval_type").meaningful()
-            if (type == "reaction") return "Runs after another task"
+            if (type == "reaction") return str(R.string.runs_after_another_task)
             val interval = o.str("interval").meaningful()
             val at = o.str("start_time").meaningful()
             val base = when {
-                interval != null && type != null -> if (interval == "1") "Every ${type.removeSuffix("s")}" else "Every $interval $type"
+                interval != null && type != null -> everyLabel(interval, type)
                 type != null -> type.replaceFirstChar { it.uppercase() }
-                else -> "Custom schedule"
+                else -> str(R.string.custom_schedule)
             }
-            val withTime = if (at != null) "$base at $at" else base
-            return if (o.bool("one_time") == true) "Once · $withTime" else withTime
+            val withTime = if (at != null) str(R.string.x_at_x, base, at) else base
+            return if (o.bool("one_time") == true) str(R.string.once_x, withTime) else withTime
         }
     }
 }
