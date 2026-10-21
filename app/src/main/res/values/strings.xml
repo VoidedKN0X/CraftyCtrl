@@ -291,7 +291,7 @@
     <string name="region_file_compression">Region file compression</string>
     <string name="view_distance_chunks">View distance (chunks)</string>
     <string name="simulation_distance_chunks">Simulation distance (chunks)</string>
-    <string name="entity_visibility_range">Entity visibility range (%)</string>
+    <string name="entity_visibility_range" formatted="false">Entity visibility range (%)</string>
     <string name="watchdog_max_tick_time_ms">Watchdog max tick time (ms)</string>
     <string name="s_1_disables_the_watchdog">-1 disables the watchdog.</string>
     <string name="max_chained_neighbour_updates">Max chained neighbour updates</string>
@@ -523,7 +523,7 @@
     <string name="enter_a_whole_number">Enter a whole number</string>
     <string name="at_least_x">At least %1$s</string>
     <string name="at_most_x">At most %1$s</string>
-    <string name="not_in_file">" · not in file"</string>
+    <string name="x_not_in_file">%1$s · not in file</string>
     <string name="the_server_is_running_so_changes">The server is running, so changes are sent as console commands and apply right away.</string>
     <string name="the_server_is_stopped_so_the">The server is stopped, so the app edits the list file directly. It applies on the next start.</string>
     <string name="changes_apply_through_the_console_while">Changes apply through the console while the server runs, or to the list file while it\'s stopped.</string>

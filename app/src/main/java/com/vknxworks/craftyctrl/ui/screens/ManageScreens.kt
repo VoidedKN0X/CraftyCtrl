@@ -207,10 +207,7 @@ private fun PropertyRow(def: PropDef, value: String, inFile: Boolean, changed: B
         color = if (changed) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceContainer,
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            val caption = buildString {
-                append(def.key)
-                if (!inFile && !changed) append(stringResource(R.string.not_in_file))
-            }
+            val caption = if (!inFile && !changed) stringResource(R.string.x_not_in_file, def.key) else def.key
             if (def.kind == PropKind.BOOL) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
