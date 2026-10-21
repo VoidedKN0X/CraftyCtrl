@@ -44,6 +44,8 @@ import com.vknxworks.craftyctrl.ui.ScreenPrivacy
 import com.vknxworks.craftyctrl.ui.SessionViewModel
 import com.vknxworks.craftyctrl.ui.lock.AppLockViewModel
 import com.vknxworks.craftyctrl.ui.lock.LockScreen
+import com.vknxworks.craftyctrl.ui.lock.PinRequestScreen
+import com.vknxworks.craftyctrl.ui.lock.PinRequests
 import com.vknxworks.craftyctrl.ui.screens.CreateServerScreen
 import com.vknxworks.craftyctrl.ui.screens.FileEditorScreen
 import com.vknxworks.craftyctrl.ui.screens.LoginScreen
@@ -132,6 +134,9 @@ private fun AppRoot(
         Box(Modifier.fillMaxSize().then(if (lockVm.locked) Modifier.clearAndSetSemantics {} else Modifier)) {
             AppContent(session, sessionVm)
         }
+        // Turning the lock on or off, or changing the PIN (from Settings), on top of the app.
+        val request = PinRequests.request
+        if (!lockVm.locked && request != null) PinRequestScreen(request, lockVm)
         if (lockVm.locked) {
             // Opaque cover in the app's own window (also behind the system bars).
             androidx.compose.material3.Surface(Modifier.fillMaxSize().clearAndSetSemantics {}) {}

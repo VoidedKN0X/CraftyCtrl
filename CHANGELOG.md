@@ -3,6 +3,20 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.5.2] - 2026-10-21
+
+The app lock and Settings now look and work the same as in every other Ctrl app.
+
+### Changed
+
+- **New lock screen look**, the same as in the other Ctrl apps: a round lock badge, a bigger PIN pad with a short buzz and shake on a wrong PIN, a spinner while the PIN is checked, and **Forgot PIN?** (which still asks first, then signs out and resets).
+- **Turning the app lock on, changing the PIN and turning the lock off now use the same full-screen PIN pad** as the lock screen, instead of a dialog with text boxes. Choosing a PIN asks for it twice; changing it asks for your current PIN first; turning the lock off asks for your PIN.
+- **Settings are grouped like in the other Ctrl apps**, in this order: **Appearance**, **Notifications** (server alerts, how often to check, and checking while the screen is off), **Privacy and security**, **Live stats** and **About** at the bottom. The rows have the same look as the other apps, and choices such as **Lock again**, **Check every** and **Refresh open screens every** open a list to pick from.
+- **Privacy and security** has the same rows, wording and icons as every Ctrl app: **App lock**, **Change app PIN**, **Unlock with fingerprint**, **Lock again** and **Hide in screenshots and recent apps** (formerly "Hide content in screenshots & recents"). The App lock and Privacy sections are now one section, and its note says what CraftyCtrl connects to and, when server alerts are on, that they keep their own Keystore-encrypted copy of your login so they work while the app is locked.
+- **Theme choices are the same as in the other Ctrl apps**: Follow system, Dark, Light or **Pure black**. Pure black is now one of the themes instead of a separate switch: if you had Dark with pure black on, you now get the Pure black theme; with "System" and pure black on, CraftyCtrl follows the system with the normal dark colours (pick Pure black again if you want it). "Material You colours" is now called **Use wallpaper colours**.
+- **The fingerprint prompts** now say what they're for ("Confirm it's you to manage your servers" when unlocking, "Confirm your fingerprint" when turning fingerprint unlock on), and turning fingerprint unlock on says so if it couldn't be set up.
+- **README**: a new App lock section that explains the PIN, fingerprint unlock, the wrong-PIN wait, Lock again, hiding the app in screenshots and recent apps, how server alerts work while locked, and Forgot PIN. The Ctrl series table now lists AdCtrl and MemoCtrl.
+
 ## [2.5.1] - 2026-10-21
 
 ### Security

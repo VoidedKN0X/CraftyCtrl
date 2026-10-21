@@ -23,8 +23,8 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Backups and scheduled tasks**: run, edit, restore and schedule; restoring asks you to type RESTORE first
 - **Create, clone, update and delete** Java and Bedrock servers; deleting asks you to type the server name
 - **Alerts** when a server stops or crashes, even with the app closed
-- **App lock** with its own 6–12 digit PIN and optional fingerprint unlock; your Crafty login stays encrypted while the app is locked, and an option hides the app in screenshots and Recents
-- Light and dark themes, pure black, and Material You colours from your wallpaper
+- **App lock** with its own PIN and optional fingerprint unlock; your Crafty login stays encrypted while the app is locked, and an option hides the app in screenshots and recent apps
+- Follow system, dark, light or pure black themes, and colours from your wallpaper
 
 ## Screenshots
 
@@ -57,6 +57,19 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 1. Enter your panel address, e.g. `https://crafty.example.com`.
 2. Sign in with an **API key** (in Crafty: your profile → *API Keys* → *Generate*) or your **username and password**, plus your 2FA code if you use one.
 3. Tap **Connect**. Your login is stored encrypted on the phone; with a password, only the token Crafty sends back is kept, never the password itself.
+
+## App lock
+
+Turn it on in **⋮ → Settings → Privacy and security → App lock**. It's off until you turn it on.
+
+- **An app PIN of its own**, at least 6 digits and separate from your phone's. Very obvious PINs, like 111111 or 123456, are refused. The PIN is never stored: it's stretched with 600,000 rounds of PBKDF2 and mixed with a key that never leaves the phone's secure hardware, so a copy of the app's files isn't enough to guess it somewhere else.
+- **Unlock with fingerprint** (optional): strong biometrics only, checked by the phone's secure hardware. Adding a fingerprint to the phone turns it off until you turn it on again. The PIN is still needed after the phone restarts and at least every 72 hours.
+- **Wrong PINs make you wait**: 30 seconds after 5 wrong tries, doubling up to 15 minutes. Restarting the app or the phone, or changing the clock, doesn't end the wait.
+- **Your Crafty login stays encrypted while CraftyCtrl is locked**, with a key that only exists in memory while the app is unlocked and is wiped the moment it locks.
+- **Lock again**: as soon as you leave the app (the default), after 1, 5 or 15 minutes or 1 hour away, or only when the app restarts. Picking a file, opening a link or the battery settings from CraftyCtrl doesn't count as leaving, unless you're away for more than 5 minutes.
+- **Hide in screenshots and recent apps** (on by default) blocks screenshots and screen recording and blanks the app in recent apps. Sign-in, the file editor and server settings are always hidden.
+- **Server alerts keep working while locked**: while alerts are on, they keep their own copy of your Crafty login, encrypted with the Android Keystore as without the app lock. Turn alerts off to keep the login sealed with your PIN only.
+- **Forgot PIN?** on the lock screen signs out and forgets the panel address and login on this phone, so you can sign in again. Your servers on Crafty aren't touched.
 
 ## Privacy
 
@@ -95,6 +108,7 @@ Native Android apps for self-hosted services and everyday tools, all with the sa
 
 | App | What it's for |
 | --- | --- |
+| [AdCtrl](https://github.com/VoidedKN0X/AdCtrl) | Control your AdGuard Home DNS server |
 | [ArrCtrl](https://github.com/VoidedKN0X/ArrCtrl) | Radarr, Sonarr, Prowlarr, Bazarr, qBittorrent, autobrr and Cleanuparr in one app |
 | [BeamCtrl](https://github.com/VoidedKN0X/BeamCtrl) | TV remote for phones with an IR blaster |
 | **CraftyCtrl** (this app) | Manage Minecraft servers on Crafty Controller |
@@ -103,6 +117,7 @@ Native Android apps for self-hosted services and everyday tools, all with the sa
 | [FrigateCtrl](https://github.com/VoidedKN0X/FrigateCtrl) | Watch and review your Frigate NVR cameras |
 | [ImmichCtrl](https://github.com/VoidedKN0X/ImmichCtrl) | Photos and backup for your Immich server |
 | [JellyCtrl](https://github.com/VoidedKN0X/JellyCtrl) | Movies, shows, music and Live TV from Jellyfin |
+| [MemoCtrl](https://github.com/VoidedKN0X/MemoCtrl) | Notes on your Memos server |
 | [NaviCtrl](https://github.com/VoidedKN0X/NaviCtrl) | Music player for Navidrome servers |
 | [PaperCtrl](https://github.com/VoidedKN0X/PaperCtrl) | Scan and browse documents on Paperless-ngx |
 | [PrintCtrl](https://github.com/VoidedKN0X/PrintCtrl) | Bambu Lab printers through Bambuddy, and Spoolman spools |

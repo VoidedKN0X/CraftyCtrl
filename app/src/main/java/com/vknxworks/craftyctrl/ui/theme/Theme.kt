@@ -25,13 +25,14 @@ import androidx.compose.ui.unit.dp
 import com.vknxworks.craftyctrl.data.ServerState
 
 // The same theme setup as the other Ctrl apps: Material You by default, a brand fallback,
-// System / Light / Dark, optional pure black, the system font and the shared corner shapes.
+// Follow system / Dark / Light / Pure black, the system font and the shared corner shapes.
 
-/** Light or dark: follow the phone, or always one of them. */
+/** The theme choices every Ctrl app offers: follow the phone, always dark or light, or pure black. */
 enum class ThemeMode(val key: String, val label: String) {
-    SYSTEM("system", "System"),
+    SYSTEM("system", "Follow system"),
+    DARK("dark", "Dark"),
     LIGHT("light", "Light"),
-    DARK("dark", "Dark");
+    BLACK("black", "Pure black");
 
     companion object {
         fun of(key: String?) = entries.firstOrNull { it.key == key } ?: SYSTEM
@@ -44,16 +45,23 @@ object ThemePrefs {
         private set
     var dynamicColor by mutableStateOf(true)
         private set
-    var pureBlack by mutableStateOf(false)
-        private set
+
+    /** True black backgrounds (the "Pure black" theme). */
+    val pureBlack: Boolean get() = mode == ThemeMode.BLACK
 
     private fun prefs(c: Context) = c.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
 
     fun load(context: Context) {
         val p = prefs(context)
+        // Before 2.5.2, pure black was a separate switch: Dark with it on is now the Pure black theme.
+        if (p.contains(KEY_BLACK)) {
+            val wasBlack = p.getBoolean(KEY_BLACK, false)
+            val edit = p.edit().remove(KEY_BLACK)
+            if (wasBlack && ThemeMode.of(p.getString(KEY_MODE, null)) == ThemeMode.DARK) edit.putString(KEY_MODE, ThemeMode.BLACK.key)
+            edit.apply()
+        }
         mode = ThemeMode.of(p.getString(KEY_MODE, null))
         dynamicColor = p.getBoolean(KEY_DYNAMIC, true)
-        pureBlack = p.getBoolean(KEY_BLACK, false)
     }
 
     fun saveMode(context: Context, m: ThemeMode) {
@@ -66,17 +74,12 @@ object ThemePrefs {
         prefs(context).edit().putBoolean(KEY_DYNAMIC, on).apply()
     }
 
-    fun savePureBlack(context: Context, on: Boolean) {
-        pureBlack = on
-        prefs(context).edit().putBoolean(KEY_BLACK, on).apply()
-    }
-
     /** Whether the app should be dark right now. */
     @Composable
     fun isDark(): Boolean = when (mode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
+        ThemeMode.DARK, ThemeMode.BLACK -> true
     }
 
     private const val KEY_MODE = "theme_mode"

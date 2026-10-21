@@ -7,44 +7,17 @@ import androidx.activity.compose.BackHandler
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricPrompt
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.AndroidViewModel
@@ -53,7 +26,6 @@ import com.vknxworks.craftyctrl.data.AppSettings
 import com.vknxworks.craftyctrl.data.CredentialStore
 import com.vknxworks.craftyctrl.data.lock.Lock
 import com.vknxworks.craftyctrl.data.lock.LockVault
-import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -89,6 +61,7 @@ fun showVaultPrompt(
     activity: FragmentActivity,
     title: String,
     cipher: Cipher,
+    subtitle: String? = null,
     onDismissed: (systemCancelled: Boolean) -> Unit = {},
     onSuccess: (Cipher) -> Unit,
 ) {
@@ -115,6 +88,7 @@ fun showVaultPrompt(
     prompt.authenticate(
         BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
+            .apply { if (subtitle != null) setSubtitle(subtitle) }
             .setNegativeButtonText("Use PIN")
             .setAllowedAuthenticators(BIOMETRIC_STRONG)
             .build(),
@@ -197,6 +171,7 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
         if (lockOn && !locked) {
             locked = true
             biometricShown = false
+            PinRequests.request = null
             vault.close()
             Lock.liveToken = null
         }
@@ -213,7 +188,7 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Fingerprint unlock: the prompt's cipher has to decrypt the vault key. */
     fun unlockWithBiometric(cipher: Cipher) {
-        if (vault.unlockWithBiometric(cipher)) unlocked() else pinError = "Fingerprint didn't unlock. Use your PIN."
+        if (vault.unlockWithBiometric(cipher)) unlocked() else pinError = "Couldn't unlock with your fingerprint. Use your PIN."
     }
 
     fun submitPin(pin: String, onWrong: () -> Unit) {
@@ -266,15 +241,16 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** The new PIN chosen after an old short one; moves the lock into the vault with it. */
-    fun chooseNewPin(pin: String, onFailed: (String) -> Unit) {
-        if (checking || oldPin == null) return
-        viewModelScope.launch {
-            checking = true
-            val moved = withContext(Dispatchers.Default) { runCatching { Lock.migrate(getApplication<Application>(), pin) }.isSuccess }
-            checking = false
-            if (moved) unlocked() else onFailed("Couldn't save the PIN. Try again.")
-        }
+    /** The new PIN chosen after an old short one; moves the lock into the vault with it. Throws when it couldn't. */
+    suspend fun chooseNewPin(pin: String) {
+        check(oldPin != null)
+        withContext(Dispatchers.Default) { Lock.migrate(getApplication<Application>(), pin) }
+        unlocked()
+    }
+
+    /** Typing again clears "Wrong PIN". */
+    fun clearError() {
+        pinError = null
     }
 
     /** "Forgot PIN?": signs out and forgets the token, the PIN and the vault. */
@@ -305,16 +281,30 @@ class AppLockViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
+/** The lock screen: PIN pad, fingerprint, and "Forgot PIN?" (the same look and flow as every Ctrl app). */
 @Composable
 fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     if (vm.mustChoosePin) {
-        ChooseNewPin(vm)
+        // Unlocked with an old 4- or 5-digit PIN: choose a new one (twice) before the app opens.
+        PinSetupScreen(
+            vault = vm.vault,
+            title = "Choose an app PIN",
+            intro = "PINs now need at least $PIN_MIN digits, different from your phone's PIN. " +
+                "Your Crafty login is encrypted with it while the app is locked.",
+            verifyCurrent = false,
+            cancellable = false,
+            onDone = { pin -> vm.chooseNewPin(pin) },
+            onCancel = {},
+        )
         return
     }
     val context = LocalContext.current
     // The lock screen lives in its own window (a dialog), whose context wraps the activity rather
     // than being it, so look through the wrappers.
     val activity = remember(context) { context.findFragmentActivity() }
+    val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+    val shake = remember { Animatable(0f) }
     var pin by remember { mutableStateOf("") }
     var forgetting by remember { mutableStateOf(false) }
     val pinDue = vm.vault.biometricEnabled && vm.vault.pinRequired()
@@ -333,6 +323,7 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
                         activity,
                         "Unlock CraftyCtrl",
                         cipher,
+                        subtitle = "Confirm it's you to manage your servers",
                         // Not shown, or closed by the system: offer it again next time the app is on screen.
                         onDismissed = { system -> if (system) vm.biometricShown = false },
                     ) { unlocked -> vm.unlockWithBiometric(unlocked) }
@@ -354,178 +345,91 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     // Back leaves the app rather than reaching the screens underneath.
     BackHandler { activity?.moveTaskToBack(true) }
 
-    fun press(d: Char) {
-        if (vm.lockoutRemaining > 0 || vm.checking || pin.length >= PIN_MAX) return
-        pin += d
-        // Submit automatically once the PIN reaches its saved length.
-        val length = if (vm.legacy) vm.settings.pinLength else vm.vault.pinLength
-        if (pin.length == length) vm.submitPin(pin) { pin = "" }
+    val wrong: () -> Unit = {
+        pin = ""
+        scope.shakePin(shake, haptics)
     }
+    // Submits automatically once the PIN reaches its saved length.
+    val savedLength = if (vm.legacy) vm.settings.pinLength else vm.vault.pinLength
+    val min = if (vm.legacy) PIN_MIN_LEGACY else PIN_MIN
 
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .safeDrawingPadding()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
-            Spacer(Modifier.height(16.dp))
-            Text("CraftyCtrl is locked", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(6.dp))
-            val sub = when {
-                vm.lockoutRemaining > 0 -> "Too many tries. Try again in ${(vm.lockoutRemaining + 999) / 1000}s"
-                vm.pinError != null -> vm.pinError!!
-                vm.legacy -> "Enter your PIN to finish the security update"
-                vm.biometricInvalidated -> "A fingerprint was added or removed. Enter your PIN, then turn fingerprint unlock on again in Settings."
-                pinDue -> "Enter your PIN. It's needed after a restart and every 72 hours."
-                else -> "Enter your PIN"
+    PinPadScreen(
+        title = "CraftyCtrl is locked",
+        message = when {
+            vm.lockoutRemaining > 0 -> lockoutText(vm.lockoutRemaining)
+            vm.pinError != null -> vm.pinError!!
+            vm.legacy -> "Enter your PIN to finish the security update"
+            vm.biometricInvalidated -> "A fingerprint was added or removed. Unlock with your PIN, then turn fingerprint unlock on again."
+            pinDue -> "Enter your PIN. It's needed after a restart and every 72 hours."
+            else -> "Enter your PIN"
+        },
+        isError = vm.pinError != null || vm.lockoutRemaining > 0 || vm.biometricInvalidated,
+        pin = pin,
+        shake = shake.value,
+        checking = vm.checking,
+        enabled = vm.lockoutRemaining == 0L && !vm.checking,
+        onDigit = { d ->
+            if (pin.length < PIN_MAX) {
+                vm.clearError()
+                pin += d
+                if (pin.length == savedLength) vm.submitPin(pin, wrong)
             }
-            Text(
-                sub,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                color = if (vm.pinError != null || vm.lockoutRemaining > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(20.dp))
-            PinDots(pin.length)
-            Spacer(Modifier.height(28.dp))
-            val min = if (vm.legacy) PIN_MIN_LEGACY else PIN_MIN
-            PinPad(
-                onDigit = ::press,
-                onBackspace = { if (pin.isNotEmpty()) pin = pin.dropLast(1) },
-                onConfirm = { if (pin.length >= min) vm.submitPin(pin) { pin = "" } },
-                confirmEnabled = pin.length >= min && !vm.checking && vm.lockoutRemaining == 0L,
-            )
-            Spacer(Modifier.height(16.dp))
-            if (canBio) {
-                TextButton(onClick = askBiometric) {
-                    Icon(Icons.Filled.Fingerprint, contentDescription = null)
-                    Spacer(Modifier.size(8.dp))
-                    Text("Use fingerprint")
-                }
-            }
-            TextButton(onClick = { forgetting = true }) { Text("Forgot PIN? Sign out") }
-        }
-    }
+        },
+        onBackspace = { pin = pin.dropLast(1) },
+        onConfirm = { if (pin.length >= min) vm.submitPin(pin, wrong) },
+        showConfirm = pin.length >= min && pin.length != savedLength,
+        minDots = if (vm.legacy) maxOf(PIN_MIN_LEGACY, savedLength) else PIN_MIN,
+        bottom = {
+            LockScreenButtons(showFingerprint = canBio, onFingerprint = askBiometric, onForgot = { forgetting = true })
+        },
+    )
     if (forgetting) {
-        AlertDialog(
-            onDismissRequest = { forgetting = false },
-            title = { Text("Forgot your PIN?") },
-            text = {
-                Text(
-                    "The PIN can't be recovered, because it encrypts your Crafty login. CraftyCtrl will sign out, " +
-                        "turn off server alerts and forget the panel address and login on this phone. Your servers on Crafty aren't touched.",
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { forgetting = false; onForgot() }) {
-                    Text("Sign out and reset", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = { TextButton(onClick = { forgetting = false }) { Text("Cancel") } },
-        )
-    }
-}
-
-/** After unlocking with an old 4- or 5-digit PIN: choose a new one (twice) before the app opens. */
-@Composable
-private fun ChooseNewPin(vm: AppLockViewModel) {
-    val activity = LocalContext.current.findFragmentActivity()
-    var pin by remember { mutableStateOf("") }
-    var first by remember { mutableStateOf<String?>(null) }
-    var message by remember { mutableStateOf<String?>(null) }
-    BackHandler { activity?.moveTaskToBack(true) }
-
-    fun next() {
-        if (vm.checking || pin.length < PIN_MIN) return
-        val f = first
-        when {
-            f == null && Lock.isObvious(pin) -> { message = "Too easy to guess. Try a less obvious PIN."; pin = "" }
-            f == null -> { first = pin; pin = ""; message = null }
-            f != pin -> { first = null; pin = ""; message = "The PINs didn't match. Start again." }
-            else -> vm.chooseNewPin(pin) { message = it; first = null; pin = "" }
-        }
-    }
-
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .safeDrawingPadding()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+        ForgotPinDialog(
+            body = "The PIN can't be recovered, because it encrypts your Crafty login. CraftyCtrl will sign out, " +
+                "turn off server alerts and forget the panel address and login on this phone. Your servers on Crafty aren't touched.",
+            confirm = "Sign out and reset",
+            onDismiss = { forgetting = false },
         ) {
-            Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
-            Spacer(Modifier.height(16.dp))
-            Text("Choose a new PIN", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                message ?: if (first == null) "PINs now need $PIN_MIN to $PIN_MAX digits. It also encrypts your Crafty login while the app is locked."
-                else "Enter the same PIN again",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                color = if (message != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(20.dp))
-            PinDots(pin.length)
-            Spacer(Modifier.height(28.dp))
-            PinPad(
-                onDigit = { d -> if (pin.length < PIN_MAX && !vm.checking) { pin += d; message = null } },
-                onBackspace = { if (pin.isNotEmpty()) pin = pin.dropLast(1) },
-                onConfirm = ::next,
-                confirmEnabled = pin.length >= PIN_MIN && !vm.checking,
-            )
+            forgetting = false
+            onForgot()
         }
     }
 }
 
+/** Turning the lock on or off, or changing the PIN, from Settings: a PIN screen on top of the app. */
 @Composable
-fun PinDots(count: Int) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        repeat(maxOf(count, PIN_MIN_LEGACY)) { i ->
-            val filled = i < count
-            Box(
-                Modifier
-                    .size(14.dp)
-                    .clip(CircleShape)
-                    .background(if (filled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
-                    .border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape),
-            )
-        }
-    }
-}
-
-@Composable
-fun PinPad(
-    onDigit: (Char) -> Unit,
-    onBackspace: () -> Unit,
-    onConfirm: () -> Unit,
-    confirmEnabled: Boolean,
-) {
-    val rows = listOf("123", "456", "789")
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        rows.forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                row.forEach { d -> DigitKey(d.toString()) { onDigit(d) } }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBackspace, modifier = Modifier.size(68.dp)) {
-                Icon(Icons.AutoMirrored.Filled.Backspace, contentDescription = "Delete")
-            }
-            DigitKey("0") { onDigit('0') }
-            TextButton(onClick = onConfirm, enabled = confirmEnabled, modifier = Modifier.size(68.dp)) { Text("OK") }
-        }
-    }
-}
-
-@Composable
-private fun DigitKey(label: String, onClick: () -> Unit) {
-    FilledTonalIconButton(onClick = onClick, modifier = Modifier.size(68.dp)) {
-        Text(label, style = MaterialTheme.typography.headlineSmall)
+fun PinRequestScreen(request: PinRequest, vm: AppLockViewModel) {
+    val app = LocalContext.current.applicationContext
+    val done = { PinRequests.request = null }
+    when (request) {
+        PinRequest.ENABLE -> PinSetupScreen(
+            vault = vm.vault,
+            title = "Choose an app PIN",
+            intro = "At least $PIN_MIN digits, different from your phone's PIN. " +
+                "If you forget it, the only way back in is to sign out and sign in again.",
+            verifyCurrent = false,
+            cancellable = true,
+            onDone = { pin -> withContext(Dispatchers.Default) { Lock.enable(app, pin) }; done() },
+            onCancel = done,
+        )
+        PinRequest.CHANGE -> PinSetupScreen(
+            vault = vm.vault,
+            title = "Change app PIN",
+            intro = "At least $PIN_MIN digits, different from your phone's PIN.",
+            verifyCurrent = true,
+            cancellable = true,
+            onDone = { pin -> withContext(Dispatchers.Default) { check(vm.vault.changePin(pin)) }; done() },
+            onCancel = done,
+        )
+        PinRequest.DISABLE -> PinSetupScreen(
+            vault = vm.vault,
+            title = "Turn off app lock",
+            intro = "Enter your app PIN to turn the lock off.",
+            verifyCurrent = true,
+            verifyOnly = true,
+            cancellable = true,
+            onDone = { withContext(Dispatchers.Default) { Lock.disable(app) }; done() },
+            onCancel = done,
+        )
     }
 }
