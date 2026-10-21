@@ -145,10 +145,10 @@ fun PlayerSheet(
 
             SectionLabel(stringResource(R.string.permissions))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionChip(stringResource(R.string.make_operator), Icons.Filled.Shield, ready) { run("op $t", stringResource(R.string.x_is_now_an_operator, name)) }
-                ActionChip(stringResource(R.string.remove_operator), Icons.Filled.RemoveModerator, ready) { run("deop $t", stringResource(R.string.x_is_no_longer_an_operator, name)) }
+                ActionChip(stringResource(R.string.make_operator), Icons.Filled.Shield, ready) { run("op $t", str(R.string.x_is_now_an_operator, name)) }
+                ActionChip(stringResource(R.string.remove_operator), Icons.Filled.RemoveModerator, ready) { run("deop $t", str(R.string.x_is_no_longer_an_operator, name)) }
                 val listCmd = if (isBedrock) "allowlist" else "whitelist"
-                ActionChip(stringResource(R.string.add_to_x, listCmd), Icons.Filled.PersonAdd, ready) { run("$listCmd add $t", stringResource(R.string.x_added_to_the_x, name, listCmd)) }
+                ActionChip(stringResource(R.string.add_to_x, listCmd), Icons.Filled.PersonAdd, ready) { run("$listCmd add $t", str(R.string.x_added_to_the_x, name, listCmd)) }
             }
 
             SectionLabel(stringResource(R.string.moderation))
@@ -161,18 +161,18 @@ fun PlayerSheet(
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ActionChip(stringResource(R.string.kick), Icons.AutoMirrored.Filled.ExitToApp, ready) {
-                    confirm = Confirm(stringResource(R.string.kick_x, name), stringResource(R.string.they_can_rejoin_straight_away), "kick $t $why".trim(), stringResource(R.string.kicked_x, name))
+                    confirm = Confirm(str(R.string.kick_x, name), str(R.string.they_can_rejoin_straight_away), "kick $t $why".trim(), str(R.string.kicked_x, name))
                 }
                 if (!isBedrock) {
                     ActionChip(stringResource(R.string.ban), Icons.Filled.Block, ready) {
-                        confirm = Confirm(stringResource(R.string.ban_x, name), stringResource(R.string.they_won_t_be_able_to), "ban $t $why".trim(), stringResource(R.string.banned_x, name))
+                        confirm = Confirm(str(R.string.ban_x, name), str(R.string.they_won_t_be_able_to), "ban $t $why".trim(), str(R.string.banned_x, name))
                     }
                 }
                 ActionChip(stringResource(R.string.clear_inventory), Icons.Filled.DeleteSweep, ready) {
-                    confirm = Confirm(stringResource(R.string.clear_x_s_inventory, name), stringResource(R.string.everything_they_re_carrying_is_deleted), "clear $t", stringResource(R.string.cleared_x_s_inventory, name))
+                    confirm = Confirm(str(R.string.clear_x_s_inventory, name), str(R.string.everything_they_re_carrying_is_deleted), "clear $t", str(R.string.cleared_x_s_inventory, name))
                 }
                 ActionChip(stringResource(R.string.power_kill), Icons.Filled.HeartBroken, ready) {
-                    confirm = Confirm(stringResource(R.string.kill_x, name), stringResource(R.string.they_ll_respawn_and_may_drop), "kill $t", stringResource(R.string.killed_x, name))
+                    confirm = Confirm(str(R.string.kill_x, name), str(R.string.they_ll_respawn_and_may_drop), "kill $t", str(R.string.killed_x, name))
                 }
             }
             if (isBedrock) {

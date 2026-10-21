@@ -275,7 +275,7 @@ fun TaskEditorSheet(
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(stringResource(R.string.delete_this_schedule)) },
-            text = { Text(stringResource(R.string.x_will_stop_running_this_can, existing?.name)) },
+            text = { Text(stringResource(R.string.x_will_stop_running_this_can, existing?.name.orEmpty())) },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; onDelete() }) {
                     Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
