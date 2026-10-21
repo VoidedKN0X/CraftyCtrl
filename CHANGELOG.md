@@ -3,6 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.6.3] - 2026-10-21
+
+### Fixed
+
+- **Fingerprint unlock works again after you leave the app.** Once you'd left CraftyCtrl with the back gesture or by swiping home, the lock screen could stop asking for your fingerprint when you came back, and tapping **Use fingerprint** then did nothing either; only the PIN worked until the app was force-closed. The fingerprint prompt was asked for while CraftyCtrl was still coming back on screen, and the phone dropped it without answering, which left the prompt stuck as "already open". Now the prompt only opens once CraftyCtrl is fully back on screen, a prompt that never answered can't block the next one (tapping **Use fingerprint** always opens a fresh one), and the lock screen offers your fingerprint again every time you come back to it. The same applies to the prompt for turning on fingerprint unlock in **Settings**.
+
 ## [2.6.2] - 2026-10-21
 
 ### Privacy
