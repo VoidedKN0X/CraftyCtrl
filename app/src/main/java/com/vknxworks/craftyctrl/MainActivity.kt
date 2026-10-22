@@ -1,7 +1,10 @@
 package com.vknxworks.craftyctrl
 
 import com.vknxworks.craftyctrl.ui.lock.findFragmentActivity
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
@@ -23,6 +26,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -42,6 +46,7 @@ import com.vknxworks.craftyctrl.data.Session
 import com.vknxworks.craftyctrl.monitor.MonitorService
 import com.vknxworks.craftyctrl.ui.ScreenPrivacy
 import com.vknxworks.craftyctrl.ui.SessionViewModel
+import com.vknxworks.craftyctrl.ui.rememberNotifyPermission
 import com.vknxworks.craftyctrl.ui.lock.AppLockViewModel
 import com.vknxworks.craftyctrl.ui.lock.LockScreen
 import com.vknxworks.craftyctrl.ui.lock.PinRequestScreen
@@ -125,6 +130,18 @@ private fun AppRoot(
     val context = LocalContext.current
     // Start or stop alerts whenever someone signs in or out.
     LaunchedEffect(session, sessionVm.signIns) { MonitorService.sync(context) }
+    // Server alerts that are on need Android 13's notification permission. Ask once, on its own, as soon as
+    // the app is signed in and unlocked; after that only the Notifications section in Settings asks.
+    val askNotify = rememberNotifyPermission { MonitorService.sync(context) }
+    LaunchedEffect(session, lockVm.locked) {
+        val settings = AppSettings(context)
+        if (session != null && !lockVm.locked && settings.alertsEnabled && !settings.notifyPermissionAsked &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            askNotify()
+        }
+    }
     if (session == null) {
         LoginScreen(sessionVm)
         return

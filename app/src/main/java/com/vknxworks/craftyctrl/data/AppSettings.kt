@@ -161,6 +161,11 @@ class AppSettings(context: Context) {
         get() = prefs.getInt(KEY_ALERT_INTERVAL, 30)
         set(v) = prefs.edit().putInt(KEY_ALERT_INTERVAL, v).apply()
 
+    /** Android's notification permission dialog was shown once; the app never asks on its own again. */
+    var notifyPermissionAsked: Boolean
+        get() = prefs.getBoolean(KEY_NOTIFY_ASKED, false)
+        set(v) = prefs.edit().putBoolean(KEY_NOTIFY_ASKED, v).apply()
+
     /** Hold a partial wake lock so checks keep running while the screen is off. */
     var alertKeepAwake: Boolean
         get() = prefs.getBoolean(KEY_ALERT_AWAKE, false)
@@ -203,5 +208,6 @@ class AppSettings(context: Context) {
         const val KEY_ALERT_SHUTDOWN = "alert_shutdown"
         const val KEY_ALERT_INTERVAL = "alert_interval"
         const val KEY_ALERT_AWAKE = "alert_keep_awake"
+        const val KEY_NOTIFY_ASKED = "notify_permission_asked"
     }
 }

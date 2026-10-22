@@ -715,6 +715,10 @@
     <string name="servers_running">Servers running</string>
     <string name="players_online_2">Players online</string>
     <string name="notifications">Notifications</string>
+    <string name="notifications_blocked">Notifications are blocked</string>
+    <string name="notifications_blocked_alerts_paused">Server alerts are paused until CraftyCtrl may show notifications. Tap Allow to let them through.</string>
+    <string name="allow">Allow</string>
+    <string name="turn_off_server_alerts">Turn off server alerts</string>
     <string name="notifications_are_blocked_for_this_app">Notifications are blocked for this app. Allow them in Android settings to get alerts.</string>
     <string name="server_alerts">Server alerts</string>
     <string name="get_notified_when_a_server_stops">Get notified when a server stops or crashes, even with the app closed. Shows a quiet ongoing notification while on</string>
