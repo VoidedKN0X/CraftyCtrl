@@ -3,6 +3,15 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.6.4] - 2026-10-22
+
+### Fixed
+
+- **Server alerts now actually get permission to notify you.** On Android 13 and later an app has to be allowed to show notifications, and CraftyCtrl only asked at the moment you turned on **Server alerts**. If notifications were blocked later (or never allowed), the switch still showed "on" while every alert, and the quiet "Server alerts on" notification, was silently dropped. Now, when server alerts are on and notifications aren't allowed, CraftyCtrl asks for them once by itself as soon as you're signed in and unlocked, and never nags again after that.
+- **The Notifications section in Settings tells the truth.** While notifications are blocked, the **Server alerts** switch no longer shows "on". A **Notifications are blocked** row appears instead, explaining that alerts are paused, with an **Allow** button: it shows Android's permission dialog while Android still offers it, and otherwise opens CraftyCtrl's notification settings. Coming back from there updates the section straight away, and alerts start again on their own once notifications are allowed. A **Turn off server alerts** row lets you switch them off completely instead.
+- **Alerts no longer run in the background when they can't reach you.** With notifications blocked, the alerts service stays stopped instead of checking your servers for nothing, and picks up again the next time you open CraftyCtrl with notifications allowed.
+- Showing Android's notification dialog or settings no longer locks the app when you come back to it.
+
 ## [2.6.3] - 2026-10-21
 
 ### Fixed

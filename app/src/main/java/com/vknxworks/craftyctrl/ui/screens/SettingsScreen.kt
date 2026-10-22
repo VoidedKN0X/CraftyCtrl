@@ -2,15 +2,12 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -24,6 +21,7 @@ import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.outlined.Refresh
@@ -36,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -57,6 +56,7 @@ import com.vknxworks.craftyctrl.data.lock.Lock
 import com.vknxworks.craftyctrl.data.lock.LockVault
 import com.vknxworks.craftyctrl.monitor.MonitorService
 import com.vknxworks.craftyctrl.ui.ScreenPrivacy
+import com.vknxworks.craftyctrl.ui.rememberNotifyPermission
 import com.vknxworks.craftyctrl.ui.lock.PinRequest
 import com.vknxworks.craftyctrl.ui.lock.PinRequests
 import com.vknxworks.craftyctrl.ui.lock.biometricAvailable
@@ -96,11 +96,16 @@ fun SettingsScreen(onBack: () -> Unit) {
     var interval by remember { mutableIntStateOf(settings.alertIntervalSeconds) }
     var keepAwake by remember { mutableStateOf(settings.alertKeepAwake) }
     var notifDenied by remember { mutableStateOf(false) }
+    var canNotify by remember { mutableStateOf(MonitorService.canNotify(context)) }
 
     val bioAvailable = remember { biometricAvailable(context) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         alerts = settings.alertsEnabled
+        // Back from Android's settings: notifications may have been allowed or blocked there.
+        canNotify = MonitorService.canNotify(context)
+        if (canNotify) notifDenied = false
+        MonitorService.sync(context)
     }
 
     fun turnAlertsOn() {
@@ -111,7 +116,9 @@ fun SettingsScreen(onBack: () -> Unit) {
         MonitorService.sync(context)
     }
 
-    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    // Android's dialog while it still shows, otherwise CraftyCtrl's notification settings.
+    val askNotify = rememberNotifyPermission { granted ->
+        canNotify = granted
         notifDenied = !granted
         if (granted) turnAlertsOn()
     }
@@ -151,20 +158,42 @@ fun SettingsScreen(onBack: () -> Unit) {
                 ) { ThemePrefs.saveDynamic(context, it) }
             }
 
-            Group(
-                stringResource(R.string.notifications),
-                footer = if (notifDenied) stringResource(R.string.notifications_are_blocked_for_this_app) else null,
-            ) {
+            Group(stringResource(R.string.notifications)) {
+                // Alerts that are on but can't notify are paused, and say so instead of showing "on".
+                if (!canNotify && (alerts || notifDenied)) {
+                    GroupRow(
+                        stringResource(R.string.notifications_blocked),
+                        stringResource(if (alerts) R.string.notifications_blocked_alerts_paused else R.string.notifications_are_blocked_for_this_app),
+                        icon = Icons.Outlined.NotificationsOff,
+                        iconTint = MaterialTheme.colorScheme.error,
+                        onClick = askNotify,
+                        trailing = { TextButton(onClick = askNotify) { Text(stringResource(R.string.allow)) } },
+                    )
+                }
+                if (!canNotify && alerts) {
+                    // Paused alerts can still be switched off for good, so the warning doesn't stay.
+                    GroupRow(
+                        stringResource(R.string.turn_off_server_alerts),
+                        icon = Icons.Outlined.NotificationsActive,
+                        onClick = {
+                            settings.alertsEnabled = false
+                            alerts = false
+                            store.syncBackgroundCopy(false)
+                            MonitorService.sync(context)
+                        },
+                    )
+                }
                 GroupSwitch(
                     stringResource(R.string.server_alerts),
                     stringResource(R.string.get_notified_when_a_server_stops),
-                    alerts,
+                    alerts && canNotify,
                     icon = Icons.Outlined.NotificationsActive,
                 ) { on ->
                     if (on) {
                         if (!MonitorService.canNotify(context)) {
-                            notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            askNotify()
                         } else {
+                            canNotify = true
                             turnAlertsOn()
                         }
                     } else {

@@ -284,9 +284,13 @@ class MonitorService : Service() {
         private const val CHANNEL_SHUTDOWN = "alerts_shutdown"
         private val nextId = AtomicInteger(2000)
 
+        /** CraftyCtrl may post notifications: the Android 13+ permission is granted and they aren't turned off. */
         fun canNotify(context: Context): Boolean =
-                ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) ==
-                PackageManager.PERMISSION_GRANTED
+            (
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                    ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) ==
+                    PackageManager.PERMISSION_GRANTED
+                ) && NotificationManagerCompat.from(context).areNotificationsEnabled()
 
         fun ensureChannels(context: Context) {
             val nm = context.getSystemService(NotificationManager::class.java)
@@ -308,7 +312,9 @@ class MonitorService : Service() {
             val settings = AppSettings(context)
             val signedIn = CredentialStore(context).load() != null
             val intent = Intent(context, MonitorService::class.java)
-            if (settings.alertsEnabled && signedIn) {
+            // Without notifications the alerts can't reach anyone, so they wait until they're allowed
+            // (the app syncs again when it comes back on screen).
+            if (settings.alertsEnabled && signedIn && canNotify(context)) {
                 runCatching { ContextCompat.startForegroundService(context, intent) }
             } else if (isRunning) {
                 // Stopping through onStartCommand avoids the crash when stopService beats startForeground.
