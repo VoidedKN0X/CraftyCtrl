@@ -245,9 +245,12 @@ class CreateServerViewModel(private val api: CraftyApi) : ViewModel() {
     companion object {
         private const val BUCKET = "https://jars.arcadiatech.org"
         private const val DOWNLOAD_TIMEOUT_MS = 10 * 60_000L
+        // Third party: HTTPS only, on every hop.
         private val catalogHttp = OkHttpClient.Builder()
             .connectTimeout(8, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
+            .followSslRedirects(false)
+            .addNetworkInterceptor(com.vknxworks.craftyctrl.data.CleartextPolicy.httpsOnly)
             .build()
     }
 }

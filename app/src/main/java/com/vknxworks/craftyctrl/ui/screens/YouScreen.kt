@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Gavel
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -142,10 +143,15 @@ fun YouScreen(session: Session, onBack: () -> Unit, onSettings: () -> Unit, onSi
             }
 
             Group(stringResource(R.string.you_panel_group)) {
+                val notEncrypted = com.vknxworks.craftyctrl.data.CleartextPolicy.isHttp(session.baseUrl)
                 GroupRow(
                     host,
-                    session.baseUrl.takeIf { it != host },
-                    icon = Icons.Outlined.Dns,
+                    listOfNotNull(
+                        session.baseUrl.takeIf { it != host },
+                        if (notEncrypted) stringResource(R.string.not_encrypted_http) else null,
+                    ).joinToString(" · ").takeIf { it.isNotEmpty() },
+                    icon = if (notEncrypted) Icons.Outlined.LockOpen else Icons.Outlined.Dns,
+                    iconTint = if (notEncrypted) CtrlColors.Error else CtrlColors.Muted,
                 )
             }
 

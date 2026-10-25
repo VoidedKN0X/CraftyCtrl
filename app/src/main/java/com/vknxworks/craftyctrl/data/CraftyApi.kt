@@ -37,7 +37,8 @@ class CraftyException(
 
 /**
  * Thin client for Crafty Controller 4's REST API (v2).
- * Uses Android's normal certificate checks — the panel must have a valid HTTPS certificate.
+ * Uses Android's normal certificate checks for https panels. Plain http is only used for a panel the user
+ * accepted after the "unencrypted connection" warning ([CleartextPolicy]).
  */
 class CraftyApi(
     baseUrl: String,
@@ -640,6 +641,17 @@ class CraftyApi(
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             .callTimeout(30, TimeUnit.SECONDS)
+            // Checks every hop, so an https request is never redirected down to http.
+            .addNetworkInterceptor(CleartextPolicy.interceptor)
+            .build()
+
+        /** Mojang is third party: HTTPS only, on every hop. */
+        private val thirdParty = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .callTimeout(30, TimeUnit.SECONDS)
+            .followSslRedirects(false)
+            .addNetworkInterceptor(CleartextPolicy.httpsOnly)
             .build()
 
         /** The last part of [raw], without control characters; "upload.bin" if nothing usable is left. */
@@ -679,7 +691,7 @@ class CraftyApi(
                 .newBuilder().addPathSegment(name).build()
             val req = Request.Builder().url(url).header("Accept", "application/json").build()
             try {
-                http.newCall(req).execute().use { resp ->
+                thirdParty.newCall(req).execute().use { resp ->
                     when {
                         resp.code == 200 -> (json.parseToJsonElement(resp.body?.string().orEmpty()) as? JsonObject)
                             ?.str("id")?.let(::dashedUuid)

@@ -39,6 +39,9 @@ class ConsoleSocket(
 
     fun connect(): Boolean {
         val http = base.toHttpUrlOrNull() ?: return false
+        // OkHttp opens wss:// for an https panel and ws:// for an http one, but ws:// only for a panel the
+        // user accepted plain HTTP for.
+        if (!http.isHttps && !CleartextPolicy.isAccepted(base)) return false
         // Crafty's panel connects to <panel>/ws?page=<page path>&page_query_params=<page query>.
         val url = http.newBuilder()
             .addPathSegment("ws")
@@ -111,6 +114,11 @@ class ConsoleSocket(
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(0, TimeUnit.SECONDS)
             .pingInterval(25, TimeUnit.SECONDS)
+            // OkHttp skips network interceptors for WebSockets, so the check runs as an app interceptor,
+            // and the handshake is never redirected (a panel's /ws doesn't redirect).
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .addInterceptor(CleartextPolicy.interceptor)
             .build()
 
         /** HTML to plain text: tags removed, entities decoded, colour codes dropped. */

@@ -3,6 +3,24 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.10.0] - 2026-10-25
+
+### Changed
+
+- **Plain HTTP panels work now.** If your Crafty panel runs on your home network without HTTPS, type `http://` in front of its address when signing in. Before, CraftyCtrl refused any `http://` address with "Use an https:// address"
+- **A warning comes first.** Signing in to an `http://` panel opens **Use an unencrypted connection?**, which explains that your API key or password, your login token, the console and everything else are then sent unencrypted, so anyone on the network can read them: fine on your home network or over a VPN, risky anywhere else. CraftyCtrl only connects after you tap **Use HTTP**; **Cancel** leaves you on the sign-in screen. While you type an `http://` address, a red line under it says it isn't encrypted
+- **Your choice is remembered for that panel** (its address and port), so server alerts, push checks and signing in again work without asking again. **Forgot PIN?** on the lock screen forgets it along with the rest
+- **"Not encrypted (HTTP)"** now shows next to the panel address on the Servers tab and on the You page (tap your profile picture) when you use an `http://` panel
+- **The live console works on HTTP panels too**: it connects over `ws://` to an `http://` panel and over `wss://` to an `https://` one, as Crafty's own web panel does
+- An address typed without `https://` or `http://` still means HTTPS
+
+### Security
+
+- **HTTPS stays the default and is never quietly dropped.** CraftyCtrl never switches an `https://` panel to HTTP, never follows a redirect from HTTPS to HTTP, and never sends your login over HTTP to an address you didn't accept; such a connection is blocked with "Blocked an unencrypted (HTTP) connection"
+- **Mojang's name lookup (`api.mojang.com`) and Crafty's download catalog (`jars.arcadiatech.org`) are always HTTPS**, on every redirect as well, whatever you choose for your own panel
+- Certificates are checked as before: only certificates Android itself trusts are accepted for HTTPS panels
+- Push from Crafty through ntfy is unchanged: your push address and the webhook setup work the same with an `http://` or `https://` panel
+
 ## [2.9.1] - 2026-10-25
 
 ### Fixed
