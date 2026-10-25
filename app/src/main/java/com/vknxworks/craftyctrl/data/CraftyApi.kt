@@ -59,6 +59,37 @@ class CraftyApi(
                 ?: throw CraftyException(0, "LOCKED", str(R.string.craftyctrl_is_locked))
         }
 
+    /** The token the next request would use, or null while the app is locked (for the console's WebSocket). */
+    fun currentToken(): String? = if (tokenProvider == null) fixedToken else tokenProvider.invoke()
+
+    /**
+     * A server's webhooks (Crafty 4.4+), as (id, fields). Crafty sends them as a list or as a map keyed by id.
+     */
+    suspend fun webhooks(serverId: String): List<Pair<String?, JsonObject>> {
+        val data = (call("GET", "/servers/$serverId/webhook") as? JsonObject)?.get("data")
+        return when (data) {
+            is kotlinx.serialization.json.JsonArray -> data.filterIsInstance<JsonObject>().map { (it.str("id") ?: it.str("webhook_id")) to it }
+            is JsonObject -> data.entries.mapNotNull { (key, v) ->
+                (v as? JsonObject)?.let { (it.str("id") ?: it.str("webhook_id") ?: key) to it }
+            }
+            else -> emptyList()
+        }
+    }
+
+    suspend fun createWebhook(serverId: String, fields: JsonObject) {
+        call("POST", "/servers/$serverId/webhook", jsonBody(fields))
+    }
+
+    /** Crafty's docs give this one as /server/ (singular); try the plural form the other calls use first. */
+    suspend fun updateWebhook(serverId: String, webhookId: String, fields: JsonObject) {
+        try {
+            call("PATCH", "/servers/$serverId/webhook/$webhookId", jsonBody(fields))
+        } catch (e: CraftyException) {
+            if (e.httpCode !in listOf(404, 405)) throw e
+            call("PATCH", "/server/$serverId/webhook/$webhookId", jsonBody(fields))
+        }
+    }
+
     suspend fun servers(): List<ServerSummary> =
         call("GET", "/servers").dataArray()
             .mapNotNull { (it as? JsonObject)?.let(ServerSummary::from) }

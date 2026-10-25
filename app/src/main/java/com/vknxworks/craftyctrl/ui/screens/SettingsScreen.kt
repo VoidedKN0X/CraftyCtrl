@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -79,7 +80,7 @@ private val LOCK_AGAIN = listOf(
 
 /** Settings, opened from the You page (tap your profile picture). About is on the You page itself. */
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(api: com.vknxworks.craftyctrl.data.CraftyApi, onBack: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { AppSettings(context) }
 
@@ -96,6 +97,9 @@ fun SettingsScreen(onBack: () -> Unit) {
     var canNotify by remember { mutableStateOf(MonitorService.canNotify(context)) }
 
     val bioAvailable = remember { biometricAvailable(context) }
+
+    var push by remember { mutableStateOf(settings.pushEnabled) }
+    var alertMode by remember { mutableStateOf(settings.alertMode) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         alerts = settings.alertsEnabled
@@ -164,7 +168,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
                 GroupSwitch(
                     stringResource(R.string.server_alerts),
-                    stringResource(R.string.get_notified_when_a_server_stops),
+                    stringResource(if (push && alertMode == AppSettings.ALERT_MODE_PUSH) R.string.server_alerts_subtitle_push else R.string.get_notified_when_a_server_stops),
                     alerts && canNotify,
                     icon = Icons.Outlined.NotificationsActive,
                 ) { on ->
@@ -182,13 +186,29 @@ fun SettingsScreen(onBack: () -> Unit) {
                         MonitorService.sync(context)
                     }
                 }
-                GroupChoice(
+                if (push) {
+                    GroupChoice(
+                        stringResource(R.string.alerts_run_as),
+                        listOf(
+                            AppSettings.ALERT_MODE_MONITOR to stringResource(R.string.alerts_mode_monitor),
+                            AppSettings.ALERT_MODE_PUSH to stringResource(R.string.alerts_mode_push),
+                        ),
+                        alertMode,
+                        icon = Icons.Outlined.Tune,
+                        footer = stringResource(R.string.alerts_mode_footer),
+                    ) {
+                        settings.alertMode = it
+                        alertMode = it
+                        MonitorService.sync(context)
+                    }
+                }
+                if (!push || alertMode == AppSettings.ALERT_MODE_MONITOR) GroupChoice(
                     stringResource(R.string.check_every),
                     listOf(15, 30).map { it to pluralStringResource(R.plurals.x_seconds, it, it) } + listOf(1, 5).map { it * 60 to pluralStringResource(R.plurals.x_minutes, it, it) },
                     interval,
                     icon = Icons.Outlined.Schedule,
                 ) { settings.alertIntervalSeconds = it; interval = it }
-                GroupSwitch(
+                if (!push || alertMode == AppSettings.ALERT_MODE_MONITOR) GroupSwitch(
                     stringResource(R.string.keep_checking_while_the_screen_is),
                     stringResource(R.string.without_this_android_may_pause_checks),
                     keepAwake,
@@ -200,6 +220,23 @@ fun SettingsScreen(onBack: () -> Unit) {
                     if (alerts) MonitorService.restart(context)
                 }
             }
+
+            PushSettings(
+                api = api,
+                push = push,
+                onPushChange = { on ->
+                    settings.pushEnabled = on
+                    push = on
+                    if (on) {
+                        com.vknxworks.craftyctrl.push.Push.register(context)
+                    } else {
+                        com.vknxworks.craftyctrl.push.Push.unregister(context)
+                    }
+                    MonitorService.sync(context)
+                },
+            )
+
+            PlayerAlertSettings(api = api, alertsOn = alerts && canNotify)
 
             Group(
                 stringResource(R.string.group_privacy),

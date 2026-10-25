@@ -11,6 +11,14 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
+    <!-- ntfy, the only push app CraftyCtrl uses. -->
+    <queries>
+        <package android:name="io.heckel.ntfy" />
+        <intent>
+            <action android:name="org.unifiedpush.android.distributor.REGISTER" />
+        </intent>
+    </queries>
+
     <application
         android:name=".CraftyCtrlApp"
         android:allowBackup="false"
@@ -39,7 +47,36 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Watches the user's self-hosted game servers and notifies on player joins and shutdowns." />
+                android:value="Watches the user's self-hosted Minecraft servers and notifies when one stops or crashes, and when players join or leave servers the user picked." />
+        </service>
+
+        <!-- Checks after a push from Crafty, and every 15 minutes in push-only mode. Only the system may start it. -->
+        <service
+            android:name=".monitor.CheckJob"
+            android:exported="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <!-- ntfy hands over the push address and Crafty's webhooks here. Exported because ntfy is another app;
+             every broadcast must carry the secret token of CraftyCtrl's registration or it's ignored. -->
+        <receiver
+            android:name=".push.PushReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.MESSAGE" />
+                <action android:name="org.unifiedpush.android.connector.UNREGISTERED" />
+                <action android:name="org.unifiedpush.android.connector.NEW_ENDPOINT" />
+                <action android:name="org.unifiedpush.android.connector.REGISTRATION_FAILED" />
+                <action android:name="org.unifiedpush.android.connector.TEMP_UNAVAILABLE" />
+            </intent-filter>
+        </receiver>
+        <!-- ntfy binds to this for a few seconds before delivering a message, so CraftyCtrl can handle it at once. -->
+        <service
+            android:name=".push.RaiseToForegroundService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.RAISE_TO_FOREGROUND" />
+            </intent-filter>
         </service>
 
         <receiver
