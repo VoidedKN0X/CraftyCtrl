@@ -3,6 +3,21 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.9.1] - 2026-10-25
+
+### Fixed
+
+- **No more crash when you close the app with the app lock set to lock immediately.** Pressing Back on the Servers screen or swiping CraftyCtrl away from recent apps locked the app as it closed, and the lock screen then tried to open on a screen that was already gone, which could crash the app. The app still locks as before and opens locked next time; the lock screen just waits until CraftyCtrl is actually on screen
+- **The live console no longer keeps a connection open after you leave it.** When the console lost its connection and reconnected around the moment you switched tabs, left the server or left the app, a late message from the old connection could make CraftyCtrl forget the new one without closing it, so it kept streaming in the background. Late messages from old connections are now ignored, and a connection that can't close cleanly is cut off at once
+- **Turning on fingerprint unlock in Settings no longer crashes** when Android refuses to show the fingerprint prompt (for example while the app is being left); it shows the usual "couldn't set up fingerprint unlock" message instead
+- **Diagnostics no longer crash when the app locks while they run**: the report stops and shows that CraftyCtrl is locked
+- **A background check that Android stops early** (out of time, or the network went away) no longer reports itself finished a second time
+
+### Security
+
+- **Turn off on the ongoing alerts notification** now does everything turning alerts off in Settings does: with the app lock on, the separate copy of your Crafty login that alerts use while locked is deleted, and what alerts last saw is forgotten. Before, the copy stayed on the phone until you next opened Settings
+- **A push address from ntfy is only accepted when it's a valid web address**, so a malformed one can't be shown or set up as a webhook
+
 ## [2.9.0] - 2026-10-25
 
 ### New

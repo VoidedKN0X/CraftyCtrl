@@ -31,6 +31,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -158,12 +159,18 @@ private fun AppRoot(
         val request = PinRequests.request
         if (!lockVm.locked && request != null) PinRequestScreen(request, lockVm)
         if (lockVm.locked) {
+            // The lock window opens only while the activity is on screen and not on its way out: locking as the
+            // app is closed (Back on the first screen, swiped from recents) must not open a window on an activity
+            // that's finishing or gone. The app is still locked, and the cover below hides it meanwhile.
+            val lifecycleState by owner.lifecycle.currentStateAsState()
+            val canShowLock = lifecycleState.isAtLeast(Lifecycle.State.STARTED) &&
+                activity?.isFinishing != true && activity?.isDestroyed != true
             // Opaque cover in the app's own window (also behind the system bars).
             androidx.compose.material3.Surface(Modifier.fillMaxSize().clearAndSetSemantics {}, color = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Background) {}
             // The lock itself is a full-screen window of its own. Dialogs, menus and sheets that were open when the
             // app locked are separate windows above the app's window, so drawing the lock in the app's window
             // alone would leave them visible and usable on top of it; this window covers them.
-            androidx.compose.ui.window.Dialog(
+            if (canShowLock) androidx.compose.ui.window.Dialog(
                 onDismissRequest = {},
                 properties = androidx.compose.ui.window.DialogProperties(
                     dismissOnBackPress = false,

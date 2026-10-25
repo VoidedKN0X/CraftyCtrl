@@ -297,7 +297,17 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
             val report = StringBuilder("Server $serverId\n")
             for ((method, p, body) in checks) {
                 report.append("\n── $method /api/v2$p").append(body?.let { " $it" }.orEmpty()).append('\n')
-                report.append(api.raw(p, body)).append('\n')
+                // Throws when the app locks while the checks run; stop there instead of crashing.
+                val result = try {
+                    api.raw(p, body)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    report.append(e.userMessage()).append('\n')
+                    diagnostics = report.toString()
+                    return@launch
+                }
+                report.append(result).append('\n')
                 diagnostics = report.toString()
             }
         }
@@ -638,8 +648,9 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         consoleWanted = false
         reconnect?.cancel()
         reconnect = null
-        socket?.close()
+        val s = socket
         socket = null
+        s?.close()
         consoleLive = false
     }
 
@@ -650,10 +661,13 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
             scheduleReconnect()
             return
         }
+        // Callbacks of a socket that was already replaced or closed (they're posted, so they can arrive late)
+        // are ignored: acting on them would drop the newer socket without closing it and keep it streaming.
+        var self: com.vknxworks.craftyctrl.data.ConsoleSocket? = null
         val s = com.vknxworks.craftyctrl.data.ConsoleSocket(api.baseUrl, serverId, token, object : com.vknxworks.craftyctrl.data.ConsoleSocket.Listener {
             override fun onOpen() {
                 mainHandler.post {
-                    if (consoleWanted) {
+                    if (consoleWanted && socket === self && self != null) {
                         socketFailures = 0
                         consoleLive = true
                         // Fill in anything that was printed while the socket was down.
@@ -664,12 +678,13 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
             override fun onLine(line: String) {
                 mainHandler.post {
-                    if (consoleWanted) logs = (logs + line).takeLast(MAX_CONSOLE_LINES)
+                    if (consoleWanted && socket === self && self != null) logs = (logs + line).takeLast(MAX_CONSOLE_LINES)
                 }
             }
 
             override fun onClosed(unauthorized: Boolean) {
                 mainHandler.post {
+                    if (socket !== self || self == null) return@post
                     socket = null
                     consoleLive = false
                     socketFailures++
@@ -677,6 +692,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 }
             }
         })
+        self = s
         socket = s
         if (!s.connect()) {
             socket = null

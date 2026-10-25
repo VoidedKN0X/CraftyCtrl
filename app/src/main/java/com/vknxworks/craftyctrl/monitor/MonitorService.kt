@@ -57,6 +57,9 @@ class MonitorService : Service() {
         when (intent?.action) {
             ACTION_STOP -> {
                 AppSettings(this).alertsEnabled = false
+                // As when alerts are turned off in Settings: their copy of the login and what they last saw go too.
+                CredentialStore(this).syncBackgroundCopy(false)
+                Checker.reset(this)
                 CheckJob.schedule(this, false)
                 stopSelf()
                 return START_NOT_STICKY
