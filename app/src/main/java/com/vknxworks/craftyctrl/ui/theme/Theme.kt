@@ -2,34 +2,56 @@ package com.vknxworks.craftyctrl.ui.theme
 
 import android.content.Context
 import androidx.annotation.StringRes
-import com.vknxworks.craftyctrl.R
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import com.vknxworks.craftyctrl.R
 import com.vknxworks.craftyctrl.data.ServerState
 
-// The same theme setup as the other Ctrl apps: Material You by default, a brand fallback,
-// Follow system / Dark / Light / Pure black, the system font and the shared corner shapes.
+// "Ctrl / Signal": the dark-only look shared by every Ctrl app. Near-black background, flat surfaces with
+// hairline borders, one accent colour, Space Grotesk for text and JetBrains Mono for numbers and labels.
 
-/** The theme choices every Ctrl app offers: follow the phone, always dark or light, or pure black. */
+/** Every colour of the Signal look. Change [Accent] to recolour the whole app. */
+object CtrlColors {
+    val Accent = Color(0xFFB48CFF)
+    val OnAccent = Color(0xFF08080A)
+
+    val Background = Color(0xFF08080A)
+    val Surface = Color(0xFF141417)
+    val Raised = Color(0xFF1C1C21)
+    val Track = Color(0xFF26262C)
+    val CardBorder = Color(0xFF232328)
+    val ControlBorder = Color(0xFF2A2A2F)
+    val Divider = Color(0xFF1E1E23)
+    val SwitchOff = Color(0xFF2A2A30)
+    val PinEmpty = Color(0xFF3A3A41)
+
+    val Text = Color(0xFFF4F4F2)
+    val Muted = Color(0xFFA3A3AB)
+    val Inactive = Color(0xFF8C8C94)
+
+    val Error = Color(0xFFFF6B6B)
+    val Warn = Color(0xFFE5A92E)
+}
+
+/** Kept so older settings still load. The app is always dark now; there is no theme choice any more. */
 enum class ThemeMode(val key: String, @StringRes val label: Int) {
     SYSTEM("system", R.string.theme_system),
     DARK("dark", R.string.theme_dark),
@@ -41,55 +63,21 @@ enum class ThemeMode(val key: String, @StringRes val label: Int) {
     }
 }
 
-/** Appearance settings, kept in Compose state so changes recolour the app at once. */
+/** Appearance: Signal is dark only, with no Material You colours. Nothing here can be changed. */
 object ThemePrefs {
-    var mode by mutableStateOf(ThemeMode.SYSTEM)
-        private set
-    var dynamicColor by mutableStateOf(true)
-        private set
+    val mode: ThemeMode get() = ThemeMode.DARK
+    val dynamicColor: Boolean get() = false
 
-    /** True black backgrounds (the "Pure black" theme). */
-    val pureBlack: Boolean get() = mode == ThemeMode.BLACK
+    /** Older versions stored a theme choice; it's simply ignored now. */
+    @Suppress("UNUSED_PARAMETER")
+    fun load(context: Context) = Unit
 
-    private fun prefs(c: Context) = c.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-
-    fun load(context: Context) {
-        val p = prefs(context)
-        // Before 2.5.2, pure black was a separate switch: Dark with it on is now the Pure black theme.
-        if (p.contains(KEY_BLACK)) {
-            val wasBlack = p.getBoolean(KEY_BLACK, false)
-            val edit = p.edit().remove(KEY_BLACK)
-            if (wasBlack && ThemeMode.of(p.getString(KEY_MODE, null)) == ThemeMode.DARK) edit.putString(KEY_MODE, ThemeMode.BLACK.key)
-            edit.apply()
-        }
-        mode = ThemeMode.of(p.getString(KEY_MODE, null))
-        dynamicColor = p.getBoolean(KEY_DYNAMIC, true)
-    }
-
-    fun saveMode(context: Context, m: ThemeMode) {
-        mode = m
-        prefs(context).edit().putString(KEY_MODE, m.key).apply()
-    }
-
-    fun saveDynamic(context: Context, on: Boolean) {
-        dynamicColor = on
-        prefs(context).edit().putBoolean(KEY_DYNAMIC, on).apply()
-    }
-
-    /** Whether the app should be dark right now. */
+    /** Always dark. */
     @Composable
-    fun isDark(): Boolean = when (mode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK, ThemeMode.BLACK -> true
-    }
-
-    private const val KEY_MODE = "theme_mode"
-    private const val KEY_DYNAMIC = "dynamic_color"
-    private const val KEY_BLACK = "pure_black"
+    fun isDark(): Boolean = true
 }
 
-/** Fixed meaning colours for server state, tuned per light/dark so they stay legible. */
+/** Fixed meaning colours for server state. */
 @Immutable
 data class StatusColors(
     val running: Color,
@@ -98,114 +86,138 @@ data class StatusColors(
     val stopped: Color,
 )
 
-private val DarkStatus = StatusColors(
-    running = Color(0xFF34C77B),
-    busy = Color(0xFFE5A92E),
-    crashed = Color(0xFFE5534B),
-    stopped = Color(0xFF8E9099),
-)
-private val LightStatus = StatusColors(
-    running = Color(0xFF15934F),
-    busy = Color(0xFFB57A00),
-    crashed = Color(0xFFC62828),
-    stopped = Color(0xFF74777F),
+private val SignalStatus = StatusColors(
+    running = CtrlColors.Accent,
+    busy = CtrlColors.Warn,
+    crashed = CtrlColors.Error,
+    stopped = CtrlColors.Inactive,
 )
 
-val LocalStatusColors = staticCompositionLocalOf { DarkStatus }
+val LocalStatusColors = staticCompositionLocalOf { SignalStatus }
 
-// Brand fallback when Material You is off: the blue of the app icon.
-private val BrandDark = darkColorScheme(
-    primary = Color(0xFFB9C3FF),
-    onPrimary = Color(0xFF0A2287),
-    primaryContainer = Color(0xFF2A3DA0),
-    onPrimaryContainer = Color(0xFFDDE1FF),
-    secondary = Color(0xFFC2C5DD),
-    onSecondary = Color(0xFF2C2F42),
-    secondaryContainer = Color(0xFF424659),
-    onSecondaryContainer = Color(0xFFDEE1F9),
-    tertiary = Color(0xFFE3BADA),
-    onTertiary = Color(0xFF43273F),
-    tertiaryContainer = Color(0xFF5B3D57),
-    onTertiaryContainer = Color(0xFFFFD6F7),
-    background = Color(0xFF121318),
-    onBackground = Color(0xFFE3E1E9),
-    surface = Color(0xFF121318),
-    onSurface = Color(0xFFE3E1E9),
-    surfaceVariant = Color(0xFF45464F),
-    onSurfaceVariant = Color(0xFFC6C5D0),
-    surfaceContainerLowest = Color(0xFF0D0E13),
-    surfaceContainerLow = Color(0xFF1A1B21),
-    surfaceContainer = Color(0xFF1E1F25),
-    surfaceContainerHigh = Color(0xFF292A2F),
-    surfaceContainerHighest = Color(0xFF34343A),
-    outline = Color(0xFF90909A),
-    outlineVariant = Color(0xFF45464F),
-    error = Color(0xFFFFB4AB),
+private val SignalScheme = darkColorScheme(
+    primary = CtrlColors.Accent,
+    onPrimary = CtrlColors.OnAccent,
+    primaryContainer = CtrlColors.Accent,
+    onPrimaryContainer = CtrlColors.OnAccent,
+    inversePrimary = CtrlColors.Accent,
+    secondary = CtrlColors.Text,
+    onSecondary = CtrlColors.OnAccent,
+    secondaryContainer = Color(0xFF241F33),
+    onSecondaryContainer = CtrlColors.Accent,
+    tertiary = CtrlColors.Muted,
+    onTertiary = CtrlColors.OnAccent,
+    tertiaryContainer = CtrlColors.Raised,
+    onTertiaryContainer = CtrlColors.Text,
+    background = CtrlColors.Background,
+    onBackground = CtrlColors.Text,
+    surface = CtrlColors.Surface,
+    onSurface = CtrlColors.Text,
+    surfaceVariant = CtrlColors.Raised,
+    onSurfaceVariant = CtrlColors.Muted,
+    surfaceTint = Color.Transparent,
+    inverseSurface = CtrlColors.Text,
+    inverseOnSurface = CtrlColors.OnAccent,
+    error = CtrlColors.Error,
+    onError = CtrlColors.OnAccent,
+    errorContainer = Color(0xFF2A1517),
+    onErrorContainer = CtrlColors.Error,
+    outline = CtrlColors.ControlBorder,
+    outlineVariant = CtrlColors.Divider,
+    scrim = Color.Black,
+    surfaceBright = CtrlColors.Raised,
+    surfaceDim = CtrlColors.Background,
+    surfaceContainerLowest = CtrlColors.Background,
+    surfaceContainerLow = CtrlColors.Surface,
+    surfaceContainer = CtrlColors.Surface,
+    surfaceContainerHigh = CtrlColors.Raised,
+    surfaceContainerHighest = CtrlColors.Track,
 )
 
-private val BrandLight = lightColorScheme(
-    primary = Color(0xFF4355B9),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFDEE0FF),
-    onPrimaryContainer = Color(0xFF00105C),
-    secondary = Color(0xFF5B5D72),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFDFE1F9),
-    onSecondaryContainer = Color(0xFF181A2C),
-    tertiary = Color(0xFF77536D),
-    onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFFFD7F1),
-    onTertiaryContainer = Color(0xFF2D1228),
-    background = Color(0xFFFBF8FF),
-    onBackground = Color(0xFF1B1B21),
-    surface = Color(0xFFFBF8FF),
-    onSurface = Color(0xFF1B1B21),
-    surfaceVariant = Color(0xFFE3E1EC),
-    onSurfaceVariant = Color(0xFF46464F),
-    surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFF5F2FA),
-    surfaceContainer = Color(0xFFEFEDF4),
-    surfaceContainerHigh = Color(0xFFE9E7EF),
-    surfaceContainerHighest = Color(0xFFE4E1E9),
-    outline = Color(0xFF767680),
-    outlineVariant = Color(0xFFC6C5D0),
-)
-
-private val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(6.dp),
+// Text fields and menus 16, chips and badges 10, cards 22, dialogs, sheets and hero cards 26.
+private val SignalShapes = Shapes(
+    extraSmall = RoundedCornerShape(16.dp),
     small = RoundedCornerShape(10.dp),
     medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(32.dp),
+    large = RoundedCornerShape(22.dp),
+    extraLarge = RoundedCornerShape(26.dp),
 )
 
-private fun ColorScheme.pureBlack(): ColorScheme = copy(
-    background = Color.Black,
-    surface = Color.Black,
-    surfaceContainerLowest = Color.Black,
-    surfaceContainerLow = Color(0xFF0B0B0B),
-    surfaceContainer = Color(0xFF121212),
-    surfaceContainerHigh = Color(0xFF1A1A1A),
-    surfaceContainerHighest = Color(0xFF222222),
+@OptIn(ExperimentalTextApi::class)
+private fun spaceGroteskVariable(weight: Int) = Font(
+    R.font.space_grotesk_variable,
+    FontWeight(weight),
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
 )
+
+/** Space Grotesk (SIL OFL 1.1), bundled: all UI text and headings. */
+val SpaceGrotesk: FontFamily = FontFamily(
+    Font(R.font.space_grotesk_regular, FontWeight.Normal),
+    Font(R.font.space_grotesk_medium, FontWeight.Medium),
+    spaceGroteskVariable(600),
+    Font(R.font.space_grotesk_bold, FontWeight.Bold),
+)
+
+/** JetBrains Mono (SIL OFL 1.1), bundled: numbers, data readouts, section labels, logs and the wordmark. */
+val JetBrainsMono: FontFamily = FontFamily(
+    Font(R.font.jetbrains_mono_regular, FontWeight.Normal),
+    Font(R.font.jetbrains_mono_medium, FontWeight.Medium),
+    Font(R.font.jetbrains_mono_semibold, FontWeight.SemiBold),
+)
+
+/** Monospaced text for numbers, code and logs. */
+val Mono: FontFamily = JetBrainsMono
+
+private fun sg(size: Int, line: Int, weight: FontWeight, tracking: Double = 0.0) = TextStyle(
+    fontFamily = SpaceGrotesk,
+    fontSize = size.sp,
+    lineHeight = line.sp,
+    fontWeight = weight,
+    letterSpacing = tracking.em,
+)
+
+private val SignalTypography = Typography(
+    displayLarge = sg(56, 56, FontWeight.Bold, -0.04),
+    displayMedium = sg(45, 48, FontWeight.Bold, -0.04),
+    displaySmall = sg(36, 40, FontWeight.Bold, -0.035),
+    headlineLarge = sg(40, 44, FontWeight.Bold, -0.035),
+    headlineMedium = sg(28, 34, FontWeight.Bold, -0.025),
+    headlineSmall = sg(24, 30, FontWeight.SemiBold, -0.02),
+    titleLarge = sg(20, 26, FontWeight.SemiBold, -0.01),
+    titleMedium = sg(18, 24, FontWeight.SemiBold),
+    titleSmall = sg(15, 20, FontWeight.SemiBold),
+    bodyLarge = sg(16, 22, FontWeight.Normal),
+    bodyMedium = sg(14, 20, FontWeight.Normal),
+    bodySmall = sg(12, 16, FontWeight.Normal),
+    labelLarge = sg(14, 20, FontWeight.SemiBold),
+    labelMedium = sg(12, 16, FontWeight.Medium),
+    labelSmall = sg(11, 16, FontWeight.Medium),
+)
+
+/** The Signal text styles that have no Material slot. */
+object CtrlType {
+    /** Section labels: JetBrains Mono 11, upper case, wide tracking (callers upper-case the text). */
+    val Label = TextStyle(fontFamily = JetBrainsMono, fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.16.em)
+    /** The "CRAFTY/CTRL" wordmark. */
+    val Wordmark = TextStyle(fontFamily = JetBrainsMono, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.14.em)
+    /** Giant readout on hero cards. */
+    val Hero = TextStyle(fontFamily = SpaceGrotesk, fontSize = 64.sp, lineHeight = 60.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.05).em)
+    /** Big screen title (56). */
+    val Display = TextStyle(fontFamily = SpaceGrotesk, fontSize = 56.sp, lineHeight = 54.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.04).em)
+    /** Readout in a metric card. */
+    val Metric = TextStyle(fontFamily = SpaceGrotesk, fontSize = 30.sp, lineHeight = 34.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.03).em)
+    /** Small mono data next to rows. */
+    val MonoSmall = TextStyle(fontFamily = JetBrainsMono, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Normal)
+    /** Mono status words in lists. */
+    val MonoStatus = TextStyle(fontFamily = JetBrainsMono, fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.1.em)
+}
 
 @Composable
 fun CraftyTheme(content: @Composable () -> Unit) {
-    val dark = ThemePrefs.isDark()
-    val ctx = LocalContext.current
-    var scheme = when {
-        ThemePrefs.dynamicColor -> if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
-        dark -> BrandDark
-        else -> BrandLight
-    }
-    if (dark && ThemePrefs.pureBlack) scheme = scheme.pureBlack()
-    CompositionLocalProvider(LocalStatusColors provides if (dark) DarkStatus else LightStatus) {
-        MaterialTheme(colorScheme = scheme, shapes = AppShapes, content = content)
+    CompositionLocalProvider(LocalStatusColors provides SignalStatus) {
+        MaterialTheme(colorScheme = SignalScheme, shapes = SignalShapes, typography = SignalTypography, content = content)
     }
 }
-
-/** Monospaced text for numbers, code and logs. */
-val Mono: FontFamily = FontFamily.Monospace
 
 /** Colour of a server state's dot. */
 @Composable
@@ -220,14 +232,14 @@ fun stateColor(state: ServerState?): Color {
     }
 }
 
-// Console and editor colours come from the active theme.
+// The console and editors sit on the deepest black, in JetBrains Mono.
 val ConsoleBackground: Color
-    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.surfaceContainerLowest
+    @Composable @ReadOnlyComposable get() = CtrlColors.Background
 val ConsoleText: Color
-    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurface
+    @Composable @ReadOnlyComposable get() = CtrlColors.Text
 val ConsoleWarn: Color
     @Composable @ReadOnlyComposable get() = LocalStatusColors.current.busy
 val ConsoleError: Color
-    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.error
+    @Composable @ReadOnlyComposable get() = CtrlColors.Error
 val ConsoleDim: Color
-    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurfaceVariant
+    @Composable @ReadOnlyComposable get() = CtrlColors.Muted

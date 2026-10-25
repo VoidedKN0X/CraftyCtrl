@@ -2,6 +2,23 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlBottomBarSpace
+import com.vknxworks.craftyctrl.ui.components.CtrlHeroCard
+import com.vknxworks.craftyctrl.ui.components.CtrlLabel
+import com.vknxworks.craftyctrl.ui.components.CtrlMetricCard
+import com.vknxworks.craftyctrl.ui.components.HeroBars
+import com.vknxworks.craftyctrl.ui.components.HeroNumber
+import com.vknxworks.craftyctrl.ui.components.StatusSquare
+import com.vknxworks.craftyctrl.ui.theme.CtrlColors
+import com.vknxworks.craftyctrl.ui.theme.CtrlType
+import com.vknxworks.craftyctrl.ui.components.CtrlTopBar
+import com.vknxworks.craftyctrl.ui.components.CtrlBackButton
+import com.vknxworks.craftyctrl.ui.components.CtrlButton
+import com.vknxworks.craftyctrl.ui.components.CtrlCardBorder
+import com.vknxworks.craftyctrl.ui.components.CtrlDialog
+import com.vknxworks.craftyctrl.ui.components.CtrlSecondaryButton
+import com.vknxworks.craftyctrl.ui.components.CtrlSwitch
+import com.vknxworks.craftyctrl.ui.components.CtrlTextField
 import com.vknxworks.craftyctrl.ui.lock.findFragmentActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -58,6 +75,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -76,7 +94,6 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -95,7 +112,6 @@ import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -229,9 +245,9 @@ fun ServerDetailScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
-        snackbarHost = { SnackbarHost(snackbar, Modifier.padding(bottom = 78.dp)) },
+        snackbarHost = { SnackbarHost(snackbar, Modifier.padding(bottom = CtrlBottomBarSpace)) },
         topBar = {
-            TopAppBar(
+            CtrlTopBar(
                 title = {
                     Column {
                         Text(
@@ -246,20 +262,16 @@ fun ServerDetailScreen(
                             vm.version,
                         ).joinToString(" · ")
                         if (sub.isNotEmpty()) {
-                            Text(sub, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                            Text(sub, style = com.vknxworks.craftyctrl.ui.theme.CtrlType.MonoSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                         }
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
+                    CtrlBackButton(onClick = onBack)
                 },
                 actions = {
                     Box {
-                        IconButton(onClick = { overflow = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more))
-                        }
+                        com.vknxworks.craftyctrl.ui.components.CtrlIconButton(Icons.Filled.MoreVert, stringResource(R.string.more), onClick = { overflow = true })
                         DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
                             ManagePage.entries.forEach { page ->
                                 DropdownMenuItem(
@@ -294,7 +306,6 @@ fun ServerDetailScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
             )
         },
     ) { padding ->
@@ -302,7 +313,7 @@ fun ServerDetailScreen(
         // It steps aside while the keyboard is open so the console's command field stays visible.
         val haze = remember { HazeState() }
         val imeVisible = WindowInsets.isImeVisible
-        val islandSpace = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 78.dp
+        val islandSpace = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + CtrlBottomBarSpace
         Box(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
             Box(
                 Modifier
@@ -341,7 +352,7 @@ fun ServerDetailScreen(
 
     if (confirmUpdate) {
         val url = vm.config?.updateUrl
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { confirmUpdate = false },
             icon = { Icon(Icons.Filled.SystemUpdateAlt, contentDescription = null) },
             title = { Text(stringResource(R.string.update_server_software_2)) },
@@ -369,7 +380,7 @@ fun ServerDetailScreen(
     }
 
     if (confirmClone) {
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { if (!vm.managing) confirmClone = false },
             icon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
             title = { Text(stringResource(R.string.clone_this_server)) },
@@ -415,7 +426,7 @@ private fun DeleteServerDialog(
     var typed by remember { mutableStateOf("") }
     var deleteFiles by remember { mutableStateOf(true) }
     val matches = typed.trim() == serverName.trim() && serverName.isNotBlank()
-    AlertDialog(
+    CtrlDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Filled.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
         title = { Text(stringResource(R.string.delete_x_2, serverName)) },
@@ -441,7 +452,7 @@ private fun DeleteServerDialog(
                         )
                     }
                 }
-                OutlinedTextField(
+                CtrlTextField(
                     value = typed,
                     onValueChange = { typed = it },
                     label = { Text(stringResource(R.string.type_the_server_name_to_confirm)) },
@@ -466,7 +477,7 @@ private fun DeleteServerDialog(
 private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
     val clipboard = com.vknxworks.craftyctrl.ui.rememberSensitiveClipboard()
     var copied by remember { mutableStateOf(false) }
-    AlertDialog(
+    CtrlDialog(
         onDismissRequest = onClose,
         title = { Text(stringResource(R.string.diagnostics)) },
         text = {
@@ -529,8 +540,8 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
             LinearProgressIndicator(Modifier.fillMaxWidth())
         }
 
+        if (s != null) StatusHero(s, vm.liveSamples.mapNotNull { it.cpu?.toFloat() })
         CtrlCard {
-            if (s != null) StatusHero(s)
             Countdowns.active[vm.serverId]?.let { c -> CountdownBanner(c, onCancel = vm::cancelCountdown) }
             PowerControls(
                 state = s?.state,
@@ -562,7 +573,7 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                OutlinedButton(onClick = { playerSheet = "" }, modifier = Modifier.fillMaxWidth()) {
+                CtrlSecondaryButton(onClick = { playerSheet = "" }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.ManageAccounts, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.manage_a_player_by_name))
@@ -584,25 +595,21 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
             }
         }
 
-        Text(
-            stringResource(R.string.manage),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 16.dp, top = 6.dp),
-        )
+        CtrlLabel(stringResource(R.string.manage), Modifier.padding(start = 4.dp, top = 8.dp))
         Card(
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = CtrlColors.Surface),
+            border = CtrlCardBorder,
             modifier = Modifier.fillMaxWidth(),
         ) {
             ManagePage.entries.forEachIndexed { idx, page ->
                 if (idx > 0) ItemDivider()
                 ListItem(
-                    leadingContent = { Icon(page.icon, contentDescription = null) },
-                    headlineContent = { Text(page.title) },
+                    leadingContent = { Icon(page.icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = CtrlColors.Muted) },
+                    headlineContent = { Text(page.title, fontWeight = FontWeight.Medium) },
                     supportingContent = { Text(page.subtitle) },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = CtrlColors.Muted) },
+                    colors = ListItemDefaults.colors(containerColor = CtrlColors.Surface),
                     modifier = Modifier.clickable { onManage(page) },
                 )
             }
@@ -611,7 +618,7 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
 
     if (vm.eulaNeeded) {
         val uri = LocalUriHandler.current
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = vm::dismissEula,
             title = { Text(stringResource(R.string.accept_the_minecraft_eula)) },
             text = {
@@ -658,32 +665,66 @@ private fun OverviewTab(vm: ServerDetailViewModel, onManage: (ManagePage) -> Uni
     }
 }
 
+/**
+ * The server's hero: its state and uptime as a mono label row, then the giant number (players online, or CPU
+ * when Crafty doesn't report players) on the accent card, and memory and CPU as metric cards underneath.
+ */
 @Composable
-private fun StatusHero(s: ServerStats) {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Dot(stateColor(s.state), size = 10.dp)
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Text(s.state.label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                val detail = when (s.state) {
-                    ServerState.RUNNING -> s.started?.let { uptimeShort(it) }?.let { stringResource(R.string.up_x, it) }
-                    ServerState.CRASHED -> stringResource(R.string.crafty_detected_a_crash)
-                    ServerState.STARTING -> stringResource(R.string.coming_up)
-                    ServerState.UPDATING -> stringResource(R.string.updating_the_server_jar)
-                    ServerState.STOPPED -> stringResource(R.string.not_running)
+private fun StatusHero(s: ServerStats, cpuSamples: List<Float>) {
+    val live = s.running || s.state == ServerState.STARTING
+    val detail = when (s.state) {
+        ServerState.RUNNING -> s.started?.let { uptimeShort(it) }?.let { stringResource(R.string.up_x, it) }
+        ServerState.CRASHED -> stringResource(R.string.crafty_detected_a_crash)
+        ServerState.STARTING -> stringResource(R.string.coming_up)
+        ServerState.UPDATING -> stringResource(R.string.updating_the_server_jar)
+        ServerState.STOPPED -> stringResource(R.string.not_running)
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (live) {
+            val showPlayers = s.playersKnown
+            CtrlHeroCard(
+                label = s.state.label + " · " + if (showPlayers) stringResource(R.string.players) else "CPU",
+                trailingLabel = detail,
+            ) {
+                if (showPlayers) {
+                    HeroNumber("${s.online ?: 0}", unit = s.max?.takeIf { it > 0 }?.let { " / $it" })
+                } else {
+                    HeroNumber(s.cpu?.let { "%.0f".format(it) } ?: "—", unit = if (s.cpu != null) "%" else null)
                 }
-                detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                if (cpuSamples.size >= 2) HeroBars(cpuSamples)
+                s.description?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
             }
-        }
-        s.description?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-        if (s.running || s.state == ServerState.STARTING) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BigStat("CPU", s.cpu?.let { "%.0f%%".format(it) } ?: "—", Modifier.weight(1f))
-                BigStat(stringResource(R.string.memory), s.memPercent?.let { "%.0f%%".format(it) } ?: s.mem?.replace(" ", "") ?: "—", Modifier.weight(1f))
-                if (s.playersKnown) BigStat(stringResource(R.string.players), playersText(s.online, s.max).replace(" ", ""), Modifier.weight(1f))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                CtrlMetricCard(
+                    "CPU",
+                    s.cpu?.let { "%.0f".format(it) } ?: "—",
+                    Modifier.weight(1f),
+                    unit = if (s.cpu != null) "%" else null,
+                    fraction = s.cpu?.let { (it / 100).toFloat() },
+                    barColor = CtrlColors.Accent,
+                )
+                CtrlMetricCard(
+                    stringResource(R.string.memory),
+                    s.mem?.substringBefore(' ') ?: s.memPercent?.let { "%.0f".format(it) } ?: "—",
+                    Modifier.weight(1f),
+                    unit = s.mem?.substringAfter(' ', "")?.takeIf { it.isNotBlank() }?.let { " $it" } ?: if (s.mem == null && s.memPercent != null) "%" else null,
+                    fraction = s.memPercent?.let { (it / 100).toFloat() },
+                )
+            }
+        } else {
+            // Not running: no accent hero, just the state in a plain card.
+            CtrlCard {
+                CtrlLabel(stringResource(R.string.signal_status))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(s.state.label, style = CtrlType.Metric, color = stateColor(s.state), modifier = Modifier.weight(1f))
+                    StatusSquare(stateColor(s.state), size = 10.dp)
+                }
+                detail?.let { Text(it, style = CtrlType.MonoSmall, color = CtrlColors.Muted) }
+                s.description?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = CtrlColors.Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
             }
         }
     }
@@ -731,10 +772,10 @@ private fun PowerControls(state: ServerState?, pending: PowerAction?, onAction: 
             PowerButton(PowerAction.KILL, Icons.Filled.Dangerous, idle, pending, Modifier.weight(1f), onAction)
         }
         state == ServerState.UPDATING -> PowerButton(PowerAction.KILL, Icons.Filled.Dangerous, idle, pending, Modifier.fillMaxWidth(), onAction)
-        else -> Button(
+        else -> CtrlButton(
             onClick = { onAction(PowerAction.START) },
             enabled = idle && state != null,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
         ) {
             if (pending == PowerAction.START) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
@@ -766,19 +807,19 @@ private fun PowerButton(
         Text(action.label, maxLines = 1)
     }
     if (action.dangerous) {
-        OutlinedButton(
+        CtrlSecondaryButton(
             onClick = { onAction(action) },
             enabled = enabled,
             contentPadding = PaddingValues(horizontal = 8.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-            modifier = modifier.height(48.dp),
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = CtrlColors.Surface, contentColor = MaterialTheme.colorScheme.error, disabledContainerColor = CtrlColors.Surface),
+            modifier = modifier.height(52.dp),
         ) { content() }
     } else {
-        FilledTonalButton(
+        CtrlSecondaryButton(
             onClick = { onAction(action) },
             enabled = enabled,
             contentPadding = PaddingValues(horizontal = 8.dp),
-            modifier = modifier.height(48.dp),
+            modifier = modifier.height(52.dp),
         ) { content() }
     }
 }
@@ -870,7 +911,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
             }
         }
         if (searching) {
-            OutlinedTextField(
+            CtrlTextField(
                 value = query,
                 onValueChange = { query = it },
                 placeholder = { Text(stringResource(R.string.search_the_console)) },
@@ -887,7 +928,8 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
 
         Surface(
             color = ConsoleBackground,
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(22.dp),
+            border = CtrlCardBorder,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
@@ -899,8 +941,8 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                         line,
                         color = lineColor(line),
                         fontFamily = Mono,
-                        fontSize = 11.5.sp,
-                        lineHeight = 15.sp,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
                         modifier = Modifier
                             .fillMaxWidth()
                             .combinedClickable(
@@ -954,7 +996,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                 .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            OutlinedTextField(
+            CtrlTextField(
                 value = input,
                 onValueChange = { input = it },
                 placeholder = { Text(stringResource(R.string.command_without)) },
@@ -968,7 +1010,9 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
             FilledIconButton(
                 onClick = { send() },
                 enabled = input.isNotBlank() && !vm.sending,
-                modifier = Modifier.size(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(containerColor = CtrlColors.Accent, contentColor = CtrlColors.OnAccent, disabledContainerColor = CtrlColors.Raised, disabledContentColor = CtrlColors.Inactive),
+                modifier = Modifier.size(56.dp),
             ) {
                 if (vm.sending) {
                     CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -1086,8 +1130,9 @@ private fun BackupCard(
     onRun: () -> Unit,
 ) {
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = CtrlCardBorder,
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1102,7 +1147,7 @@ private fun BackupCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (b.isDefault) {
-                    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
+                    Surface(shape = RoundedCornerShape(9.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
                         Text(
                             stringResource(R.string.default_label),
                             style = MaterialTheme.typography.labelSmall,
@@ -1162,7 +1207,7 @@ private fun BackupCard(
                                 Text(t.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        Switch(checked = t.enabled, onCheckedChange = { onToggle(t, it) })
+                        CtrlSwitch(checked = t.enabled, onCheckedChange = { onToggle(t, it) })
                     }
                 }
                 schedulesLoading -> Text(stringResource(R.string.loading_schedule), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1174,23 +1219,23 @@ private fun BackupCard(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onAddSchedule, modifier = Modifier.weight(1f)) {
+                CtrlSecondaryButton(onClick = onAddSchedule, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.add_schedule))
                 }
-                OutlinedButton(onClick = onEdit, modifier = Modifier.weight(1f)) {
+                CtrlSecondaryButton(onClick = onEdit, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.settings))
                 }
             }
-            OutlinedButton(onClick = onRestore, modifier = Modifier.fillMaxWidth()) {
+            CtrlSecondaryButton(onClick = onRestore, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Filled.SettingsBackupRestore, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(stringResource(R.string.restore_a_backup))
             }
-            FilledTonalButton(onClick = onRun, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+            CtrlSecondaryButton(onClick = onRun, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
                 if (busy) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
@@ -1221,7 +1266,7 @@ private fun SchedulesTab(vm: ServerDetailViewModel) {
     ) {
         item(key = "header") { TabHeader(stringResource(R.string.scheduled_tasks), state.loading, vm::loadTasks) }
         item(key = "new") {
-            FilledTonalButton(onClick = { editing = TaskEdit(null, null) }, modifier = Modifier.fillMaxWidth()) {
+            CtrlSecondaryButton(onClick = { editing = TaskEdit(null, null) }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.new_schedule))
@@ -1247,7 +1292,7 @@ private fun SchedulesTab(vm: ServerDetailViewModel) {
 
     editing?.let { e -> TaskEditor(vm, e) { editing = null } }
     confirmRun?.let { t ->
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { confirmRun = null },
             title = { Text(stringResource(R.string.run_x_now, t.name)) },
             text = { Text(t.command?.let { "${t.actionLabel}: $it" } ?: t.actionLabel) },
@@ -1277,8 +1322,9 @@ private fun TaskEditor(vm: ServerDetailViewModel, e: TaskEdit, close: () -> Unit
 private fun TaskCard(t: ScheduledTask, onClick: () -> Unit, onRun: () -> Unit, onToggle: (Boolean) -> Unit) {
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = CtrlCardBorder,
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -1300,7 +1346,7 @@ private fun TaskCard(t: ScheduledTask, onClick: () -> Unit, onRun: () -> Unit, o
                 )
             }
             IconButton(onClick = onRun) { Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.run_now)) }
-            Switch(checked = t.enabled, onCheckedChange = onToggle)
+            CtrlSwitch(checked = t.enabled, onCheckedChange = onToggle)
         }
     }
 }
@@ -1328,12 +1374,12 @@ private fun EmptyCard(
     busy: Boolean = false,
     onAction: () -> Unit = {},
 ) {
-    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+    Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, border = CtrlCardBorder) {
         Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (action != null) {
-                FilledTonalButton(onClick = onAction, enabled = !busy) { Text(action) }
+                CtrlSecondaryButton(onClick = onAction, enabled = !busy) { Text(action) }
             }
         }
     }
@@ -1370,7 +1416,7 @@ private fun RestoreDialog(
     val name = (picked ?: typed).trim()
     val armed = confirm.trim().equals("restore", ignoreCase = true)
 
-    AlertDialog(
+    CtrlDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Filled.SettingsBackupRestore, contentDescription = null) },
         title = { Text(stringResource(R.string.restore_from_x, config.name)) },
@@ -1403,7 +1449,7 @@ private fun RestoreDialog(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        OutlinedTextField(
+                        CtrlTextField(
                             value = typed,
                             onValueChange = { typed = it },
                             label = { Text(stringResource(R.string.backup_file_name)) },
@@ -1433,7 +1479,7 @@ private fun RestoreDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
-                OutlinedTextField(
+                CtrlTextField(
                     value = confirm,
                     onValueChange = { confirm = it },
                     placeholder = { Text("RESTORE") },
@@ -1465,7 +1511,7 @@ private fun CountdownBanner(c: Countdown, onCancel: () -> Unit) {
     val left = ((c.endsAt - now) / 1000).coerceAtLeast(0)
     Column {
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Dot(MaterialTheme.colorScheme.tertiary)
+            Dot(CtrlColors.Accent)
             Spacer(Modifier.width(10.dp))
             Text(
                 (if (c.action == PowerAction.RESTART) stringResource(R.string.restarting_in) else stringResource(R.string.stopping_in)) + "%d:%02d".format(left / 60, left % 60),
@@ -1494,7 +1540,7 @@ private fun PowerDialog(
     val canWarn = action == PowerAction.RESTART || action == PowerAction.STOP
     var delay by remember { mutableStateOf(0) }
     var note by remember { mutableStateOf("") }
-    AlertDialog(
+    CtrlDialog(
         onDismissRequest = onDismiss,
         title = { Text("${action.label} ${serverName.ifBlank { "server" }}?") },
         text = {
@@ -1508,7 +1554,7 @@ private fun PowerDialog(
                         }
                     }
                     if (delay > 0) {
-                        OutlinedTextField(
+                        CtrlTextField(
                             value = note,
                             onValueChange = { note = it },
                             label = { Text(stringResource(R.string.reason_optional)) },

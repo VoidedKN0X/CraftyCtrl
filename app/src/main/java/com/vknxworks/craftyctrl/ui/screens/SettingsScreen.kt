@@ -2,6 +2,8 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlTopBar
+import com.vknxworks.craftyctrl.ui.components.CtrlBackButton
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
@@ -16,13 +18,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.BatteryChargingFull
-import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.NotificationsOff
-import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Schedule
@@ -42,7 +42,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -66,8 +65,6 @@ import com.vknxworks.craftyctrl.ui.settings.Group
 import com.vknxworks.craftyctrl.ui.settings.GroupChoice
 import com.vknxworks.craftyctrl.ui.settings.GroupRow
 import com.vknxworks.craftyctrl.ui.settings.GroupSwitch
-import com.vknxworks.craftyctrl.ui.theme.ThemeMode
-import com.vknxworks.craftyctrl.ui.theme.ThemePrefs
 import androidx.compose.ui.res.pluralStringResource
 
 /** When the app lock asks again after you leave the app (seconds; -1 = only when the app restarts). */
@@ -123,16 +120,13 @@ fun SettingsScreen(onBack: () -> Unit) {
         if (granted) turnAlertsOn()
     }
 
-    val scroll = androidx.compose.material3.TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
-            androidx.compose.material3.LargeTopAppBar(
-                title = { Text(stringResource(R.string.settings), fontWeight = FontWeight.SemiBold) },
+            CtrlTopBar(
+                title = { Text(stringResource(R.string.settings), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                    CtrlBackButton(onClick = onBack)
                 },
-                scrollBehavior = scroll,
             )
         },
     ) { padding ->
@@ -143,21 +137,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp),
         ) {
-            Group(stringResource(R.string.group_appearance)) {
-                GroupChoice(
-                    stringResource(R.string.theme),
-                    ThemeMode.entries.map { it to stringResource(it.label) },
-                    ThemePrefs.mode,
-                    icon = Icons.Outlined.DarkMode,
-                ) { ThemePrefs.saveMode(context, it) }
-                GroupSwitch(
-                    stringResource(R.string.dynamic_colour),
-                    stringResource(R.string.dynamic_colour_subtitle),
-                    ThemePrefs.dynamicColor,
-                    icon = Icons.Outlined.Palette,
-                ) { ThemePrefs.saveDynamic(context, it) }
-            }
-
             Group(stringResource(R.string.notifications)) {
                 // Alerts that are on but can't notify are paused, and say so instead of showing "on".
                 if (!canNotify && (alerts || notifDenied)) {
@@ -167,7 +146,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                         icon = Icons.Outlined.NotificationsOff,
                         iconTint = MaterialTheme.colorScheme.error,
                         onClick = askNotify,
-                        trailing = { TextButton(onClick = askNotify) { Text(stringResource(R.string.allow)) } },
+                        trailing = { TextButton(onClick = askNotify) { Text(stringResource(R.string.allow), color = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Accent) } },
                     )
                 }
                 if (!canNotify && alerts) {

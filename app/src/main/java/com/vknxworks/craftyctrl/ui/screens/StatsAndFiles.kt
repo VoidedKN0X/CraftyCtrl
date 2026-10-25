@@ -2,6 +2,11 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlTopBar
+import com.vknxworks.craftyctrl.ui.components.CtrlBackButton
+import com.vknxworks.craftyctrl.ui.components.CtrlDialog
+import com.vknxworks.craftyctrl.ui.components.CtrlSecondaryButton
+import com.vknxworks.craftyctrl.ui.components.CtrlTextField
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.vknxworks.craftyctrl.ui.theme.Mono
@@ -53,7 +58,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -417,7 +421,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                         )
                     }
                     TextButton(onClick = vm::cancelClip) { Text(stringResource(R.string.cancel)) }
-                    FilledTonalButton(onClick = vm::pasteHere) { Text(stringResource(R.string.paste_here)) }
+                    CtrlSecondaryButton(onClick = vm::pasteHere) { Text(stringResource(R.string.paste_here)) }
                 }
             }
         }
@@ -435,7 +439,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
     }
 
     confirmDelete?.let { e ->
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { confirmDelete = null },
             title = { Text(stringResource(R.string.delete_x_2, e.name)) },
             text = {
@@ -463,7 +467,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
     }
 
     binaryWarning?.let { e ->
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { binaryWarning = null },
             title = { Text(stringResource(R.string.can_t_edit_x, e.name)) },
             text = { Text(stringResource(R.string.this_looks_like_a_binary_file)) },
@@ -567,7 +571,7 @@ fun FileEditorScreen(api: CraftyApi, serverId: String, path: String, onBack: () 
         contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(
+            CtrlTopBar(
                 title = {
                     Column {
                         Text(
@@ -586,7 +590,7 @@ fun FileEditorScreen(api: CraftyApi, serverId: String, path: String, onBack: () 
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                    CtrlBackButton(onClick = leave)
                 },
                 actions = {
                     FilterChip(selected = wrap, onClick = { wrap = !wrap }, label = { Text(stringResource(R.string.wrap)) })
@@ -627,7 +631,7 @@ fun FileEditorScreen(api: CraftyApi, serverId: String, path: String, onBack: () 
     }
 
     if (confirmLeave) {
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { confirmLeave = false },
             title = { Text(stringResource(R.string.discard_changes)) },
             text = { Text(stringResource(R.string.unsaved_edits_to_x, path.substringAfterLast('/'))) },
@@ -659,11 +663,11 @@ private fun NameDialog(
 ) {
     var name by remember { mutableStateOf(initial) }
     val error = if (name.isEmpty()) null else validName(name)
-    AlertDialog(
+    CtrlDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            OutlinedTextField(
+            CtrlTextField(
                 value = name,
                 onValueChange = { name = it },
                 label = { Text(hint) },

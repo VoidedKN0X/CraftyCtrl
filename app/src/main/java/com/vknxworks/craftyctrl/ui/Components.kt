@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -76,8 +76,8 @@ fun PollWhileVisible(key: Any?, intervalMs: Long, block: suspend () -> Unit) {
 fun StatusDot(state: ServerState?, modifier: Modifier = Modifier) {
     Box(
         modifier
-            .size(10.dp)
-            .clip(CircleShape)
+            .size(8.dp)
+            .clip(RoundedCornerShape(2.dp))
             .background(stateColor(state)),
     )
 }
@@ -89,13 +89,13 @@ fun StatusPill(state: ServerState?) {
         Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        StatusDot(state, Modifier.size(7.dp))
-        Spacer(Modifier.width(6.dp))
         Text(
-            state?.label ?: stringResource(R.string.unknown),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            (state?.label ?: stringResource(R.string.unknown)).uppercase(),
+            style = com.vknxworks.craftyctrl.ui.theme.CtrlType.MonoStatus,
+            color = stateColor(state),
         )
+        Spacer(Modifier.width(8.dp))
+        StatusDot(state)
     }
 }
 
@@ -108,8 +108,9 @@ fun MetricTile(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(22.dp),
+        color = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Surface,
+        border = com.vknxworks.craftyctrl.ui.components.CtrlCardBorder,
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -145,15 +146,16 @@ fun ErrorBanner(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.35f)),
     ) {
         Row(
             Modifier.padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Filled.ErrorOutline, contentDescription = null, modifier = Modifier.size(20.dp))
+            Icon(Icons.Outlined.ErrorOutline, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
             Text(message, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             if (onRetry != null) {
@@ -165,10 +167,5 @@ fun ErrorBanner(
 
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        modifier = modifier.padding(start = 4.dp),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-    )
+    com.vknxworks.craftyctrl.ui.components.CtrlLabel(text, modifier.padding(start = 4.dp))
 }

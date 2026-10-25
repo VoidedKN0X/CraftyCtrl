@@ -1,4 +1,5 @@
 <resources>
-    <color name="window_bg">#FBF8F3</color>
+    <!-- Ctrl / Signal background, shown while the app starts (dark only). -->
+    <color name="window_bg">#08080A</color>
     <color name="launcher_bg">#15171C</color>
 </resources>

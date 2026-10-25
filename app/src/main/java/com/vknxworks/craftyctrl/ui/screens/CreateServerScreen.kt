@@ -2,6 +2,12 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlTopBar
+import com.vknxworks.craftyctrl.ui.components.CtrlBackButton
+import com.vknxworks.craftyctrl.ui.components.CtrlButton
+import com.vknxworks.craftyctrl.ui.components.CtrlCardBorder
+import com.vknxworks.craftyctrl.ui.components.CtrlSwitch
+import com.vknxworks.craftyctrl.ui.components.CtrlTextField
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +57,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -261,12 +266,10 @@ fun CreateServerScreen(
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            TopAppBar(
+            CtrlTopBar(
                 title = { Text(stringResource(R.string.new_server), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack, enabled = !busy) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
+                    CtrlBackButton(onClick = onBack, enabled = !busy)
                 },
             )
         },
@@ -397,7 +400,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
             }
         }
 
-        OutlinedTextField(
+        CtrlTextField(
             value = name,
             onValueChange = { name = it.take(48) },
             label = { Text(stringResource(R.string.server_name)) },
@@ -419,7 +422,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
             }
 
             ExposedDropdownMenuBox(expanded = versionMenu && versions.isNotEmpty(), onExpandedChange = { versionMenu = it }) {
-                OutlinedTextField(
+                CtrlTextField(
                     value = version,
                     onValueChange = { version = it.trim().take(32) },
                     label = { Text(stringResource(R.string.minecraft_version)) },
@@ -445,13 +448,13 @@ private fun CreateForm(vm: CreateServerViewModel) {
 
             SectionLabel(stringResource(R.string.memory_gb))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
+                CtrlTextField(
                     value = memMin, onValueChange = { memMin = it.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(5) },
                     label = { Text(stringResource(R.string.minimum)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.weight(1f),
                 )
-                OutlinedTextField(
+                CtrlTextField(
                     value = memMax, onValueChange = { memMax = it.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(5) },
                     label = { Text(stringResource(R.string.maximum)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -460,7 +463,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
             }
         }
 
-        OutlinedTextField(
+        CtrlTextField(
             value = port,
             onValueChange = { port = it.filter(Char::isDigit).take(5) },
             label = { Text(stringResource(R.string.game_port)) },
@@ -479,7 +482,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, border = CtrlCardBorder) {
             Column(Modifier.padding(vertical = 6.dp)) {
                 Row(
                     Modifier
@@ -499,7 +502,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(stringResource(R.string.start_the_server_when_it_s), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    Switch(checked = startAfter, onCheckedChange = { startAfter = it })
+                    CtrlSwitch(checked = startAfter, onCheckedChange = { startAfter = it })
                 }
             }
         }
@@ -507,7 +510,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
         problem?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Button(
+        CtrlButton(
             onClick = { vm.create(body(), name.trim(), startAfter) },
             enabled = problem == null,
             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -560,7 +563,7 @@ private fun DoneView(s: CreateStep.Done, onBack: () -> Unit, onOpen: () -> Unit)
             Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onOpen, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.open_server)) }
+        CtrlButton(onClick = onOpen, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.open_server)) }
         Spacer(Modifier.width(8.dp))
         TextButton(onClick = onBack) { Text(stringResource(R.string.back_to_servers)) }
     }

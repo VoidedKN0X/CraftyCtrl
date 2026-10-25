@@ -12,122 +12,81 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vknxworks.craftyctrl.R
+import androidx.compose.ui.unit.sp
+import com.vknxworks.craftyctrl.ui.components.CtrlAvatar
+import com.vknxworks.craftyctrl.ui.components.CtrlButton
+import com.vknxworks.craftyctrl.ui.components.CtrlLabel
+import com.vknxworks.craftyctrl.ui.components.CtrlProgress
+import com.vknxworks.craftyctrl.ui.theme.CtrlColors
+import com.vknxworks.craftyctrl.ui.theme.CtrlType
 import com.vknxworks.craftyctrl.ui.theme.LocalStatusColors
-import com.vknxworks.craftyctrl.ui.theme.Mono
 
-// Building blocks shared with the other Ctrl apps, so the screens look and behave alike.
+// Building blocks shared with the other Ctrl apps, so the screens look and behave alike (Ctrl / Signal).
 
 /**
- * The round profile picture at the top right of the main screens. Tapping it opens the You page, the only
- * way into Settings (like every Ctrl app). Shows the first letter of the signed-in user, or the series'
- * placeholder avatar when signed in with an API key (Crafty doesn't host profile pictures of its own).
+ * The profile picture at the top right of the main screens. Tapping it opens the You page, the only
+ * way into Settings (like every Ctrl app). Shows the initials of the signed-in user, or the placeholder
+ * figure when signed in with an API key (Crafty doesn't host profile pictures of its own).
  */
 @Composable
-fun ProfileButton(username: String?, onClick: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
-    val label = stringResource(R.string.account_and_settings)
-    IconButton(onClick = onClick, modifier = Modifier.semantics { contentDescription = label }) {
-        Box(
-            Modifier.size(34.dp).clip(CircleShape).background(cs.primary.copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            val initial = username?.trim()?.take(1)?.uppercase()
-            if (initial.isNullOrBlank()) {
-                Icon(Icons.Filled.AccountCircle, null, tint = cs.primary)
-            } else {
-                Text(initial, style = MaterialTheme.typography.titleMedium, color = cs.primary)
-            }
-        }
-    }
-}
+fun ProfileButton(username: String?, onClick: () -> Unit) = CtrlAvatar(username, onClick)
 
-/** Compact screen header: icon tile, title, one line of context and action buttons. */
+/**
+ * Screen header: a mono label over a big Space Grotesk title and one mono line of context, with action
+ * buttons on the right. [icon] is kept for older call sites; Signal headers have no icon tile.
+ */
 @Composable
 fun CtrlHeader(
-    icon: ImageVector,
+    @Suppress("UNUSED_PARAMETER") icon: ImageVector,
     title: String,
     subtitle: String?,
     modifier: Modifier = Modifier,
-    subtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    subtitleColor: Color = CtrlColors.Muted,
+    label: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    val cs = MaterialTheme.colorScheme
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(cs.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) { Icon(icon, null, tint = cs.onPrimaryContainer, modifier = Modifier.size(22.dp)) }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            subtitle?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = subtitleColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (label != null) CtrlLabel(label)
+            Text(title, style = CtrlType.Display, color = CtrlColors.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            subtitle?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = CtrlType.MonoSmall, color = subtitleColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), content = actions)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, content = actions)
     }
 }
 
-/** A rounded card with an optional title in the accent colour. */
+/** A card with an optional mono label (see [com.vknxworks.craftyctrl.ui.components.CtrlCard]). */
 @Composable
 fun CtrlCard(
     title: String? = null,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
-) {
-    val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-    val body: @Composable () -> Unit = {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (title != null) {
-                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-            }
-            content()
-        }
-    }
-    if (onClick != null) {
-        Card(onClick = onClick, shape = RoundedCornerShape(24.dp), colors = colors, modifier = modifier.fillMaxWidth()) { body() }
-    } else {
-        Card(shape = RoundedCornerShape(24.dp), colors = colors, modifier = modifier.fillMaxWidth()) { body() }
-    }
-}
+) = com.vknxworks.craftyctrl.ui.components.CtrlCard(title, modifier, onClick, content = content)
 
-/** A large monospaced number over a small label. */
+/** A big number over a small mono label. */
 @Composable
 fun BigStat(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier) {
-        Text(value, style = MaterialTheme.typography.headlineSmall, fontFamily = Mono, fontWeight = FontWeight.Medium, maxLines = 1)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        CtrlLabel(label)
+        Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, color = CtrlColors.Text)
     }
 }
 
@@ -136,20 +95,20 @@ fun BigStat(label: String, value: String, modifier: Modifier = Modifier) {
 fun StatRow(label: String, value: String, warn: Boolean = false) {
     val warnColor = LocalStatusColors.current.busy
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = CtrlColors.Text, modifier = Modifier.weight(1f))
         if (warn) Icon(Icons.Outlined.Warning, null, tint = warnColor, modifier = Modifier.size(16.dp).padding(end = 4.dp))
         Text(
             value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontFamily = Mono,
-            color = if (warn) warnColor else MaterialTheme.colorScheme.onSurfaceVariant,
+            style = CtrlType.MonoSmall,
+            fontSize = 13.sp,
+            color = if (warn) warnColor else CtrlColors.Muted,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
-/** A usage meter: label, value and a rounded bar that turns amber and red as it fills. */
+/** A usage meter: label, mono value and a 6 dp bar that turns amber and red as it fills. */
 @Composable
 fun Meter(label: String, percent: Double?, detail: String? = null) {
     if (percent == null) return
@@ -158,26 +117,14 @@ fun Meter(label: String, percent: Double?, detail: String? = null) {
     val color = when {
         p >= 90 -> status.crashed
         p >= 75 -> status.busy
-        else -> MaterialTheme.colorScheme.primary
+        else -> CtrlColors.Text
     }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row {
-            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), maxLines = 1)
-            Text(
-                detail ?: "%.0f %%".format(p),
-                style = MaterialTheme.typography.bodyMedium,
-                fontFamily = Mono,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = CtrlColors.Text, modifier = Modifier.weight(1f), maxLines = 1)
+            Text(detail ?: "%.0f %%".format(p), style = CtrlType.MonoSmall, color = CtrlColors.Muted)
         }
-        LinearProgressIndicator(
-            progress = { (p / 100).toFloat() },
-            color = color,
-            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            strokeCap = StrokeCap.Round,
-            drawStopIndicator = {},
-            modifier = Modifier.fillMaxWidth().height(8.dp),
-        )
+        CtrlProgress((p / 100).toFloat(), color = color)
     }
 }
 
@@ -188,20 +135,20 @@ fun EmptyState(title: String, body: String, action: String? = null, icon: ImageV
         Modifier.fillMaxWidth().padding(vertical = 64.dp, horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(icon, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(icon, null, Modifier.size(40.dp), tint = CtrlColors.Muted)
         Spacer(Modifier.height(16.dp))
-        Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-        Text(body, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
+        Text(title, style = MaterialTheme.typography.titleLarge, color = CtrlColors.Text, textAlign = TextAlign.Center)
+        Text(body, color = CtrlColors.Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
         if (action != null) {
             Spacer(Modifier.height(20.dp))
-            Button(onClick = onAction) { Text(action) }
+            CtrlButton(onClick = onAction) { Text(action) }
         }
     }
 }
 
-/** Divider between rows inside a card. */
+/** 1 dp divider between rows inside a card. */
 @Composable
-fun ItemDivider() = HorizontalDivider(
-    Modifier.padding(horizontal = 16.dp),
-    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+fun ItemDivider() = Box(
+    Modifier.fillMaxWidth().height(1.dp).background(CtrlColors.CardBorder),
 )
+

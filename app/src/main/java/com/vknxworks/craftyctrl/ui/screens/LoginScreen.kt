@@ -2,6 +2,8 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlButton
+import com.vknxworks.craftyctrl.ui.components.CtrlTextField
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -89,7 +91,7 @@ fun LoginScreen(vm: SessionViewModel) {
         }
     }
 
-    Scaffold(contentWindowInsets = WindowInsets.safeDrawing) { padding ->
+    Scaffold(contentWindowInsets = WindowInsets.safeDrawing, containerColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Background) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
@@ -107,9 +109,10 @@ fun LoginScreen(vm: SessionViewModel) {
                 Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.matchParentSize().scale(1.35f))
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                com.vknxworks.craftyctrl.ui.components.CtrlWordmark("Crafty")
                 Text(
-                    "CraftyCtrl",
-                    style = MaterialTheme.typography.displaySmall,
+                    stringResource(R.string.app_name),
+                    style = com.vknxworks.craftyctrl.ui.theme.CtrlType.Display,
                 )
                 Text(
                     stringResource(R.string.connect_to_your_crafty_controller_panel),
@@ -120,7 +123,7 @@ fun LoginScreen(vm: SessionViewModel) {
 
             Spacer(Modifier.height(4.dp))
 
-            OutlinedTextField(
+            CtrlTextField(
                 value = url,
                 onValueChange = { url = it },
                 label = { Text(stringResource(R.string.panel_address)) },
@@ -135,14 +138,22 @@ fun LoginScreen(vm: SessionViewModel) {
                     SegmentedButton(
                         selected = mode == m,
                         onClick = { mode = m },
-                        shape = SegmentedButtonDefaults.itemShape(index, AuthMode.entries.size),
+                        shape = SegmentedButtonDefaults.itemShape(index, AuthMode.entries.size, androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),
+                        colors = SegmentedButtonDefaults.colors(
+                            activeContainerColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Accent,
+                            activeContentColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.OnAccent,
+                            activeBorderColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Accent,
+                            inactiveContainerColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Surface,
+                            inactiveContentColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Text,
+                            inactiveBorderColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.ControlBorder,
+                        ),
                     ) { Text(m.label) }
                 }
             }
 
             when (mode) {
                 AuthMode.API_KEY -> {
-                    OutlinedTextField(
+                    CtrlTextField(
                         value = apiKey,
                         onValueChange = { apiKey = it },
                         label = { Text(stringResource(R.string.you_api_key_user)) },
@@ -161,7 +172,7 @@ fun LoginScreen(vm: SessionViewModel) {
                 }
 
                 AuthMode.PASSWORD -> {
-                    OutlinedTextField(
+                    CtrlTextField(
                         value = username,
                         onValueChange = { username = it },
                         label = { Text(stringResource(R.string.username)) },
@@ -169,7 +180,7 @@ fun LoginScreen(vm: SessionViewModel) {
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    OutlinedTextField(
+                    CtrlTextField(
                         value = password,
                         onValueChange = { password = it },
                         label = { Text(stringResource(R.string.auth_password)) },
@@ -179,7 +190,7 @@ fun LoginScreen(vm: SessionViewModel) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    OutlinedTextField(
+                    CtrlTextField(
                         value = totp,
                         onValueChange = { v -> totp = v.filter { it.isDigit() }.take(8) },
                         label = { Text(stringResource(R.string.s_2fa_code_if_enabled)) },
@@ -198,7 +209,7 @@ fun LoginScreen(vm: SessionViewModel) {
 
             vm.loginError?.let { ErrorBanner(it) }
 
-            Button(
+            CtrlButton(
                 onClick = submit,
                 enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -207,7 +218,7 @@ fun LoginScreen(vm: SessionViewModel) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = com.vknxworks.craftyctrl.ui.theme.CtrlColors.OnAccent,
                     )
                 } else {
                     Text(stringResource(R.string.connect))

@@ -62,7 +62,7 @@ fun RingGauge(
     stroke: Dp = 9.dp,
 ) {
     val animated by animateFloatAsState((fraction ?: 0f).coerceIn(0f, 1f), tween(600), label = "gauge")
-    val track = MaterialTheme.colorScheme.surfaceContainerHighest
+    val track = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Track
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.size(size), contentAlignment = Alignment.Center) {
             Canvas(Modifier.size(size)) {
@@ -95,7 +95,9 @@ fun PillTabs(tabs: List<PillTab>, selected: Int, onSelect: (Int) -> Unit, modifi
     androidx.compose.material3.ScrollableTabRow(
         selectedTabIndex = selected,
         edgePadding = 8.dp,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Background,
+        contentColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Text,
+        divider = { HorizontalDivider(color = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Divider) },
         modifier = modifier.fillMaxWidth(),
     ) {
         tabs.forEachIndexed { i, tab ->
@@ -104,6 +106,7 @@ fun PillTabs(tabs: List<PillTab>, selected: Int, onSelect: (Int) -> Unit, modifi
                 onClick = { onSelect(i) },
                 text = { Text(tab.title, maxLines = 1) },
                 icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                selectedContentColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Accent,
                 unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -128,19 +131,13 @@ fun AccentCard(
 /** A small status dot. */
 @Composable
 fun Dot(color: Color, modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 8.dp) {
-    Box(modifier.size(size).background(color, CircleShape))
+    Box(modifier.size(size).background(color, RoundedCornerShape(2.dp)))
 }
 
 /** Uppercase caption used for labels over numbers and section headings. */
 @Composable
 fun Caption(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        letterSpacing = 1.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier,
-    )
+    com.vknxworks.craftyctrl.ui.components.CtrlLabel(text, modifier)
 }
 
 /** Caption, a big monospaced value and an optional line under it. */
@@ -148,7 +145,7 @@ fun Caption(text: String, modifier: Modifier = Modifier) {
 fun BigMetric(label: String, value: String, sub: String? = null, modifier: Modifier = Modifier, bar: Float? = null) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Caption(label)
-        Text(value, style = MaterialTheme.typography.headlineSmall, fontFamily = Mono, maxLines = 1)
+        Text(value, style = com.vknxworks.craftyctrl.ui.theme.CtrlType.Metric, maxLines = 1)
         bar?.let { HairBar(it) }
         sub?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
     }
@@ -162,7 +159,7 @@ fun DetailRow(label: String, value: String) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
             Text(value, style = MaterialTheme.typography.bodyMedium, fontFamily = Mono, maxLines = 1)
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        HorizontalDivider(color = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Divider)
     }
 }
 

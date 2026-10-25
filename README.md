@@ -24,7 +24,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Create, clone, update and delete** Java and Bedrock servers; deleting asks you to type the server name
 - **Alerts** when a server stops or crashes, even with the app closed
 - **App lock** with its own PIN and optional fingerprint unlock; your Crafty login stays encrypted while the app is locked, and two switches keep the app out of screenshots and the recent apps view
-- Follow system, dark, light or pure black themes, and colours from your wallpaper
+- The Ctrl / Signal look shared by every Ctrl app: dark only, one violet accent, Space Grotesk and JetBrains Mono
 
 ## Screenshots
 
@@ -109,7 +109,7 @@ CraftyCtrl is free and open source. If it's useful to you, you can support devel
 
 ## The Ctrl series
 
-Native Android apps for self-hosted services and everyday tools, all with the same Material You design.
+Native Android apps for self-hosted services and everyday tools, all with the same Ctrl / Signal design.
 
 | App | What it's for |
 | --- | --- |
@@ -133,5 +133,7 @@ Native Android apps for self-hosted services and everyday tools, all with the sa
 ## License
 
 CraftyCtrl is licensed under the [GNU General Public License v3.0](LICENSE). © VKNXWorks
+
+The app bundles two fonts, both under the [SIL Open Font License 1.1](https://openfontlicense.org) (licence texts in `app/src/main/assets/licenses/`): [Space Grotesk](https://github.com/floriankarsten/space-grotesk) by Florian Karsten and [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) by JetBrains.
 
 CraftyCtrl is an unofficial app and is not affiliated with the Crafty Controller team.

@@ -111,14 +111,8 @@ fun ChartCard(
 ) {
     CtrlCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(1f),
-            )
-            Text(current, style = MaterialTheme.typography.titleMedium, fontFamily = Mono)
+            com.vknxworks.craftyctrl.ui.components.CtrlLabel(title, Modifier.weight(1f))
+            Text(current, style = com.vknxworks.craftyctrl.ui.theme.CtrlType.Metric.copy(fontSize = 22.sp, lineHeight = 26.sp))
         }
         val present = values.filterNotNull()
         if (present.size >= 2) {
@@ -153,24 +147,20 @@ fun UsageBar(label: String, percent: Double?, detail: String?) {
             )
         }
         val p = ((percent ?: 0.0) / 100).toFloat().coerceIn(0f, 1f)
-        HairBar(p, if (p > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+        HairBar(p, if (p > 0.9f) MaterialTheme.colorScheme.error else com.vknxworks.craftyctrl.ui.theme.CtrlColors.Text)
     }
 }
 
-/** A 2 dp track with a filled part, used instead of thick progress bars and ring gauges. */
+/** A 6 dp track with a filled part (Signal progress bar). */
 @Composable
-fun HairBar(fraction: Float, color: Color = MaterialTheme.colorScheme.primary, modifier: Modifier = Modifier) {
-    val track = MaterialTheme.colorScheme.outlineVariant
-    Canvas(modifier.fillMaxWidth().height(2.dp)) {
-        drawRect(track)
-        drawRect(color, size = size.copy(width = size.width * fraction.coerceIn(0f, 1f)))
-    }
+fun HairBar(fraction: Float, color: Color = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Text, modifier: Modifier = Modifier) {
+    com.vknxworks.craftyctrl.ui.components.CtrlProgress(fraction, modifier, color)
 }
 
-// Each series has its own Material colour role.
+// CPU is the primary metric (accent); memory and players are white and grey.
 val ChartCpu: Color
-    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.primary
+    @Composable @ReadOnlyComposable get() = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Accent
 val ChartMem: Color
-    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.tertiary
+    @Composable @ReadOnlyComposable get() = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Text
 val ChartPlayers: Color
-    @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.secondary
+    @Composable @ReadOnlyComposable get() = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Muted
