@@ -159,7 +159,7 @@ fun HairBar(fraction: Float, color: Color = com.vknxworks.craftyctrl.ui.theme.Ct
 
 // CPU is the primary metric (accent); memory and players are white and grey.
 val ChartCpu: Color
-    @Composable @ReadOnlyComposable get() = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Accent
+    @Composable @ReadOnlyComposable get() = com.vknxworks.craftyctrl.ui.theme.CtrlColors.AccentText
 val ChartMem: Color
     @Composable @ReadOnlyComposable get() = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Text
 val ChartPlayers: Color

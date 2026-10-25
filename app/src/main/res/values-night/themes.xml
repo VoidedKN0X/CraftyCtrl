@@ -1,0 +1,11 @@
+<resources>
+    <!-- Compose draws the UI; this theme only sets the window and bar colours shown while the app starts.
+         Ctrl / Signal follows the device's dark or light setting. -->
+    <style name="Theme.CraftyRemote" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_bg</item>
+        <item name="android:statusBarColor">@color/window_bg</item>
+        <item name="android:navigationBarColor">@color/window_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

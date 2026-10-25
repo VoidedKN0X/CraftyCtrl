@@ -202,10 +202,10 @@ fun <T> ChoiceSheet(
                     Text(
                         label,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = if (isSel) CtrlColors.Accent else CtrlColors.Text,
+                        color = if (isSel) CtrlColors.AccentText else CtrlColors.Text,
                         modifier = Modifier.weight(1f),
                     )
-                    if (isSel) Icon(Icons.Filled.Check, stringResource(R.string.selected), tint = CtrlColors.Accent)
+                    if (isSel) Icon(Icons.Filled.Check, stringResource(R.string.selected), tint = CtrlColors.AccentText)
                 }
             }
             if (footer != null) {

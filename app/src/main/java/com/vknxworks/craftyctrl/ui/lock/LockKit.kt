@@ -318,7 +318,7 @@ fun PinPadScreen(
             )
             Spacer(Modifier.height(28.dp))
             Box(Modifier.height(20.dp).offset { IntOffset(shake.roundToInt(), 0) }, contentAlignment = Alignment.Center) {
-                if (checking) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = CtrlColors.Accent)
+                if (checking) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = CtrlColors.AccentText)
                 else Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     repeat(maxOf(pin.length, minDots)) { i ->
                         val shape = RoundedCornerShape(5.dp)
@@ -410,7 +410,7 @@ private fun DigitKey(label: String, enabled: Boolean, modifier: Modifier, onClic
 @Composable
 private fun OutlineKey(description: String, enabled: Boolean, modifier: Modifier, onClick: () -> Unit, content: @Composable () -> Unit) {
     val shape = RoundedCornerShape(22.dp)
-    val tint = if (enabled) CtrlColors.Accent else CtrlColors.Accent.copy(alpha = 0.35f)
+    val tint = if (enabled) CtrlColors.AccentText else CtrlColors.AccentText.copy(alpha = 0.35f)
     Box(
         modifier
             .height(68.dp)

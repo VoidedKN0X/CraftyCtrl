@@ -1,5 +1,5 @@
 <resources>
-    <!-- Ctrl / Signal background, shown while the app starts (dark only). -->
-    <color name="window_bg">#08080A</color>
+    <!-- Signal Light background, shown while the app starts in light mode (values-night has the dark one). -->
+    <color name="window_bg">#F5F5F1</color>
     <color name="launcher_bg">#15171C</color>
 </resources>
