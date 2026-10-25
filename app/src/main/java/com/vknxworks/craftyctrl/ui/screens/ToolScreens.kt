@@ -2,6 +2,12 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlTopBar
+import com.vknxworks.craftyctrl.ui.components.CtrlBackButton
+import com.vknxworks.craftyctrl.ui.components.CtrlDialog
+import com.vknxworks.craftyctrl.ui.components.CtrlSecondaryButton
+import com.vknxworks.craftyctrl.ui.components.CtrlSwitch
+import com.vknxworks.craftyctrl.ui.components.CtrlTextField
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -73,9 +79,9 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
         contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(
+            CtrlTopBar(
                 title = { Text(stringResource(R.string.page_addons)) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) } },
+                navigationIcon = { CtrlBackButton(onClick = onBack) },
                 actions = { IconButton(onClick = vm::load) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.reload)) } },
             )
         },
@@ -113,8 +119,8 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                         )
                         if (!vm.isBedrock) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(onClick = { pick("plugins") }) { Text(stringResource(R.string.add_a_plugin)) }
-                                OutlinedButton(onClick = { pick("mods") }) { Text(stringResource(R.string.add_a_mod)) }
+                                CtrlSecondaryButton(onClick = { pick("plugins") }) { Text(stringResource(R.string.add_a_plugin)) }
+                                CtrlSecondaryButton(onClick = { pick("mods") }) { Text(stringResource(R.string.add_a_mod)) }
                             }
                         }
                     }
@@ -165,7 +171,7 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                             if (vm.busy == a.path) {
                                 CircularProgressIndicator(Modifier.padding(horizontal = 14.dp).size(22.dp), strokeWidth = 2.dp)
                             } else {
-                                Switch(checked = a.enabled, onCheckedChange = { vm.setEnabled(a, it) }, enabled = vm.busy == null)
+                                CtrlSwitch(checked = a.enabled, onCheckedChange = { vm.setEnabled(a, it) }, enabled = vm.busy == null)
                             }
                         }
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -176,7 +182,7 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
     }
 
     removing?.let { a ->
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { removing = null },
             title = { Text(stringResource(R.string.remove_x_2, a.name)) },
             text = { Text(stringResource(R.string.addon_delete_body, a.fileName, a.folder.substringAfterLast('/'))) },
@@ -203,7 +209,7 @@ fun LogsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
-            TopAppBar(
+            CtrlTopBar(
                 title = {
                     Column {
                         Text(open?.name ?: stringResource(R.string.page_logs), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -213,9 +219,7 @@ fun LogsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (open != null) vm.openFile(null) else onBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
+                    CtrlBackButton(onClick = { if (open != null) vm.openFile(null) else onBack() })
                 },
                 actions = {
                     IconButton(onClick = { if (open != null) vm.openFile(open) else vm.loadList() }) {
@@ -296,7 +300,7 @@ private fun LogViewer(vm: LogsViewModel) {
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            OutlinedTextField(
+            CtrlTextField(
                 value = query,
                 onValueChange = { query = it },
                 placeholder = { Text(stringResource(R.string.search_this_log)) },

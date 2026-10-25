@@ -1,5 +1,21 @@
 package com.vknxworks.craftyctrl.ui.lock
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import com.vknxworks.craftyctrl.ui.components.CtrlButton
+import com.vknxworks.craftyctrl.ui.theme.CtrlColors
+import com.vknxworks.craftyctrl.ui.theme.CtrlType
+import com.vknxworks.craftyctrl.ui.theme.JetBrainsMono
+import com.vknxworks.craftyctrl.ui.theme.SpaceGrotesk
+import com.vknxworks.craftyctrl.ui.components.CtrlDialog
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -101,28 +117,28 @@ fun lockoutText(ms: Long) = stringResource(R.string.lock_too_many, ((ms + 999) /
 @Composable
 fun LockBadge() {
     Box(
-        Modifier.size(72.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
+        Modifier.size(72.dp).clip(RoundedCornerShape(24.dp)).background(CtrlColors.Accent),
         contentAlignment = Alignment.Center,
-    ) { Icon(Icons.Outlined.Lock, null, Modifier.size(34.dp), tint = MaterialTheme.colorScheme.primary) }
+    ) { Icon(Icons.Outlined.Lock, null, Modifier.size(30.dp), tint = CtrlColors.OnAccent) }
 }
 
 /** The "Use fingerprint" and "Forgot PIN?" buttons under the lock screen's PIN pad. */
 @Composable
-fun LockScreenButtons(showFingerprint: Boolean, onFingerprint: () -> Unit, onForgot: () -> Unit) {
-    if (showFingerprint) {
+fun LockScreenButtons(showFingerprint: Boolean, onFingerprint: () -> Unit, onForgot: () -> Unit, fingerprintOnPad: Boolean = false) {
+    if (showFingerprint && !fingerprintOnPad) {
         TextButton(onClick = onFingerprint) {
             Icon(Icons.Outlined.Fingerprint, null)
             Spacer(Modifier.size(8.dp))
             Text(stringResource(R.string.lock_use_fingerprint))
         }
     }
-    TextButton(onClick = onForgot) { Text(stringResource(R.string.lock_forgot)) }
+    TextButton(onClick = onForgot) { Text(stringResource(R.string.lock_forgot), color = CtrlColors.Muted) }
 }
 
 /** Asks before "Forgot PIN?" resets the app. [body] says what's removed. */
 @Composable
 fun ForgotPinDialog(body: String, confirm: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
+    CtrlDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.lock_forgot_title)) },
         text = { Text(body) },
@@ -250,7 +266,7 @@ fun PinSetupScreen(
     )
 }
 
-/** The PIN pad screen every lock screen and PIN step uses. */
+/** The PIN pad screen every lock screen and PIN step uses (Ctrl / Signal layout). */
 @Composable
 fun PinPadScreen(
     title: String,
@@ -266,77 +282,144 @@ fun PinPadScreen(
     showConfirm: Boolean,
     confirmLabel: String = stringResource(R.string.lock_ok),
     minDots: Int = LockVault.PIN_MIN,
+    onFingerprint: (() -> Unit)? = null,
     bottom: @Composable () -> Unit,
 ) {
-    val cs = MaterialTheme.colorScheme
     val haptics = LocalHapticFeedback.current
     // The PIN pad is never in screenshots, screen recordings or casting, whatever the app's setting says:
     // a recording would show which keys were pressed.
     KeepOutOfScreenshots()
-    Surface(Modifier.fillMaxSize(), color = cs.background) {
+    Surface(Modifier.fillMaxSize(), color = CtrlColors.Background, contentColor = CtrlColors.Text) {
         Column(
-            Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(24.dp),
+            Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 32.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
         ) {
+            Spacer(Modifier.height(48.dp))
             LockBadge()
-            Spacer(Modifier.height(18.dp))
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(28.dp))
+            Text(stringResource(R.string.signal_lock_brand).uppercase(), style = CtrlType.Label.copy(letterSpacing = 0.18.em), color = CtrlColors.Muted)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                title,
+                fontFamily = SpaceGrotesk,
+                fontSize = 36.sp,
+                lineHeight = 40.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.035).em,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(8.dp))
             Text(
                 message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isError) cs.error else cs.onSurfaceVariant,
+                color = if (isError) CtrlColors.Error else CtrlColors.Muted,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.widthIn(max = 340.dp),
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
             Box(Modifier.height(20.dp).offset { IntOffset(shake.roundToInt(), 0) }, contentAlignment = Alignment.Center) {
-                if (checking) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (checking) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = CtrlColors.Accent)
+                else Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     repeat(maxOf(pin.length, minDots)) { i ->
-                        Box(Modifier.size(12.dp).clip(CircleShape).background(if (i < pin.length) cs.primary else cs.surfaceContainerHighest))
+                        val shape = RoundedCornerShape(5.dp)
+                        if (i < pin.length) {
+                            Box(Modifier.size(14.dp).clip(shape).background(CtrlColors.Accent))
+                        } else {
+                            Box(Modifier.size(14.dp).border(2.dp, CtrlColors.PinEmpty, shape))
+                        }
                     }
                 }
             }
-            Spacer(Modifier.height(28.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.height(40.dp))
+            Column(Modifier.widthIn(max = 420.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 listOf("123", "456", "789").forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         row.forEach { d ->
-                            DigitKey(d.toString(), enabled) {
+                            DigitKey(d.toString(), enabled, Modifier.weight(1f)) {
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onDigit(d)
                             }
                         }
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBackspace, enabled = enabled && pin.isNotEmpty(), modifier = Modifier.size(72.dp)) {
-                        Icon(Icons.AutoMirrored.Outlined.Backspace, stringResource(R.string.lock_delete))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Left key: fingerprint on the lock screen, otherwise the confirm key.
+                    if (onFingerprint != null) {
+                        OutlineKey(stringResource(R.string.lock_use_fingerprint), enabled, Modifier.weight(1f), onFingerprint) {
+                            Icon(Icons.Outlined.Fingerprint, null, Modifier.size(26.dp))
+                        }
+                    } else {
+                        OutlineKey(confirmLabel, enabled && showConfirm, Modifier.weight(1f), onConfirm) {
+                            Text(confirmLabel, fontFamily = SpaceGrotesk, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        }
                     }
-                    DigitKey("0", enabled) {
+                    DigitKey("0", enabled, Modifier.weight(1f)) {
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onDigit('0')
                     }
-                    TextButton(onClick = onConfirm, enabled = enabled && showConfirm, modifier = Modifier.size(72.dp)) { Text(confirmLabel) }
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(68.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .clickable(enabled = enabled && pin.isNotEmpty(), role = Role.Button, onClick = onBackspace),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.Backspace,
+                            stringResource(R.string.lock_delete),
+                            Modifier.size(24.dp),
+                            tint = CtrlColors.Muted.copy(alpha = if (enabled && pin.isNotEmpty()) 1f else 0.4f),
+                        )
+                    }
+                }
+                // With fingerprint on the left key, a PIN that's long enough is confirmed here.
+                if (onFingerprint != null && showConfirm) {
+                    CtrlButton(onClick = onConfirm, enabled = enabled, modifier = Modifier.fillMaxWidth().height(56.dp)) { Text(confirmLabel) }
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
             bottom()
         }
     }
 }
 
 @Composable
-private fun DigitKey(label: String, enabled: Boolean, onClick: () -> Unit) {
-    FilledIconButton(
-        onClick = onClick,
-        enabled = enabled,
-        colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-        ),
-        modifier = Modifier.size(72.dp),
-    ) { Text(label, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium) }
+private fun DigitKey(label: String, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(22.dp)
+    Box(
+        modifier
+            .height(68.dp)
+            .clip(shape)
+            .background(CtrlColors.Surface)
+            .border(1.dp, CtrlColors.CardBorder, shape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            fontFamily = JetBrainsMono,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Medium,
+            color = CtrlColors.Text.copy(alpha = if (enabled) 1f else 0.4f),
+        )
+    }
+}
+
+/** A keypad key outlined in the accent colour (fingerprint, or the confirm key). */
+@Composable
+private fun OutlineKey(description: String, enabled: Boolean, modifier: Modifier, onClick: () -> Unit, content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(22.dp)
+    val tint = if (enabled) CtrlColors.Accent else CtrlColors.Accent.copy(alpha = 0.35f)
+    Box(
+        modifier
+            .height(68.dp)
+            .clip(shape)
+            .border(1.dp, tint, shape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides tint) { content() }
+    }
 }

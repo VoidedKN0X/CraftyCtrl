@@ -75,7 +75,10 @@ class MainActivity : FragmentActivity() {
         ScreenPrivacy.load(this)
         // Deletes what the anonymous stats (removed in 2.4.12) left in the settings, once after the update.
         if (savedInstanceState == null) AppSettings(this).removeLeftoverStats()
-        enableEdgeToEdge()
+        // Signal is dark only: edge to edge, both bars on the background colour with light icons.
+        val bars = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
+        window.decorView.setBackgroundColor(android.graphics.Color.parseColor("#08080A"))
         setContent {
             // FLAG_SECURE follows "Hide in screenshots", and is forced on by sign-in, the lock and PIN screens and the file editor.
             val secure = ScreenPrivacy.secure
@@ -89,13 +92,6 @@ class MainActivity : FragmentActivity() {
             // "Hide in recent apps", and always with the app lock on: a blank card instead of a snapshot.
             val blankRecents = ScreenPrivacy.hideRecents || com.vknxworks.craftyctrl.data.lock.Lock.vault(this).enabled
             LaunchedEffect(blankRecents) { setRecentsScreenshotEnabled(!blankRecents) }
-            // System bar icons follow the app's own light/dark choice, not just the phone's.
-            val dark = ThemePrefs.isDark()
-            LaunchedEffect(dark) {
-                val clear = android.graphics.Color.TRANSPARENT
-                val style = if (dark) SystemBarStyle.dark(clear) else SystemBarStyle.light(clear, clear)
-                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
-            }
             CraftyTheme { AppRoot() }
         }
     }
@@ -158,7 +154,7 @@ private fun AppRoot(
         if (!lockVm.locked && request != null) PinRequestScreen(request, lockVm)
         if (lockVm.locked) {
             // Opaque cover in the app's own window (also behind the system bars).
-            androidx.compose.material3.Surface(Modifier.fillMaxSize().clearAndSetSemantics {}) {}
+            androidx.compose.material3.Surface(Modifier.fillMaxSize().clearAndSetSemantics {}, color = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Background) {}
             // The lock itself is a full-screen window of its own. Dialogs, menus and sheets that were open when the
             // app locked are separate windows above the app's window, so drawing the lock in the app's window
             // alone would leave them visible and usable on top of it; this window covers them.

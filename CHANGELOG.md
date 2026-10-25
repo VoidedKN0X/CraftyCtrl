@@ -3,6 +3,43 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.7.0] - 2026-10-25
+
+CraftyCtrl gets the new **Ctrl / Signal** look, the design every Ctrl app now shares. Only the look changes: every screen, feature, button and setting works exactly as before.
+
+### New
+
+- **The Signal look, everywhere.** A near-black background (#08080A), flat dark cards with a thin border, and one violet accent colour (#B48CFF) for the things that matter: running servers, the selected tab, switches that are on and main buttons
+- **New fonts, built into the app.** Space Grotesk for all text and headings, and JetBrains Mono for numbers, stats, labels, the console and file editor. Both are bundled under the SIL Open Font License 1.1, with no font downloads and nothing from Google. The licence texts ship inside the app (`assets/licenses`) and are credited in the README
+- **New Servers overview**, laid out like ProxCtrl's. A **CRAFTY/CTRL** wordmark at the top left, a mono "Panel · online" label and a big **Servers** title, then a violet hero card with the total **players online** across your running servers (and their combined slots), the panel's CPU in its corner and a live CPU bar chart. Under it are **Memory** and **Storage** cards with the panel machine's usage and a thin bar. The server list follows as plain rows: port on the left, then name, version, players and memory, and on the right the state in mono with a small coloured square (violet running, amber starting or updating, red crashed, grey stopped)
+- **New Host tab**: CPU load as the violet hero card (with the live CPU bars), **Servers running** and **Players online** as cards, then the System, Storage and Machine cards as before
+- **New server Overview hero**: while a server runs, its violet hero card shows the players online out of the maximum (or CPU when Crafty doesn't report players), how long it has been up and a live CPU bar chart, with **CPU** and **Memory** cards and their bars underneath. A stopped or crashed server shows its state in a plain card instead
+
+### Changed
+
+- **Top bars** no longer have a coloured fill. The main tabs show the **CRAFTY/CTRL** wordmark on the left (the slash in violet), with Broadcast and your profile picture on the right. Other screens have a square back button and the title in Space Grotesk. The ⋮ menu on a server is now a square button too
+- **Your profile picture** is now a rounded square with your initials (or the placeholder figure for API-key sign-ins) and a small violet square at its corner while you're connected. Tapping it still opens the You page
+- **Bottom tabs** (Servers / Host, and a server's Overview, Console, Stats, Files, Backups and Schedules) are a floating dark bar with a thin border. The selected tab is a violet block with its icon and name, the other tabs show just their icon. Content scrolls clear of the bar
+- **Switches** are rounded rectangles: violet with a dark knob when on, dark grey with a grey knob when off. They still read out as switches to TalkBack
+- **Buttons**: main actions are violet with dark text, other buttons are dark with a thin border. Corners are 16 dp throughout, and **Start**, **Connect** and **Create server** are taller (56 dp)
+- **Text fields** are dark with a thin border and turn violet while you type. Search fields are no longer pill-shaped
+- **Cards** have 22 dp corners and a thin border; section headings are small upper-case mono labels instead of coloured titles
+- **Progress bars and usage meters** are 6 dp tall with rounded ends, white on a dark track (amber and red as they fill up)
+- **Status dots** are small rounded squares instead of circles, and state names are shown in mono capitals
+- **The console** sits on the deepest black in JetBrains Mono, in a bordered card. The send button is a violet square
+- **Stats charts**: CPU is drawn in violet, memory in white and players in grey, with the current value in large type
+- **Dialogs and bottom sheets** are dark cards with 26 dp corners and a thin border
+- **The lock screen**: a violet rounded-square lock badge, a "VKNXWORKS · CTRL" label and a big **Locked** title. The PIN is shown as small squares (violet when entered), and the keypad has three columns of tall rounded keys in JetBrains Mono. The fingerprint key, outlined in violet, sits bottom-left on the keypad, and the delete key is icon-only. How the lock works is unchanged: same PIN rules, fingerprint unlock, wrong-PIN wait and Forgot PIN
+- **The PIN screens** for turning the lock on or off and changing the PIN use the same keypad, with **Next** or **Done** as the outlined key bottom-left
+- **The You page** is now titled **Profile**. It shows a large violet picture with your initials, your name and the panel address in mono, then grouped sections with mono labels and thin dividers. **Support CraftyCtrl** is a violet button at the bottom (it moved there from the About list), above the version line and a "GOOGLE-FREE · TELEMETRY-FREE · ARM64" footer
+- **Settings** groups use the same look: mono labels ("NOTIFICATIONS", "PRIVACY"…), dark bordered cards with dividers between rows, plain outlined icons and the new switches. **Hide in screenshots** and **Hide in recent apps** are still off until you turn them on
+- **Sign-in screen**: the CRAFTY/CTRL wordmark over a big CraftyCtrl title, and a violet API key / password switcher
+- The status bar and navigation bar always match the dark background, with light icons, and the app starts on the same dark colour
+
+### Removed
+
+- **The Appearance section in Settings is gone**, with its **Theme** (Follow system, Dark, Light, Pure black) and **Dynamic colour** options. CraftyCtrl is now always dark with the Signal colours and no longer takes colours from your wallpaper. A theme you picked before is ignored
+
 ## [2.6.4] - 2026-10-22
 
 ### Fixed

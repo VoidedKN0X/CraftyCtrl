@@ -864,4 +864,15 @@
         <item quantity="other">%1$d days</item>
     </plurals>
     <string name="version_example">e.g. 1.21.4</string>
+    <!-- Ctrl / Signal labels -->
+    <string name="signal_panel_online">Panel · online</string>
+    <string name="signal_panel_offline">Panel · unreachable</string>
+    <string name="signal_host_live">Host · live</string>
+    <string name="signal_x_of_y_running">%1$d / %2$d running</string>
+    <string name="signal_cpu_load">CPU load</string>
+    <string name="signal_lock_brand">VKNXWorks · Ctrl</string>
+    <string name="signal_locked">Locked</string>
+    <string name="signal_profile">Profile</string>
+    <string name="signal_status">Status</string>
+    <string name="signal_footer">Google-free · Telemetry-free · ARM64</string>
 </resources>

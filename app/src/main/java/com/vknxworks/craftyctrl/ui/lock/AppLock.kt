@@ -418,7 +418,7 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
     val min = if (vm.legacy) PIN_MIN_LEGACY else PIN_MIN
 
     PinPadScreen(
-        title = stringResource(R.string.lock_title),
+        title = stringResource(R.string.signal_locked),
         message = when {
             vm.lockoutRemaining > 0 -> lockoutText(vm.lockoutRemaining)
             vm.pinError != null -> stringResource(vm.pinError!!)
@@ -443,8 +443,9 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
         onConfirm = { if (pin.length >= min) vm.submitPin(pin, wrong) },
         showConfirm = pin.length >= min && pin.length != savedLength,
         minDots = if (vm.legacy) maxOf(PIN_MIN_LEGACY, savedLength) else PIN_MIN,
+        onFingerprint = if (canBio) askBiometric else null,
         bottom = {
-            LockScreenButtons(showFingerprint = canBio, onFingerprint = askBiometric, onForgot = { forgetting = true })
+            LockScreenButtons(showFingerprint = canBio, onFingerprint = askBiometric, onForgot = { forgetting = true }, fingerprintOnPad = true)
         },
     )
     if (forgetting) {

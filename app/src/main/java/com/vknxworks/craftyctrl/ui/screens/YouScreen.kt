@@ -2,6 +2,20 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import com.vknxworks.craftyctrl.ui.components.CtrlButton
+import com.vknxworks.craftyctrl.ui.components.initialsOf
+import com.vknxworks.craftyctrl.ui.theme.CtrlColors
+import com.vknxworks.craftyctrl.ui.theme.CtrlType
+import com.vknxworks.craftyctrl.ui.components.CtrlTopBar
+import com.vknxworks.craftyctrl.ui.components.CtrlBackButton
+import com.vknxworks.craftyctrl.ui.components.CtrlDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,28 +26,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Gavel
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,7 +53,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -79,16 +89,13 @@ fun YouScreen(session: Session, onBack: () -> Unit, onSettings: () -> Unit, onSi
         runCatching { uriHandler.openUri(url) }
     }
 
-    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
-                title = { Text(stringResource(R.string.you_title), fontWeight = FontWeight.SemiBold) },
+            CtrlTopBar(
+                title = { Text(stringResource(R.string.signal_profile), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                    CtrlBackButton(onClick = onBack)
                 },
-                scrollBehavior = scroll,
             )
         },
     ) { padding ->
@@ -99,40 +106,46 @@ fun YouScreen(session: Session, onBack: () -> Unit, onSettings: () -> Unit, onSi
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp),
         ) {
-            // Account card: the series' big profile picture, who you are and where.
-            Column(
-                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+            // Account: the 68 dp accent picture, who you are, and the panel address in mono.
+            Row(
+                Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    Modifier.size(96.dp).clip(CircleShape).background(cs.primary.copy(alpha = 0.18f)),
+                    Modifier.size(68.dp).clip(RoundedCornerShape(22.dp)).background(CtrlColors.Accent),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (username == null) {
-                        Icon(Icons.Filled.AccountCircle, null, Modifier.size(56.dp), tint = cs.primary)
+                        Icon(Icons.Outlined.AccountCircle, null, Modifier.size(34.dp), tint = CtrlColors.OnAccent)
                     } else {
-                        Text(username.take(1).uppercase(), style = MaterialTheme.typography.displaySmall, color = cs.primary)
+                        Text(initialsOf(username), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = CtrlColors.OnAccent)
                     }
                 }
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    username ?: stringResource(R.string.you_api_key_user),
-                    style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    stringResource(if (session.mode == AuthMode.API_KEY) R.string.you_signed_in_api_key else R.string.you_signed_in_password),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = cs.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
+                Spacer(Modifier.width(16.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        username ?: stringResource(R.string.you_api_key_user),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.02).em,
+                        color = CtrlColors.Text,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(host, style = CtrlType.MonoSmall, color = CtrlColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        stringResource(if (session.mode == AuthMode.API_KEY) R.string.you_signed_in_api_key else R.string.you_signed_in_password),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CtrlColors.Muted,
+                    )
+                }
             }
 
             Group(stringResource(R.string.you_panel_group)) {
                 GroupRow(
                     host,
                     session.baseUrl.takeIf { it != host },
-                    icon = Icons.Filled.Dns,
+                    icon = Icons.Outlined.Dns,
                 )
             }
 
@@ -140,7 +153,7 @@ fun YouScreen(session: Session, onBack: () -> Unit, onSettings: () -> Unit, onSi
                 GroupRow(
                     stringResource(R.string.settings),
                     stringResource(R.string.settings_subtitle),
-                    icon = Icons.Filled.Settings,
+                    icon = Icons.Outlined.Settings,
                     showChevron = true,
                     onClick = onSettings,
                 )
@@ -155,38 +168,47 @@ fun YouScreen(session: Session, onBack: () -> Unit, onSettings: () -> Unit, onSi
 
             Group(stringResource(R.string.group_about)) {
                 GroupRow(
-                    stringResource(R.string.support_title),
-                    stringResource(R.string.support_subtitle),
-                    icon = Icons.Filled.Favorite,
-                    showChevron = true,
-                    onClick = { open(SPONSOR_URL) },
-                )
-                GroupRow(
                     stringResource(R.string.bugs_title),
                     stringResource(R.string.bugs_subtitle),
-                    icon = Icons.Filled.BugReport,
+                    icon = Icons.Outlined.BugReport,
                     showChevron = true,
                     onClick = { open(ISSUES_URL) },
                 )
                 GroupRow(
                     stringResource(R.string.source_title),
                     stringResource(R.string.source_subtitle),
-                    icon = Icons.Filled.Code,
+                    icon = Icons.Outlined.Code,
                     showChevron = true,
                     onClick = { open(REPO_URL) },
                 )
                 GroupRow(
                     stringResource(R.string.licence_title),
                     stringResource(R.string.licence_subtitle),
-                    icon = Icons.Filled.Gavel,
+                    icon = Icons.Outlined.Gavel,
                     showChevron = true,
                     onClick = { open(LICENCE_URL) },
                 )
             }
+            Spacer(Modifier.height(16.dp))
+            CtrlButton(
+                onClick = { open(SPONSOR_URL) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(56.dp),
+            ) {
+                Icon(Icons.Outlined.FavoriteBorder, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(stringResource(R.string.support_title), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
             Text(
                 stringResource(R.string.about_footer, BuildConfig.VERSION_NAME),
                 style = MaterialTheme.typography.bodySmall,
-                color = cs.onSurfaceVariant,
+                color = CtrlColors.Muted,
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                stringResource(R.string.signal_footer).uppercase(),
+                style = CtrlType.Label.copy(letterSpacing = 0.12.em),
+                color = CtrlColors.Muted,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 textAlign = TextAlign.Center,
             )
@@ -194,7 +216,7 @@ fun YouScreen(session: Session, onBack: () -> Unit, onSettings: () -> Unit, onSi
     }
 
     if (confirmSignOut) {
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { confirmSignOut = false },
             icon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
             title = { Text(stringResource(R.string.sign_out_title)) },

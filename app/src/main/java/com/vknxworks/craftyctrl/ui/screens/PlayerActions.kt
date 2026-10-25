@@ -2,6 +2,9 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlDialog
+import com.vknxworks.craftyctrl.ui.components.CtrlSheet
+import com.vknxworks.craftyctrl.ui.components.CtrlTextField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -88,7 +91,7 @@ fun PlayerSheet(
         onDismiss()
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    CtrlSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -101,7 +104,7 @@ fun PlayerSheet(
                 Text(fixedName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
             } else {
                 Text(stringResource(R.string.manage_a_player), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                OutlinedTextField(
+                CtrlTextField(
                     value = typed,
                     onValueChange = { typed = it },
                     label = { Text(stringResource(R.string.player_name)) },
@@ -112,7 +115,7 @@ fun PlayerSheet(
 
             SectionLabel(stringResource(R.string.message))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
+                CtrlTextField(
                     value = message,
                     onValueChange = { message = it },
                     placeholder = { Text(stringResource(R.string.whisper_to_this_player)) },
@@ -152,7 +155,7 @@ fun PlayerSheet(
             }
 
             SectionLabel(stringResource(R.string.moderation))
-            OutlinedTextField(
+            CtrlTextField(
                 value = reason,
                 onValueChange = { reason = it },
                 placeholder = { Text(stringResource(R.string.reason_optional)) },
@@ -186,7 +189,7 @@ fun PlayerSheet(
     }
 
     confirm?.let { c ->
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { confirm = null },
             title = { Text(c.title) },
             text = { Text(c.body) },

@@ -2,6 +2,13 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlTopBar
+import com.vknxworks.craftyctrl.ui.components.CtrlBackButton
+import com.vknxworks.craftyctrl.ui.components.CtrlButton
+import com.vknxworks.craftyctrl.ui.components.CtrlCardBorder
+import com.vknxworks.craftyctrl.ui.components.CtrlDialog
+import com.vknxworks.craftyctrl.ui.components.CtrlSwitch
+import com.vknxworks.craftyctrl.ui.components.CtrlTextField
 import com.vknxworks.craftyctrl.ui.theme.Mono
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -90,14 +97,14 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
         contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(
+            CtrlTopBar(
                 title = {
                     Column {
                         Text(stringResource(R.string.page_properties), fontWeight = FontWeight.Bold)
                         Text("server.properties", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
-                navigationIcon = { IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) } },
+                navigationIcon = { CtrlBackButton(onClick = leave) },
                 actions = {
                     if (vm.saving) {
                         CircularProgressIndicator(Modifier.padding(horizontal = 14.dp).size(22.dp), strokeWidth = 2.dp)
@@ -121,7 +128,7 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
                             color = if (invalid.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                         )
                         TextButton(onClick = vm::discard, enabled = !vm.saving) { Text(stringResource(R.string.discard)) }
-                        Button(onClick = ::save, enabled = !vm.saving && invalid.isEmpty()) { Text(stringResource(R.string.save)) }
+                        CtrlButton(onClick = ::save, enabled = !vm.saving && invalid.isEmpty()) { Text(stringResource(R.string.save)) }
                     }
                 }
             }
@@ -131,7 +138,7 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
             if (vm.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
             vm.error?.let { ErrorBanner(it, Modifier.padding(16.dp), onRetry = vm::load) }
             if (vm.error == null && !vm.loading || vm.original.isNotEmpty()) {
-                OutlinedTextField(
+                CtrlTextField(
                     value = query,
                     onValueChange = { query = it },
                     placeholder = { Text(stringResource(R.string.search_settings)) },
@@ -183,7 +190,7 @@ fun ServerPropertiesScreen(api: CraftyApi, serverId: String, onBack: () -> Unit)
     }
 
     if (confirmLeave) {
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { confirmLeave = false },
             title = { Text(stringResource(R.string.discard_changes)) },
             text = { Text(stringResource(R.string.your_changes_to_server_properties_haven)) },
@@ -214,7 +221,7 @@ private fun PropertyRow(def: PropDef, value: String, inFile: Boolean, changed: B
                         Text(def.label, style = MaterialTheme.typography.bodyLarge)
                         Text(caption, style = MaterialTheme.typography.labelSmall, fontFamily = Mono, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Switch(checked = value.trim().equals("true", true), onCheckedChange = { onChange(it.toString()) })
+                    CtrlSwitch(checked = value.trim().equals("true", true), onCheckedChange = { onChange(it.toString()) })
                 }
             } else {
                 Text(def.label, style = MaterialTheme.typography.bodyLarge)
@@ -223,7 +230,7 @@ private fun PropertyRow(def: PropDef, value: String, inFile: Boolean, changed: B
                     PropKind.CHOICE -> ChoiceField(def, value, onChange)
                     PropKind.INT -> {
                         val err = intError(def, value)
-                        OutlinedTextField(
+                        CtrlTextField(
                             value = value,
                             onValueChange = { v -> onChange(v.filter { it.isDigit() || it == '-' }) },
                             singleLine = true,
@@ -235,7 +242,7 @@ private fun PropertyRow(def: PropDef, value: String, inFile: Boolean, changed: B
                     }
                     PropKind.SECRET -> {
                         var show by remember { mutableStateOf(false) }
-                        OutlinedTextField(
+                        CtrlTextField(
                             value = value,
                             onValueChange = onChange,
                             singleLine = true,
@@ -249,7 +256,7 @@ private fun PropertyRow(def: PropDef, value: String, inFile: Boolean, changed: B
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    else -> OutlinedTextField(
+                    else -> CtrlTextField(
                         value = value,
                         onValueChange = onChange,
                         singleLine = def.key != "motd" && def.key != "generator-settings",
@@ -268,7 +275,7 @@ private fun ChoiceField(def: PropDef, value: String, onChange: (String) -> Unit)
     // Keep whatever the file has, even if it's not one of the usual choices.
     val choices = (def.choices + value).filter { it.isNotBlank() }.distinct()
     ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }) {
-        OutlinedTextField(
+        CtrlTextField(
             value = value,
             onValueChange = {},
             readOnly = true,
@@ -301,9 +308,9 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
         contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(
+            CtrlTopBar(
                 title = { Text(stringResource(R.string.page_players), fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) } },
+                navigationIcon = { CtrlBackButton(onClick = onBack) },
                 actions = {
                     if (vm.busy) CircularProgressIndicator(Modifier.padding(horizontal = 14.dp).size(22.dp), strokeWidth = 2.dp)
                     else IconButton(onClick = vm::loadAll) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.reload)) }
@@ -346,7 +353,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                 }
                 if (current == PlayerList.WHITELIST) {
                     item(key = "toggle") {
-                        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                        Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, border = CtrlCardBorder) {
                             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text(if (vm.isBedrock) stringResource(R.string.allowlist_on) else stringResource(R.string.whitelist_on), style = MaterialTheme.typography.bodyLarge)
@@ -356,7 +363,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
-                                Switch(checked = vm.whitelistOn == true, enabled = vm.whitelistOn != null && !vm.busy, onCheckedChange = vm::setWhitelist)
+                                CtrlSwitch(checked = vm.whitelistOn == true, enabled = vm.whitelistOn != null && !vm.busy, onCheckedChange = vm::setWhitelist)
                             }
                         }
                     }
@@ -370,7 +377,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                     }
                 }
                 itemsIndexed(entries.orEmpty(), key = { i, e -> "$i:${e.raw}" }) { _, e ->
-                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                    Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surfaceContainerLow, border = CtrlCardBorder) {
                         Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 if (current == PlayerList.BANNED_IPS) Icons.Filled.Public else if (current == PlayerList.OPS) Icons.Filled.Shield else Icons.Filled.Person,
@@ -398,7 +405,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
         var name by remember { mutableStateOf("") }
         var reason by remember { mutableStateOf("") }
         val ban = list == PlayerList.BANNED_PLAYERS || list == PlayerList.BANNED_IPS
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { adding = null },
             title = {
                 Text(
@@ -412,7 +419,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
+                    CtrlTextField(
                         value = name,
                         onValueChange = { name = it },
                         label = { Text(if (list == PlayerList.BANNED_IPS) stringResource(R.string.ip_address) else if (vm.isBedrock) stringResource(R.string.gamertag) else stringResource(R.string.player_name)) },
@@ -420,7 +427,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                     )
                     if (ban) {
-                        OutlinedTextField(
+                        CtrlTextField(
                             value = reason,
                             onValueChange = { reason = it },
                             label = { Text(stringResource(R.string.reason_optional)) },
@@ -449,7 +456,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
             PlayerList.OPS -> stringResource(R.string.remove_operator_rights_from_x, e.label)
             PlayerList.BANNED_PLAYERS, PlayerList.BANNED_IPS -> stringResource(R.string.unban_x, e.label)
         }
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { removing = null },
             title = { Text(verb) },
             confirmButton = { TextButton(onClick = { vm.remove(list, e); removing = null }) { Text(if (list.name.startsWith("BANNED")) stringResource(R.string.unban) else stringResource(R.string.remove)) } },
@@ -470,14 +477,14 @@ fun ServerOptionsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
         contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(
+            CtrlTopBar(
                 title = {
                     Column {
                         Text(stringResource(R.string.page_options), fontWeight = FontWeight.Bold)
                         Text(stringResource(R.string.crafty_s_settings_for_this_server), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) } },
+                navigationIcon = { CtrlBackButton(onClick = onBack) },
                 actions = { IconButton(onClick = vm::load) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.reload)) } },
             )
         },
@@ -557,7 +564,7 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         SectionLabel(stringResource(R.string.general))
-        OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.server_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        CtrlTextField(name, { name = it }, label = { Text(stringResource(R.string.server_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
         SwitchRow(stringResource(R.string.start_with_crafty), stringResource(R.string.starts_this_server_when_crafty_starts), autoStart) { autoStart = it }
         if (autoStart) NumberField(stringResource(R.string.start_delay_seconds), autoDelay) { autoDelay = it }
         SwitchRow(stringResource(R.string.crash_detection), stringResource(R.string.crafty_restarts_the_server_if_it), crash) { crash = it }
@@ -576,13 +583,13 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
         }
 
         SectionLabel(stringResource(R.string.stopping))
-        OutlinedTextField(stopCmd, { stopCmd = it }, label = { Text(stringResource(R.string.stop_command)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        CtrlTextField(stopCmd, { stopCmd = it }, label = { Text(stringResource(R.string.stop_command)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
         NumberField(stringResource(R.string.shutdown_timeout_seconds), timeout) { timeout = it }
 
         SectionLabel(stringResource(R.string.group_network))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(ip, { ip = it }, label = { Text(stringResource(R.string.address_crafty_checks)) }, singleLine = true, modifier = Modifier.weight(1.4f))
-            OutlinedTextField(
+            CtrlTextField(ip, { ip = it }, label = { Text(stringResource(R.string.address_crafty_checks)) }, singleLine = true, modifier = Modifier.weight(1.4f))
+            CtrlTextField(
                 port, { port = it.filter(Char::isDigit) },
                 label = { Text(stringResource(R.string.port)) }, singleLine = true, isError = portError != null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -599,7 +606,7 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
 
         SectionLabel(stringResource(R.string.maintenance))
         NumberField(stringResource(R.string.delete_logs_after_days), logsDays) { logsDays = it }
-        OutlinedTextField(
+        CtrlTextField(
             updateUrl, { updateUrl = it },
             label = { Text(stringResource(R.string.server_jar_update_url)) },
             supportingText = { Text(stringResource(R.string.used_by_update_server_software_point)) },
@@ -607,7 +614,7 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
         )
 
         SectionLabel(stringResource(R.string.start_command))
-        OutlinedTextField(
+        CtrlTextField(
             value = finalCommand,
             onValueChange = { edited ->
                 // A hand edit wins; the memory fields follow whatever it now says.
@@ -619,7 +626,7 @@ private fun OptionsForm(c: ServerConfig, bedrock: Boolean, saving: Boolean, onSa
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Button(onClick = { onSave(fields) }, enabled = canSave, modifier = Modifier.fillMaxWidth()) {
+        CtrlButton(onClick = { onSave(fields) }, enabled = canSave, modifier = Modifier.fillMaxWidth()) {
             if (saving) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(8.dp))
@@ -640,13 +647,13 @@ private fun SwitchRow(title: String, body: String, checked: Boolean, onChange: (
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Switch(checked = checked, onCheckedChange = onChange)
+        CtrlSwitch(checked = checked, onCheckedChange = onChange)
     }
 }
 
 @Composable
 private fun NumberField(label: String, value: String, modifier: Modifier = Modifier.fillMaxWidth(), onChange: (String) -> Unit) {
-    OutlinedTextField(
+    CtrlTextField(
         value = value,
         onValueChange = { onChange(it.filter(Char::isDigit)) },
         label = { Text(label) },

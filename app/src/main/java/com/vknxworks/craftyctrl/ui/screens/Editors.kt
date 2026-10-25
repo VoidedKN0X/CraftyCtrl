@@ -2,6 +2,12 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlButton
+import com.vknxworks.craftyctrl.ui.components.CtrlDialog
+import com.vknxworks.craftyctrl.ui.components.CtrlSecondaryButton
+import com.vknxworks.craftyctrl.ui.components.CtrlSheet
+import com.vknxworks.craftyctrl.ui.components.CtrlSwitch
+import com.vknxworks.craftyctrl.ui.components.CtrlTextField
 import com.vknxworks.craftyctrl.ui.theme.Mono
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -150,7 +156,7 @@ fun TaskEditorSheet(
         }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
+    CtrlSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -166,7 +172,7 @@ fun TaskEditorSheet(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
-            OutlinedTextField(
+            CtrlTextField(
                 value = name, onValueChange = { name = it.take(64) },
                 label = { Text(stringResource(R.string.name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
@@ -183,7 +189,7 @@ fun TaskEditorSheet(
                 }
             }
             when (action) {
-                TaskAction.COMMAND -> OutlinedTextField(
+                TaskAction.COMMAND -> CtrlTextField(
                     value = command, onValueChange = { command = it.replace("\n", " ") },
                     label = { Text(stringResource(R.string.command_without)) }, singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = Mono),
@@ -218,7 +224,7 @@ fun TaskEditorSheet(
                 Timing.INTERVAL -> Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.every), style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.width(10.dp))
-                    OutlinedTextField(
+                    CtrlTextField(
                         value = every, onValueChange = { v -> every = v.filter { it.isDigit() }.take(4) },
                         singleLine = true, modifier = Modifier.width(88.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -230,13 +236,13 @@ fun TaskEditorSheet(
                         }
                     }
                 }
-                Timing.DAILY -> OutlinedTextField(
+                Timing.DAILY -> CtrlTextField(
                     value = at, onValueChange = { at = it.filter { c -> c.isDigit() || c == ':' }.take(5) },
                     label = { Text(stringResource(R.string.time_24_hour_server_s_clock)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Timing.CRON -> OutlinedTextField(
+                Timing.CRON -> CtrlTextField(
                     value = cron, onValueChange = { cron = it.take(64) },
                     label = { Text(stringResource(R.string.cron_minute_hour_day_month_weekday)) }, singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = Mono),
@@ -245,7 +251,7 @@ fun TaskEditorSheet(
                 )
             }
 
-            OutlinedTextField(
+            CtrlTextField(
                 value = delay, onValueChange = { v -> delay = v.filter { it.isDigit() }.take(5) },
                 label = { Text(stringResource(R.string.delay_before_running_seconds)) }, singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -258,13 +264,13 @@ fun TaskEditorSheet(
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (onDelete != null) {
-                    OutlinedButton(onClick = { confirmDelete = true }, enabled = !saving) {
+                    CtrlSecondaryButton(onClick = { confirmDelete = true }, enabled = !saving) {
                         Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                     }
                 }
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-                Button(onClick = { onSave(build()) }, enabled = error == null && !saving) {
+                CtrlButton(onClick = { onSave(build()) }, enabled = error == null && !saving) {
                     if (saving) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.save))
                 }
             }
@@ -272,7 +278,7 @@ fun TaskEditorSheet(
     }
 
     if (confirmDelete && onDelete != null) {
-        AlertDialog(
+        CtrlDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(stringResource(R.string.delete_this_schedule)) },
             text = { Text(stringResource(R.string.x_will_stop_running_this_can, existing?.name.orEmpty())) },
@@ -308,7 +314,7 @@ fun BackupEditorSheet(
         else -> null
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
+    CtrlSheet(onDismissRequest = onDismiss, sheetState = sheet) {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -320,11 +326,11 @@ fun BackupEditorSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(stringResource(R.string.backup_settings), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            OutlinedTextField(
+            CtrlTextField(
                 value = name, onValueChange = { name = it.take(64) },
                 label = { Text(stringResource(R.string.name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            CtrlTextField(
                 value = keep, onValueChange = { v -> keep = v.filter { it.isDigit() }.take(4) },
                 label = { Text(stringResource(R.string.backups_to_keep)) },
                 supportingText = { Text(stringResource(R.string.older_backups_are_deleted_beyond_this)) },
@@ -334,13 +340,13 @@ fun BackupEditorSheet(
             )
             ToggleRow(stringResource(R.string.compress_backups), compress) { compress = it }
             ToggleRow(stringResource(R.string.stop_the_server_while_backing_up), shutdown) { shutdown = it }
-            OutlinedTextField(
+            CtrlTextField(
                 value = before, onValueChange = { before = it.replace("\n", " ") },
                 label = { Text(stringResource(R.string.console_command_before_backup)) }, singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = Mono),
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
+            CtrlTextField(
                 value = after, onValueChange = { after = it.replace("\n", " ") },
                 label = { Text(stringResource(R.string.console_command_after_backup)) }, singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = Mono),
@@ -355,7 +361,7 @@ fun BackupEditorSheet(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-                Button(
+                CtrlButton(
                     enabled = error == null && !saving,
                     onClick = {
                         onSave(buildJsonObject {
@@ -379,6 +385,6 @@ fun BackupEditorSheet(
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
+        CtrlSwitch(checked = checked, onCheckedChange = onChange)
     }
 }
