@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
 import androidx.annotation.StringRes
 import com.vknxworks.craftyctrl.R
 import com.vknxworks.craftyctrl.str
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import com.vknxworks.craftyctrl.plural
 
 private fun Exception.userMessage(): String {
@@ -84,8 +85,11 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
             loginError = null
             try {
                 val base = CraftyApi.normalizeUrl(url)
-                if (base.startsWith("http://", ignoreCase = true)) {
-                    loginError = str(R.string.use_an_https_address_this_app)
+                // Plain HTTP only for a panel the user accepted in the "unencrypted connection" warning.
+                if (com.vknxworks.craftyctrl.data.CleartextPolicy.isHttp(base) &&
+                    !com.vknxworks.craftyctrl.data.CleartextPolicy.isAccepted(base)
+                ) {
+                    loginError = str(R.string.err_cleartext_blocked, base.toHttpUrlOrNull()?.host ?: base)
                     return@launch
                 }
                 val token = when (mode) {
@@ -125,6 +129,8 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
 data class ServerRow(val summary: ServerSummary, val stats: ServerStats?)
 
 class ServerListViewModel(private val api: CraftyApi) : ViewModel() {
+    /** The panel address, for the "Not encrypted (HTTP)" label. */
+    val baseUrl: String get() = api.baseUrl
     var rows by mutableStateOf<List<ServerRow>>(emptyList())
         private set
     var loading by mutableStateOf(true)

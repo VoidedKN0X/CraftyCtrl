@@ -54,6 +54,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.vknxworks.craftyctrl.R
 import com.vknxworks.craftyctrl.data.AuthMode
+import com.vknxworks.craftyctrl.data.CleartextPolicy
+import com.vknxworks.craftyctrl.data.CraftyApi
+import com.vknxworks.craftyctrl.ui.components.CtrlDialog
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material3.TextButton
 import com.vknxworks.craftyctrl.ui.ErrorBanner
 import com.vknxworks.craftyctrl.ui.SecureScreen
 import com.vknxworks.craftyctrl.ui.SessionViewModel
@@ -77,8 +82,35 @@ fun LoginScreen(vm: SessionViewModel) {
         AuthMode.API_KEY -> apiKey.isNotBlank()
         AuthMode.PASSWORD -> username.isNotBlank() && password.isNotBlank()
     }
+    // Leaving the scheme out means https; an http:// address needs the warning accepted first.
+    val normalized = remember(url) { runCatching { CraftyApi.normalizeUrl(url) }.getOrDefault("") }
+    val isHttp = url.isNotBlank() && CleartextPolicy.isHttp(normalized)
+    var confirmHttp by remember { mutableStateOf<String?>(null) }
     val submit: () -> Unit = {
-        if (canSubmit) vm.signIn(url, mode, apiKey, username, password, totp)
+        if (canSubmit) {
+            if (isHttp && !CleartextPolicy.isAccepted(normalized)) {
+                confirmHttp = normalized
+            } else {
+                vm.signIn(url, mode, apiKey, username, password, totp)
+            }
+        }
+    }
+
+    confirmHttp?.let { address ->
+        CtrlDialog(
+            onDismissRequest = { confirmHttp = null },
+            icon = { Icon(Icons.Outlined.LockOpen, contentDescription = null) },
+            title = { Text(stringResource(R.string.http_title)) },
+            text = { Text(stringResource(R.string.http_body, address)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmHttp = null
+                    CleartextPolicy.accept(address)
+                    vm.signIn(url, mode, apiKey, username, password, totp)
+                }) { Text(stringResource(R.string.http_confirm), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmHttp = null }) { Text(stringResource(R.string.cancel)) } },
+        )
     }
 
     val secretTransform = if (reveal) VisualTransformation.None else PasswordVisualTransformation()
@@ -132,6 +164,13 @@ fun LoginScreen(vm: SessionViewModel) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (isHttp) {
+                Text(
+                    stringResource(R.string.http_login_warning),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
 
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 AuthMode.entries.forEachIndexed { index, m ->

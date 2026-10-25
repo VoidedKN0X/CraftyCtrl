@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The panel address is typed by the user and many Crafty panels run on a home network, so cleartext
+     can't be limited to a fixed domain here. Plain HTTP stays possible at the platform level, but the app
+     enforces it in code (CleartextPolicy): HTTP is only used for a panel address the user typed as
+     http:// and accepted after an "unencrypted connection" warning, an https request is never
+     redirected down to http, and the third-party hosts below are HTTPS only.
+     Trust anchors are unchanged: the system's certificates only, as before. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">api.mojang.com</domain>
+        <domain includeSubdomains="true">jars.arcadiatech.org</domain>
+    </domain-config>
+</network-security-config>

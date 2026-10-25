@@ -189,6 +189,7 @@ private fun ServersTab(
 ) {
     val bars = WindowInsets.statusBars.asPaddingValues()
     val running = vm.rows.count { it.stats?.running == true }
+    val notEncrypted = remember(vm) { com.vknxworks.craftyctrl.data.CleartextPolicy.isHttp(vm.baseUrl) }
 
     PullToRefreshBox(
         isRefreshing = vm.refreshing,
@@ -216,6 +217,7 @@ private fun ServersTab(
                     title = stringResource(R.string.servers),
                     subtitle = listOfNotNull(
                         host,
+                        stringResource(R.string.not_encrypted_http).takeIf { notEncrypted },
                         vm.rows.takeIf { it.isNotEmpty() }?.let { pluralStringResource(R.plurals.count_servers, it.size, it.size) },
                     ).joinToString(" · "),
                     modifier = Modifier.padding(top = 14.dp, bottom = 22.dp),

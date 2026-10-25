@@ -24,6 +24,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Create, clone, update and delete** Java and Bedrock servers; deleting asks you to type the server name
 - **Alerts** when a server stops or crashes, even with the app closed, and **player join and leave alerts** for the servers you pick, grouped into one notification
 - **Push from Crafty through ntfy** (UnifiedPush): one tap adds a webhook to every server so starts, stops, kills and crashes wake CraftyCtrl at once. Choose the foreground monitor or push only (no ongoing notification, with a check every 15 minutes as a fallback)
+- **HTTPS by default; plain HTTP only for your own panel after a warning**, never for anything else, and an HTTPS connection is never redirected to HTTP
 - **App lock** with its own PIN and optional fingerprint unlock; your Crafty login stays encrypted while the app is locked, and two switches keep the app out of screenshots and the recent apps view
 - The Ctrl / Signal look shared by every Ctrl app: dark and light modes that follow your phone, one violet accent, Space Grotesk and JetBrains Mono
 
@@ -34,7 +35,7 @@ Coming soon.
 ## Requirements
 
 - Android 13 or newer, on a 64-bit ARM phone (nearly every phone from the last several years)
-- Crafty Controller 4.x reachable over **HTTPS with a valid certificate** (for example behind a reverse proxy). Plain `http://` is not supported.
+- Crafty Controller 4.x. **HTTPS by default** (with a certificate Android trusts, for example behind a reverse proxy); plain `http://` only for your own panel, after a warning
 - Notification permission, only if you turn on server alerts
 - For push: the [ntfy](https://f-droid.org/packages/io.heckel.ntfy/) app connected to your own ntfy server, and Crafty 4.4 or newer for webhooks
 - **Google-free and de-Googled:** no Google Play services, Firebase or other Google services, and the app never contacts Google. It works the same on de-Googled phones (GrapheneOS, CalyxOS, /e/OS, LineageOS without Google apps).
@@ -56,7 +57,7 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 
 ## Getting started
 
-1. Enter your panel address, e.g. `https://crafty.example.com`.
+1. Enter your panel address, e.g. `https://crafty.example.com`. Without `https://` or `http://` in front, HTTPS is used. For a panel on your home network without HTTPS, type `http://` in front: CraftyCtrl warns that your login and everything else are then sent unencrypted, and only connects after you tap **Use HTTP**. The panel then shows **Not encrypted (HTTP)** on the Servers tab and the You page.
 2. Sign in with an **API key** (in Crafty: your profile → *API Keys* → *Generate*) or your **username and password**, plus your 2FA code if you use one.
 3. Tap **Connect**. Your login is stored encrypted on the phone; with a password, only the token Crafty sends back is kept, never the password itself.
 
@@ -94,6 +95,8 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 
 - Adding someone to the whitelist, operators or bans of an online-mode Java server looks the player name up at Mojang (`api.mojang.com`) to get the account's ID, as Minecraft itself does.
 - The **Create server** screen loads the list of available server versions from Crafty's download catalog (`jars.arcadiatech.org`).
+
+Both are always HTTPS. Your panel is HTTPS by default too; plain HTTP is only used for a panel address you typed as `http://` and accepted after the warning.
 
 The Support, Report a bug, Source code and Licence links on the You page (tap your profile picture), and the Minecraft EULA link, open in your browser only when you tap them.
 

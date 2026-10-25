@@ -399,7 +399,12 @@
     <string name="couldn_t_open_that_file">Couldn\'t open that file.</string>
     <string name="this_server_has_no_logs_folder">This server has no logs folder.</string>
     <string name="couldn_t_read_x">Couldn\'t read %1$s.</string>
-    <string name="use_an_https_address_this_app">Use an https:// address — this app only talks to Crafty over HTTPS.</string>
+    <string name="http_title">Use an unencrypted connection?</string>
+    <string name="http_body">%1$s uses plain HTTP. CraftyCtrl can connect to it, but then your API key or password, your login token, the console and everything else are sent unencrypted, and anyone on the network can read them. That\'s fine on your home network or over a VPN, but risky anywhere else. Use https:// if you can.</string>
+    <string name="http_confirm">Use HTTP</string>
+    <string name="http_login_warning">Not encrypted (HTTP). Your login is sent in the clear. Fine on your home network or a VPN, risky anywhere else.</string>
+    <string name="not_encrypted_http">Not encrypted (HTTP)</string>
+    <string name="err_cleartext_blocked">Blocked an unencrypted (HTTP) connection to %1$s.</string>
     <string name="crafty_rejected_that_api_key">Crafty rejected that API key.</string>
     <string name="no_servers_are_running">No servers are running.</string>
     <string name="couldn_t_send_to_x">Couldn\'t send to %1$s</string>

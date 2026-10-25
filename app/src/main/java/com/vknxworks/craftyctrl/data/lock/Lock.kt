@@ -81,6 +81,7 @@ object Lock {
         val settings = AppSettings(context)
         settings.alertsEnabled = false
         CredentialStore(context).wipe()
+        com.vknxworks.craftyctrl.data.CleartextPolicy.forgetAll()
         vault(context).disable()
         settings.clearPin()
         deleteLegacyBiometricKey()
