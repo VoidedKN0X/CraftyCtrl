@@ -295,7 +295,7 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
                 )
             }
             composable("settings") { entry ->
-                SettingsScreen(onBack = { nav.back(entry) })
+                SettingsScreen(api = api, onBack = { nav.back(entry) })
             }
         }
     }

@@ -3,6 +3,26 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.9.0] - 2026-10-25
+
+### New
+
+- **Push from Crafty through ntfy.** Under **Settings > Notifications** there's a new **Push from Crafty** section. Install the ntfy app (from F-Droid), connect it to your own ntfy server and turn on **Receive Crafty webhooks**: CraftyCtrl registers with ntfy (UnifiedPush, and only ntfy) and shows its **push address**. Tap it to copy it; it's copied as sensitive, so it stays out of clipboard previews
+- **Set up webhooks on all servers.** One button adds a webhook named CraftyCtrl to every server on the panel through Crafty's API (Crafty 4.4 or newer), pointing at your push address, for **Server Start, Server Stop, Server Crash and Server Killed**. Tapping it again updates those webhooks instead of adding new ones. If your Crafty doesn't know every event, it falls back to start and stop. Your account needs permission to change the servers' webhooks
+- **Or set it up by hand:** the same section shows exactly what to enter in a server's **Webhooks** tab in Crafty (provider Discord, the push address as URL, the four events and the message line `CRAFTYCTRL|{{ event_type }}|{{ server_id }}|{{ server_name }}`), with a button to copy the message
+- **Every push makes CraftyCtrl check your servers straight away.** A stop, kill or crash push is confirmed with Crafty first (a stop has to last 20 seconds, so a restart doesn't alert), and a stop that was already notified isn't notified again by the next check. Anyone who learns the push address can only make CraftyCtrl check; they can't make it show false alerts
+- **Choose how alerts run.** With push on, **Alerts run as** offers **Foreground monitor** (as before: checks every 15 or 30 seconds or 1 or 5 minutes with a quiet ongoing notification, and pushes add an extra check at once) or **Push only**: no service in the background and no ongoing notification. Each push starts a check, and a check every 15 minutes catches anything a push missed. Without ntfy installed, alerts always use the foreground monitor
+- **Player join and leave alerts.** A new **Player alerts** section lists your servers with a switch each (all off at first). For the servers you switch on, CraftyCtrl notifies when a player joins or leaves, with the player's name and the server's name, for example "Steve joined Survival", and how many players are online now. Player notifications are grouped into one with a summary of the latest joins and leaves, and have their own notification channel, **Players joining and leaving**, so you can set their sound separately. Names come from Crafty's online player list, or from the console's "joined the game" / "left the game" lines when the list has none. Crafty has no webhook for players, so they're noticed by the next check (within seconds to minutes with the foreground monitor, within 15 minutes or at the next push with push only). A failed ping that briefly reports 0 players doesn't count as everyone leaving
+- **The console is now live.** It connects to Crafty's own WebSocket (the one the web panel's terminal uses), so new lines appear the moment the server prints them instead of every couple of seconds. A **LIVE** label with a violet square shows above the console while it streams; **POLLING** with a grey square means it's refreshing the log the old way. If the connection drops, CraftyCtrl reconnects on its own (after 2, 4, 8 … up to 60 seconds) and refreshes the log meanwhile, and after reconnecting it fills in anything printed while it was away. The socket closes when you leave the Console tab or the app, and isn't opened while the app is locked. Commands are still sent the way Crafty expects them, through its command API
+
+### Changed
+
+- **The Server alerts description says what alerts do now**: stops and crashes, and player joins and leaves on the servers you pick. With push only it explains that there's no ongoing notification and checks run every 15 minutes as a fallback
+- **The foreground monitor's description in Android's settings** (what Android shows for its special-use service) now says it notifies when a server stops or crashes, and when players join or leave the servers you picked. It used to promise player joins while the app didn't send them
+- **Alerts remember what they last saw**, so a check after a push or after the phone restarts still compares with the one before and doesn't miss a stop or a join. Turning alerts off or signing out forgets it
+- **"Server alerts paused"** (when Crafty signs the phone out) is now one notification that's replaced rather than stacked
+- After a command, the console no longer reloads the whole log while it's live: the reply streams in
+
 ## [2.8.0] - 2026-10-25
 
 ### New

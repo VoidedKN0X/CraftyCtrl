@@ -161,6 +161,32 @@ class AppSettings(context: Context) {
         get() = prefs.getInt(KEY_ALERT_INTERVAL, 30)
         set(v) = prefs.edit().putInt(KEY_ALERT_INTERVAL, v).apply()
 
+    /** Receive Crafty's webhooks as push through ntfy (UnifiedPush). Off by default. */
+    var pushEnabled: Boolean
+        get() = prefs.getBoolean(KEY_PUSH, false)
+        set(v) = prefs.edit().putBoolean(KEY_PUSH, v).apply()
+
+    /**
+     * How alerts run: [ALERT_MODE_MONITOR] keeps the foreground monitor (with its ongoing notification) checking
+     * every [alertIntervalSeconds]; [ALERT_MODE_PUSH] has no foreground service: ntfy wakes the app, and a
+     * background check runs every 15 minutes as a fallback. Push-only needs push on, otherwise it's the monitor.
+     */
+    var alertMode: String
+        get() = if (prefs.getString(KEY_ALERT_MODE, ALERT_MODE_MONITOR) == ALERT_MODE_PUSH) ALERT_MODE_PUSH else ALERT_MODE_MONITOR
+        set(v) = prefs.edit().putString(KEY_ALERT_MODE, v).apply()
+
+    /** True when alerts run without the foreground monitor (push only, with 15-minute checks as fallback). */
+    val pushOnly: Boolean get() = pushEnabled && alertMode == ALERT_MODE_PUSH
+
+    /** Servers (by Crafty id) whose player joins and leaves are notified. None by default. */
+    var playerAlertServers: Set<String>
+        get() = prefs.getStringSet(KEY_PLAYER_SERVERS, emptySet()).orEmpty().toSet()
+        set(v) = prefs.edit().putStringSet(KEY_PLAYER_SERVERS, v.toSet()).apply()
+
+    fun setPlayerAlerts(serverId: String, on: Boolean) {
+        playerAlertServers = if (on) playerAlertServers + serverId else playerAlertServers - serverId
+    }
+
     /** Android's notification permission dialog was shown once; the app never asks on its own again. */
     var notifyPermissionAsked: Boolean
         get() = prefs.getBoolean(KEY_NOTIFY_ASKED, false)
@@ -189,25 +215,30 @@ class AppSettings(context: Context) {
     private fun b64(bytes: ByteArray) = Base64.encodeToString(bytes, Base64.NO_WRAP)
     private fun unb64(s: String): ByteArray = Base64.decode(s, Base64.NO_WRAP)
 
-    private companion object {
-        const val KEY_PIN_HASH = "pin_hash"
-        const val KEY_PIN_SALT = "pin_salt"
-        const val KEY_PIN_LENGTH = "pin_length"
-        const val KEY_BIOMETRIC = "biometric"
-        const val KEY_LOCK_AFTER = "lock_after"
-        const val KEY_HIDE_CONTENT = "hide_content"
-        const val KEY_HIDE_SCREENSHOTS = "hide_screenshots"
-        const val KEY_HIDE_RECENTS = "hide_recents"
-        const val KEY_FAILED = "pin_failed"
-        const val KEY_LOCKOUT_UNTIL = "pin_lockout_until"
-        const val KEY_LOCKOUT_REMAINING = "pin_lockout_remaining"
-        const val KEY_LOCKOUT_BASE = "pin_lockout_base"
-        const val KEY_LOCKOUT_BOOT = "pin_lockout_boot"
-        const val KEY_LIVE_REFRESH = "live_refresh"
-        const val KEY_ALERTS = "alerts_enabled"
-        const val KEY_ALERT_SHUTDOWN = "alert_shutdown"
-        const val KEY_ALERT_INTERVAL = "alert_interval"
-        const val KEY_ALERT_AWAKE = "alert_keep_awake"
-        const val KEY_NOTIFY_ASKED = "notify_permission_asked"
+    companion object {
+        const val ALERT_MODE_MONITOR = "monitor"
+        const val ALERT_MODE_PUSH = "push"
+        private const val KEY_PUSH = "push_enabled"
+        private const val KEY_ALERT_MODE = "alert_mode"
+        private const val KEY_PLAYER_SERVERS = "player_alert_servers"
+        private const val KEY_PIN_HASH = "pin_hash"
+        private const val KEY_PIN_SALT = "pin_salt"
+        private const val KEY_PIN_LENGTH = "pin_length"
+        private const val KEY_BIOMETRIC = "biometric"
+        private const val KEY_LOCK_AFTER = "lock_after"
+        private const val KEY_HIDE_CONTENT = "hide_content"
+        private const val KEY_HIDE_SCREENSHOTS = "hide_screenshots"
+        private const val KEY_HIDE_RECENTS = "hide_recents"
+        private const val KEY_FAILED = "pin_failed"
+        private const val KEY_LOCKOUT_UNTIL = "pin_lockout_until"
+        private const val KEY_LOCKOUT_REMAINING = "pin_lockout_remaining"
+        private const val KEY_LOCKOUT_BASE = "pin_lockout_base"
+        private const val KEY_LOCKOUT_BOOT = "pin_lockout_boot"
+        private const val KEY_LIVE_REFRESH = "live_refresh"
+        private const val KEY_ALERTS = "alerts_enabled"
+        private const val KEY_ALERT_SHUTDOWN = "alert_shutdown"
+        private const val KEY_ALERT_INTERVAL = "alert_interval"
+        private const val KEY_ALERT_AWAKE = "alert_keep_awake"
+        private const val KEY_NOTIFY_ASKED = "notify_permission_asked"
     }
 }

@@ -614,6 +614,93 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         }
     }
 
+    // ------------------------------------------------------------ live console (WebSocket)
+
+    /** True while the console streams over Crafty's WebSocket; false means it's polling the logs instead. */
+    var consoleLive by mutableStateOf(false)
+        private set
+
+    private var socket: com.vknxworks.craftyctrl.data.ConsoleSocket? = null
+    private var reconnect: kotlinx.coroutines.Job? = null
+    private var consoleWanted = false
+    private var socketFailures = 0
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /** The console tab is showing: connect the live console, reconnecting on its own until [stopConsole]. */
+    fun startConsole() {
+        consoleWanted = true
+        if (socket != null || reconnect?.isActive == true) return
+        connectSocket()
+    }
+
+    /** The console tab is gone or the app left the screen. */
+    fun stopConsole() {
+        consoleWanted = false
+        reconnect?.cancel()
+        reconnect = null
+        socket?.close()
+        socket = null
+        consoleLive = false
+    }
+
+    private fun connectSocket() {
+        // No token while the app is locked: nothing is opened until it unlocks.
+        val token = api.currentToken()
+        if (token == null) {
+            scheduleReconnect()
+            return
+        }
+        val s = com.vknxworks.craftyctrl.data.ConsoleSocket(api.baseUrl, serverId, token, object : com.vknxworks.craftyctrl.data.ConsoleSocket.Listener {
+            override fun onOpen() {
+                mainHandler.post {
+                    if (consoleWanted) {
+                        socketFailures = 0
+                        consoleLive = true
+                        // Fill in anything that was printed while the socket was down.
+                        viewModelScope.launch { refreshLogs() }
+                    }
+                }
+            }
+
+            override fun onLine(line: String) {
+                mainHandler.post {
+                    if (consoleWanted) logs = (logs + line).takeLast(MAX_CONSOLE_LINES)
+                }
+            }
+
+            override fun onClosed(unauthorized: Boolean) {
+                mainHandler.post {
+                    socket = null
+                    consoleLive = false
+                    socketFailures++
+                    if (consoleWanted) scheduleReconnect()
+                }
+            }
+        })
+        socket = s
+        if (!s.connect()) {
+            socket = null
+            socketFailures++
+            scheduleReconnect()
+        }
+    }
+
+    /** Tries again after 2, 4, 8 … up to 60 seconds; the logs are polled meanwhile. */
+    private fun scheduleReconnect() {
+        if (!consoleWanted || reconnect?.isActive == true) return
+        val wait = (2_000L shl socketFailures.coerceIn(0, 5)).coerceAtMost(60_000L)
+        reconnect = viewModelScope.launch {
+            delay(wait)
+            reconnect = null
+            if (consoleWanted && socket == null) connectSocket()
+        }
+    }
+
+    override fun onCleared() {
+        stopConsole()
+        super.onCleared()
+    }
+
     var deletingServer by mutableStateOf(false)
         private set
 
@@ -700,8 +787,11 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 recentCommands.remove(command)
                 recentCommands.add(0, command)
                 while (recentCommands.size > 8) recentCommands.removeAt(recentCommands.lastIndex)
-                delay(600)
-                refreshLogs()
+                // The live console shows the reply as it comes; polling picks it up from the logs.
+                if (!consoleLive) {
+                    delay(600)
+                    refreshLogs()
+                }
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
             } finally {
@@ -986,6 +1076,8 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     companion object {
         const val DEFAULT_BACKUP = "__default__"
         private const val LIVE_SAMPLES = 200
+        /** About what Crafty's own console keeps. */
+        private const val MAX_CONSOLE_LINES = 1000
     }
 }
 

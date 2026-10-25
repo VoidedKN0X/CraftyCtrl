@@ -2,14 +2,11 @@ package com.vknxworks.craftyctrl.monitor
 
 import android.annotation.SuppressLint
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
@@ -17,55 +14,38 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.vknxworks.craftyctrl.MainActivity
 import com.vknxworks.craftyctrl.R
 import com.vknxworks.craftyctrl.data.AppSettings
 import com.vknxworks.craftyctrl.data.CraftyApi
 import com.vknxworks.craftyctrl.data.CraftyException
 import com.vknxworks.craftyctrl.data.CredentialStore
-import com.vknxworks.craftyctrl.data.ServerStats
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicInteger
 import com.vknxworks.craftyctrl.str
 import com.vknxworks.craftyctrl.plural
 
 /**
- * Polls Crafty in the background and notifies when a server stops or crashes.
- * Runs as a foreground service (with a quiet ongoing notification) so Android keeps it alive.
+ * The foreground monitor: checks Crafty every few seconds to minutes (Settings > Check every) and notifies when
+ * a server stops or crashes, and when players join or leave servers that have player alerts on. Runs as a
+ * foreground service (with a quiet ongoing notification) so Android keeps it alive. With push from Crafty
+ * through ntfy and "Push only" chosen, this service doesn't run at all: [CheckJob] does the checks instead.
  */
 class MonitorService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var loop: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
-    private data class Snapshot(
-        val running: Boolean,
-        val crashed: Boolean,
-        val online: Int,
-        /** Polls in a row that looked stopped; a restart passes through one, a real stop stays. */
-        val stoppedPolls: Int = 0,
-        /** Whether the server was running when the current stopped streak began. */
-        val wasRunningBeforeStop: Boolean = false,
-    )
-
-    private val last = mutableMapOf<String, Snapshot>()
-
-
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        ensureChannels(this)
+        Alerts.ensureChannels(this)
         // Must come first: Android kills the app if a foreground start isn't confirmed quickly.
         try {
             startInForeground(status(str(R.string.starting)))
@@ -77,6 +57,7 @@ class MonitorService : Service() {
         when (intent?.action) {
             ACTION_STOP -> {
                 AppSettings(this).alertsEnabled = false
+                CheckJob.schedule(this, false)
                 stopSelf()
                 return START_NOT_STICKY
             }
@@ -110,18 +91,25 @@ class MonitorService : Service() {
             val store = CredentialStore(this)
             val session = store.load()
             val token = store.backgroundToken()
-            if (!settings.alertsEnabled || session == null || token == null) {
+            if (!settings.alertsEnabled || pushOnly(this) || session == null || token == null) {
                 stopSelf()
                 return
             }
             val api = CraftyApi(session.baseUrl, token)
             try {
-                poll(api, settings)
+                val s = Checker.check(this, api, settings)
+                val summary = str(
+                    R.string.monitor_summary,
+                    plural(R.plurals.watching_servers, s.servers, s.servers),
+                    str(R.string.x_running, s.running),
+                    plural(R.plurals.players_online, s.playersOnline, s.playersOnline),
+                )
+                notifyStatus(status(summary))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: CraftyException) {
                 if (e.httpCode == 401) {
-                    alert(str(R.string.alerts_paused), str(R.string.alerts_paused_body), CHANNEL_SHUTDOWN)
+                    Alerts.paused(this)
                     stopSelf()
                     return
                 }
@@ -133,67 +121,7 @@ class MonitorService : Service() {
         }
     }
 
-    private suspend fun poll(api: CraftyApi, settings: AppSettings) = coroutineScope {
-        val servers = api.servers()
-        val results = servers.map { s ->
-            async { s to runCatching { api.stats(s.id) }.getOrNull() }
-        }.awaitAll()
-
-        var running = 0
-        var playersOnline = 0
-        for ((server, stats) in results) {
-            // Unknown or half-filled replies change nothing, so they can't cause false alerts.
-            if (stats == null || !stats.runningReported) continue
-            val before = last[server.id]
-            var now = snapshotOf(stats)
-            if (before != null) {
-                val down = !now.running && !stats.waitingStart && !stats.updating
-                now = if (down) {
-                    now.copy(
-                        stoppedPolls = before.stoppedPolls + 1,
-                        wasRunningBeforeStop = if (before.stoppedPolls == 0) before.running else before.wasRunningBeforeStop,
-                    )
-                } else {
-                    now.copy(stoppedPolls = 0)
-                }
-            }
-            if (now.running) running++
-            playersOnline += now.online
-            last[server.id] = now
-            if (before == null) continue // first sighting is the baseline, not an event
-
-            // Stops and crashes are the only alerts.
-            when {
-                // Crashes are reported straight away.
-                now.crashed && !before.crashed ->
-                    alert(str(R.string.x_crashed, server.name), str(R.string.crafty_detected_a_crash), CHANNEL_SHUTDOWN)
-                // A plain stop must hold for two polls, so restarts don't alert.
-                !now.crashed && now.stoppedPolls == 2 && now.wasRunningBeforeStop ->
-                    alert(str(R.string.x_stopped, server.name), str(R.string.the_server_is_no_longer_running), CHANNEL_SHUTDOWN)
-            }
-        }
-        val summary = str(
-            R.string.monitor_summary,
-            plural(R.plurals.watching_servers, servers.size, servers.size),
-            str(R.string.x_running, running),
-            plural(R.plurals.players_online, playersOnline, playersOnline),
-        )
-        notifyStatus(status(summary))
-    }
-
-    private fun snapshotOf(s: ServerStats) = Snapshot(
-        running = s.running,
-        crashed = s.crashed,
-        online = s.online ?: s.players.size,
-    )
-
     // ------------------------------------------------------------ notifications
-
-    private fun openAppIntent(): PendingIntent = PendingIntent.getActivity(
-        this, 0,
-        Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-    )
 
     private fun status(text: String): Notification {
         val stop = PendingIntent.getService(
@@ -212,10 +140,10 @@ class MonitorService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setContentIntent(openAppIntent())
+            .setContentIntent(Alerts.openAppIntent(this))
             .addAction(turnOff)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setPublicVersion(publicVersion(CHANNEL_STATUS, str(R.string.server_alerts_on)))
+            .setPublicVersion(Alerts.publicVersion(this, CHANNEL_STATUS, str(R.string.server_alerts_on)))
             .build()
     }
 
@@ -231,33 +159,6 @@ class MonitorService : Service() {
     private fun notifyStatus(n: Notification) {
         if (canNotify(this)) NotificationManagerCompat.from(this).notify(STATUS_ID, n)
     }
-
-    @SuppressLint("MissingPermission")
-    private fun alert(title: String, text: String, channel: String) {
-        if (!canNotify(this)) return
-        val n = NotificationCompat.Builder(this, channel)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setAutoCancel(true)
-            .setContentIntent(openAppIntent())
-            .setCategory(NotificationCompat.CATEGORY_STATUS)
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setPublicVersion(publicVersion(channel, str(R.string.a_server_needs_attention)))
-            .build()
-        NotificationManagerCompat.from(this).notify(nextId.incrementAndGet(), n)
-    }
-
-    /**
-     * What a secure lock screen shows when the phone hides sensitive notification content:
-     * no server names, player counts or panel errors (those can name the panel's address).
-     */
-    private fun publicVersion(channel: String, title: String): Notification =
-        NotificationCompat.Builder(this, channel)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(str(R.string.unlock_to_see_details))
-            .build()
 
     @SuppressLint("WakelockTimeout")
     private fun updateWakeLock(keepAwake: Boolean) {
@@ -280,41 +181,31 @@ class MonitorService : Service() {
         @Volatile
         private var isRunning = false
         private const val STATUS_ID = 1001
-        private const val CHANNEL_STATUS = "monitor_status"
-        private const val CHANNEL_SHUTDOWN = "alerts_shutdown"
-        private val nextId = AtomicInteger(2000)
+        private const val CHANNEL_STATUS = Alerts.CHANNEL_STATUS
 
-        /** CraftyCtrl may post notifications: the Android 13+ permission is granted and they aren't turned off. */
-        fun canNotify(context: Context): Boolean =
-            (
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                    ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) ==
-                    PackageManager.PERMISSION_GRANTED
-                ) && NotificationManagerCompat.from(context).areNotificationsEnabled()
+        fun canNotify(context: Context): Boolean = Alerts.canNotify(context)
 
-        fun ensureChannels(context: Context) {
-            val nm = context.getSystemService(NotificationManager::class.java)
-            nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_STATUS, str(R.string.channel_alerts_service), NotificationManager.IMPORTANCE_MIN).apply {
-                    description = str(R.string.channel_alerts_service_desc)
-                },
-            )
-            nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_SHUTDOWN, str(R.string.channel_shutdown), NotificationManager.IMPORTANCE_HIGH),
-            )
-            // Player-join and backup alerts were removed; drop their channels from Android's settings too.
-            nm.deleteNotificationChannel("alerts_players")
-            nm.deleteNotificationChannel("alerts_backup")
-        }
+        /** Push only is chosen and can work: without ntfy installed, the foreground monitor runs instead. */
+        fun pushOnly(context: Context): Boolean =
+            AppSettings(context).pushOnly && com.vknxworks.craftyctrl.push.UnifiedPush.isNtfyInstalled(context)
 
-        /** Starts or stops the service to match the saved settings. Call from the foreground. */
+        fun ensureChannels(context: Context) = Alerts.ensureChannels(context)
+
+        /**
+         * Starts or stops alerts to match the saved settings: the foreground monitor, or (push only) the
+         * 15-minute background check, and the ntfy registration. Call from the foreground.
+         */
         fun sync(context: Context) {
             val settings = AppSettings(context)
             val signedIn = CredentialStore(context).load() != null
             val intent = Intent(context, MonitorService::class.java)
             // Without notifications the alerts can't reach anyone, so they wait until they're allowed
             // (the app syncs again when it comes back on screen).
-            if (settings.alertsEnabled && signedIn && canNotify(context)) {
+            val on = settings.alertsEnabled && signedIn && canNotify(context)
+            if (!on) Checker.reset(context)
+            val pushOnly = pushOnly(context)
+            CheckJob.schedule(context, on && pushOnly)
+            if (on && !pushOnly) {
                 runCatching { ContextCompat.startForegroundService(context, intent) }
             } else if (isRunning) {
                 // Stopping through onStartCommand avoids the crash when stopService beats startForeground.

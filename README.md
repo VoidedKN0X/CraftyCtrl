@@ -14,7 +14,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 
 - **Server list** with live status, CPU, memory, players and uptime, and a broadcast to every running server
 - **Start, restart, stop and kill**, with a fingerprint or face check (or your phone's screen lock) before restart, stop and kill, and an optional in-game countdown
-- **Live console** with search, filters, quick commands and player-name completion
+- **Live console** streamed over Crafty's own WebSocket as lines are printed, reconnecting by itself and falling back to refreshing the log; with search, filters, quick commands and player-name completion
 - **Logs and stats history** charts for CPU, memory and players
 - **Server settings**: every `server.properties` option, whitelist, operators and bans
 - **Players**: message, kick, ban, make operator, change game mode or clear inventory for any player
@@ -22,7 +22,8 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **File browser** with a built-in text editor, upload, unzip and more
 - **Backups and scheduled tasks**: run, edit, restore and schedule; restoring asks you to type RESTORE first
 - **Create, clone, update and delete** Java and Bedrock servers; deleting asks you to type the server name
-- **Alerts** when a server stops or crashes, even with the app closed
+- **Alerts** when a server stops or crashes, even with the app closed, and **player join and leave alerts** for the servers you pick, grouped into one notification
+- **Push from Crafty through ntfy** (UnifiedPush): one tap adds a webhook to every server so starts, stops, kills and crashes wake CraftyCtrl at once. Choose the foreground monitor or push only (no ongoing notification, with a check every 15 minutes as a fallback)
 - **App lock** with its own PIN and optional fingerprint unlock; your Crafty login stays encrypted while the app is locked, and two switches keep the app out of screenshots and the recent apps view
 - The Ctrl / Signal look shared by every Ctrl app: dark and light modes that follow your phone, one violet accent, Space Grotesk and JetBrains Mono
 
@@ -35,6 +36,7 @@ Coming soon.
 - Android 13 or newer, on a 64-bit ARM phone (nearly every phone from the last several years)
 - Crafty Controller 4.x reachable over **HTTPS with a valid certificate** (for example behind a reverse proxy). Plain `http://` is not supported.
 - Notification permission, only if you turn on server alerts
+- For push: the [ntfy](https://f-droid.org/packages/io.heckel.ntfy/) app connected to your own ntfy server, and Crafty 4.4 or newer for webhooks
 - **Google-free and de-Googled:** no Google Play services, Firebase or other Google services, and the app never contacts Google. It works the same on de-Googled phones (GrapheneOS, CalyxOS, /e/OS, LineageOS without Google apps).
 
 ## Install
@@ -59,6 +61,16 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 3. Tap **Connect**. Your login is stored encrypted on the phone; with a password, only the token Crafty sends back is kept, never the password itself.
 
 Settings, signing out and About are behind your profile picture at the top right of the Servers and Host tabs: tap it to open the You page, then **Settings**. **Broadcast** (a chat message to every running server) is the megaphone button next to it.
+
+## Alerts and push
+
+Turn on **Settings > Notifications > Server alerts** (tap your profile picture, then **Settings**).
+
+- **Foreground monitor** (the default): CraftyCtrl checks your servers every 15 or 30 seconds, or 1 or 5 minutes, with a quiet ongoing notification. A stop is only reported once the server stays down for two checks, so restarts don't alert; crashes are reported straight away.
+- **Player alerts:** under **Player alerts**, switch on the servers whose joins and leaves you want. Each notification names the player and the server, and they're grouped into one. Names come from Crafty's online player list, or from the console's "joined the game" / "left the game" lines when the list has none. Crafty has no webhook for players, so these always come from the checks.
+- **Push from Crafty:** install [ntfy](https://f-droid.org/packages/io.heckel.ntfy/), connect it to your ntfy server, and turn on **Push from Crafty > Receive Crafty webhooks**. CraftyCtrl shows its push address and can add a webhook named CraftyCtrl to every server for you (**Set up webhooks on all servers**, Crafty 4.4+). To do it by hand, open each server's **Webhooks** tab in Crafty and add one with provider *Discord*, the push address as URL, the events *Server Start*, *Server Stop*, *Server Crash* and *Server Killed*, and the message `CRAFTYCTRL|{{ event_type }}|{{ server_id }}|{{ server_name }}`.
+- **Push only:** with push on you can pick **Alerts run as > Push only**. Then no service runs in the background and there's no ongoing notification: every push starts a check at once, and a check every 15 minutes catches anything a push missed.
+- Every push only makes CraftyCtrl check with Crafty; nothing is notified from what the push says alone, so someone who learns the push address can't fake alerts. Keep the address private anyway.
 
 ## App lock
 

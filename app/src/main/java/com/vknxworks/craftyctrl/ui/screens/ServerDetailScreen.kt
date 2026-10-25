@@ -107,6 +107,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.automirrored.filled.ShowChart
@@ -849,7 +852,25 @@ internal fun isWarn(line: String) = "WARN" in line
 @Composable
 private fun ConsoleTab(vm: ServerDetailViewModel) {
     val consoleMs = rememberRefreshMs().coerceAtMost(2_000)
-    PollWhileVisible("console-${vm.serverId}" to consoleMs, consoleMs) { vm.refreshLogs() }
+    // Live over Crafty's WebSocket while the tab is on screen; the logs are polled whenever it isn't connected.
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(vm, owner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_START -> vm.startConsole()
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> vm.stopConsole()
+                else -> Unit
+            }
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose {
+            owner.lifecycle.removeObserver(observer)
+            vm.stopConsole()
+        }
+    }
+    // While live, a slow refresh from the logs keeps the console right even if the socket goes quiet.
+    val pollMs = if (vm.consoleLive) 15_000L else consoleMs
+    PollWhileVisible(Triple("console-${vm.serverId}", pollMs, vm.consoleLive), pollMs) { vm.refreshLogs() }
 
     val listState = rememberLazyListState()
     var follow by rememberSaveable { mutableStateOf(true) }
@@ -901,6 +922,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                 Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                ConsoleLiveBadge(vm.consoleLive)
                 FilterChip(selected = follow, onClick = { follow = !follow }, label = { Text(stringResource(R.string.follow)) })
                 LogLevel.entries.forEach { l ->
                     FilterChip(selected = level == l, onClick = { level = l }, label = { Text(l.label) })
@@ -1021,6 +1043,28 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                 }
             }
         }
+    }
+}
+
+/** "LIVE" with a violet square while streaming over the WebSocket, "POLLING" with a grey one otherwise. */
+@Composable
+private fun ConsoleLiveBadge(live: Boolean) {
+    val label = stringResource(if (live) R.string.console_live else R.string.console_polling)
+    val description = stringResource(if (live) R.string.console_live_desc else R.string.console_polling_desc)
+    Row(
+        Modifier
+            .height(32.dp)
+            .semantics { contentDescription = description },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(8.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(if (live) CtrlColors.AccentText else CtrlColors.Inactive),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(label, style = CtrlType.MonoStatus, color = if (live) CtrlColors.AccentText else CtrlColors.Muted)
     }
 }
 
