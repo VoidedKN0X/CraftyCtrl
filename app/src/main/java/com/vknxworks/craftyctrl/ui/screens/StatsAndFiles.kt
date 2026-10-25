@@ -622,7 +622,7 @@ fun FileEditorScreen(api: CraftyApi, serverId: String, path: String, onBack: () 
                         value = vm.text,
                         onValueChange = { vm.text = it },
                         textStyle = textStyle,
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        cursorBrush = SolidColor(com.vknxworks.craftyctrl.ui.theme.CtrlColors.Accent),
                         modifier = scrollModifier,
                     )
                 }

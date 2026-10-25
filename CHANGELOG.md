@@ -3,6 +3,27 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.8.0] - 2026-10-25
+
+### New
+
+- **Light mode that follows the device theme.** CraftyCtrl now switches between **Signal Dark** and the new **Signal Light** on its own, whenever your phone switches between dark and light mode (including scheduled or sunset-to-sunrise dark mode). There's no setting for it and no theme picker: the app always matches the phone. Material You and wallpaper colours stay off in both modes
+- **Signal Light colours**: a warm off-white background (#F5F5F1), white cards and sheets with a thin light-grey border, near-black text (#0B0B0D) and grey secondary text (#5C5C64)
+- **The violet accent is the same in both modes.** Hero cards, main buttons, the selected tab, switches that are on, the lock badge, your profile picture on the Profile page and entered PIN squares keep the #B48CFF fill with near-black content
+- **A deeper violet for text and icons in light mode** (#6A3BDB), because the fill violet is too pale to read on white. It's used for the slash in the CRAFTY/CTRL wordmark, running-server status words and squares, the focused text-field border and cursor, the selected option in pickers, the selected tab in tab rows, link-style buttons such as **Allow**, dialog icons, the CPU line in stats charts and the outlined fingerprint key on the lock screen. In dark mode these stay #B48CFF
+
+### Changed
+
+- **Every screen works in both modes**: the Servers and Host tabs, a server's Overview, Stats, Files, Backups and Schedules tabs, the management pages (server.properties, players, add-ons, logs, options), creating a server, the sign-in screen, Profile, Settings, the lock and PIN screens, dialogs, bottom sheets and menus
+- **The status bar and navigation bar** take the background colour of the current mode, with light icons in dark mode and dark icons in light mode. They update straight away when the phone switches. The app also starts on the right background colour, so there's no dark flash in light mode
+- **The floating bottom bar** in light mode is white at 92 % with a thin grey border; the selected tab is still the violet block
+- **Switches in light mode**: violet with a near-black knob when on, light grey with a grey knob when off
+- **Progress bars and usage meters in light mode**: a light grey track with a near-black fill (amber and red as they fill up)
+- **Errors** are red #D93636 in light mode (#FF6B6B in dark), and error banners use a pale red background
+- **The lock screen in light mode**: white keypad keys with a thin border, empty PIN squares outlined in grey, entered squares violet
+- **The console stays dark in both modes**, as do the log viewer under **Logs**, the file editor and the **Diagnostics** report. They keep the near-black background and log colours (white text, amber warnings, red errors) so logs read the same as in a terminal
+- The server-state colours (running, starting or updating, crashed, stopped) are tuned for each mode so they stay readable
+
 ## [2.7.0] - 2026-10-25
 
 CraftyCtrl gets the new **Ctrl / Signal** look, the design every Ctrl app now shares. Only the look changes: every screen, feature, button and setting works exactly as before.

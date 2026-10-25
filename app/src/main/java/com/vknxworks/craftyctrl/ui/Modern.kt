@@ -106,7 +106,7 @@ fun PillTabs(tabs: List<PillTab>, selected: Int, onSelect: (Int) -> Unit, modifi
                 onClick = { onSelect(i) },
                 text = { Text(tab.title, maxLines = 1) },
                 icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                selectedContentColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Accent,
+                selectedContentColor = com.vknxworks.craftyctrl.ui.theme.CtrlColors.AccentText,
                 unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

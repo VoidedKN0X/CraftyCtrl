@@ -64,6 +64,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -111,7 +112,8 @@ private val DialogShape = RoundedCornerShape(26.dp)
 private val SheetShape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
 
 /** The 1 dp hairline round every card. */
-val CtrlCardBorder = BorderStroke(1.dp, CtrlColors.CardBorder)
+val CtrlCardBorder: BorderStroke
+    @Composable @ReadOnlyComposable get() = BorderStroke(1.dp, CtrlColors.CardBorder)
 
 /** Room the floating bottom bar takes above the navigation bar (64 bar + 28 margin + a little air). */
 val CtrlBottomBarSpace: Dp = 100.dp
@@ -124,7 +126,7 @@ fun CtrlWordmark(name: String, modifier: Modifier = Modifier) {
     Text(
         buildAnnotatedString {
             append(name.uppercase())
-            withStyle(SpanStyle(color = CtrlColors.Accent)) { append("/") }
+            withStyle(SpanStyle(color = CtrlColors.AccentText)) { append("/") }
             append("CTRL")
         },
         style = CtrlType.Wordmark,
@@ -663,11 +665,11 @@ fun CtrlTextField(
             unfocusedContainerColor = CtrlColors.Surface,
             disabledContainerColor = CtrlColors.Surface,
             errorContainerColor = CtrlColors.Surface,
-            focusedBorderColor = CtrlColors.Accent,
+            focusedBorderColor = CtrlColors.AccentText,
             unfocusedBorderColor = CtrlColors.ControlBorder,
             disabledBorderColor = CtrlColors.CardBorder,
-            cursorColor = CtrlColors.Accent,
-            focusedLabelColor = CtrlColors.Accent,
+            cursorColor = CtrlColors.AccentText,
+            focusedLabelColor = CtrlColors.AccentText,
             unfocusedLabelColor = CtrlColors.Muted,
             focusedLeadingIconColor = CtrlColors.Muted,
             unfocusedLeadingIconColor = CtrlColors.Muted,
@@ -703,7 +705,7 @@ fun CtrlDialog(
         text = text,
         shape = DialogShape,
         containerColor = CtrlColors.Surface,
-        iconContentColor = CtrlColors.Accent,
+        iconContentColor = CtrlColors.AccentText,
         titleContentColor = CtrlColors.Text,
         textContentColor = CtrlColors.Muted,
         tonalElevation = 0.dp,

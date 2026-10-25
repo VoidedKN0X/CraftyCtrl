@@ -75,10 +75,7 @@ class MainActivity : FragmentActivity() {
         ScreenPrivacy.load(this)
         // Deletes what the anonymous stats (removed in 2.4.12) left in the settings, once after the update.
         if (savedInstanceState == null) AppSettings(this).removeLeftoverStats()
-        // Signal is dark only: edge to edge, both bars on the background colour with light icons.
-        val bars = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-        enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
-        window.decorView.setBackgroundColor(android.graphics.Color.parseColor("#08080A"))
+        enableEdgeToEdge()
         setContent {
             // FLAG_SECURE follows "Hide in screenshots", and is forced on by sign-in, the lock and PIN screens and the file editor.
             val secure = ScreenPrivacy.secure
@@ -92,6 +89,14 @@ class MainActivity : FragmentActivity() {
             // "Hide in recent apps", and always with the app lock on: a blank card instead of a snapshot.
             val blankRecents = ScreenPrivacy.hideRecents || com.vknxworks.craftyctrl.data.lock.Lock.vault(this).enabled
             LaunchedEffect(blankRecents) { setRecentsScreenshotEnabled(!blankRecents) }
+            // Edge to edge with the bars on the background colour: light icons in dark mode, dark icons in light.
+            val dark = ThemePrefs.isDark()
+            LaunchedEffect(dark) {
+                val clear = android.graphics.Color.TRANSPARENT
+                val style = if (dark) SystemBarStyle.dark(clear) else SystemBarStyle.light(clear, clear)
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                window.decorView.setBackgroundColor(if (dark) 0xFF08080A.toInt() else 0xFFF5F5F1.toInt())
+            }
             CraftyTheme { AppRoot() }
         }
     }

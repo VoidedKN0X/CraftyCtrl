@@ -146,7 +146,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                         icon = Icons.Outlined.NotificationsOff,
                         iconTint = MaterialTheme.colorScheme.error,
                         onClick = askNotify,
-                        trailing = { TextButton(onClick = askNotify) { Text(stringResource(R.string.allow), color = com.vknxworks.craftyctrl.ui.theme.CtrlColors.Accent) } },
+                        trailing = { TextButton(onClick = askNotify) { Text(stringResource(R.string.allow), color = com.vknxworks.craftyctrl.ui.theme.CtrlColors.AccentText) } },
                     )
                 }
                 if (!canNotify && alerts) {

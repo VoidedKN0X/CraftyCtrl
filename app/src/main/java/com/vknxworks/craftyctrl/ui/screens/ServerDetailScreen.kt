@@ -1511,7 +1511,7 @@ private fun CountdownBanner(c: Countdown, onCancel: () -> Unit) {
     val left = ((c.endsAt - now) / 1000).coerceAtLeast(0)
     Column {
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Dot(CtrlColors.Accent)
+            Dot(CtrlColors.AccentText)
             Spacer(Modifier.width(10.dp))
             Text(
                 (if (c.action == PowerAction.RESTART) stringResource(R.string.restarting_in) else stringResource(R.string.stopping_in)) + "%d:%02d".format(left / 60, left % 60),

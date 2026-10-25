@@ -1,0 +1,4 @@
+<resources>
+    <!-- Signal Dark background, shown while the app starts in dark mode. -->
+    <color name="window_bg">#08080A</color>
+</resources>
