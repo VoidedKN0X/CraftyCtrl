@@ -36,17 +36,22 @@ class CheckJob : JobService() {
     override fun onStartJob(params: JobParameters): Boolean {
         val extras = params.extras
         val event = extras.getString(KEY_EVENT)?.let { PushEvent(it, extras.getString(KEY_SERVER), extras.getString(KEY_DETAIL)) }
+        stopped = false
         running = scope.launch {
             try {
                 work(event)
             } finally {
-                jobFinished(params, false)
+                // After onStopJob Android has already ended the job (and reschedules it if asked): don't finish it again.
+                if (!stopped) runCatching { jobFinished(params, false) }
             }
         }
         return true
     }
 
+    @Volatile private var stopped = false
+
     override fun onStopJob(params: JobParameters): Boolean {
+        stopped = true
         running?.cancel()
         return params.jobId == PERIODIC_ID
     }

@@ -24,6 +24,7 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /** Where CraftyCtrl's registration with ntfy stands. */
 sealed interface PushStatus {
@@ -224,7 +225,8 @@ class PushReceiver : BroadcastReceiver() {
         val app = context.applicationContext
         when (intent.action) {
             UnifiedPush.ACTION_NEW_ENDPOINT -> {
-                val endpoint = intent.getStringExtra(UnifiedPush.EXTRA_ENDPOINT) ?: return
+                val endpoint = intent.getStringExtra(UnifiedPush.EXTRA_ENDPOINT)
+                    ?.takeIf { it.length <= 2048 && it.toHttpUrlOrNull() != null } ?: return
                 UnifiedPush.ack(app, token, intent.getStringExtra(UnifiedPush.EXTRA_ID))
                 Push.onEndpoint(app, endpoint)
             }

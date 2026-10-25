@@ -273,15 +273,20 @@ fun SettingsScreen(api: com.vknxworks.craftyctrl.data.CraftyApi, onBack: () -> U
                                 Toast.makeText(context, R.string.lock_fingerprint_setup_failed, Toast.LENGTH_SHORT).show()
                                 return@GroupSwitch
                             }
-                            showVaultPrompt(
-                                activity,
-                                context.getString(R.string.lock_fingerprint_enable_title),
-                                cipher,
-                                subtitle = context.getString(R.string.lock_fingerprint_enable_subtitle),
-                            ) { unlocked ->
-                                if (!vault.finishBiometricEnrol(unlocked)) {
-                                    Toast.makeText(context, R.string.lock_fingerprint_setup_failed, Toast.LENGTH_SHORT).show()
+                            // Android can refuse to show the prompt (for example while the app is being left).
+                            runCatching {
+                                showVaultPrompt(
+                                    activity,
+                                    context.getString(R.string.lock_fingerprint_enable_title),
+                                    cipher,
+                                    subtitle = context.getString(R.string.lock_fingerprint_enable_subtitle),
+                                ) { unlocked ->
+                                    if (!vault.finishBiometricEnrol(unlocked)) {
+                                        Toast.makeText(context, R.string.lock_fingerprint_setup_failed, Toast.LENGTH_SHORT).show()
+                                    }
                                 }
+                            }.onFailure {
+                                Toast.makeText(context, R.string.lock_fingerprint_setup_failed, Toast.LENGTH_SHORT).show()
                             }
                         }
                     }

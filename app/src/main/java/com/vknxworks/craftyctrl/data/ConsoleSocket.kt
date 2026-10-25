@@ -54,9 +54,12 @@ class ConsoleSocket(
             .build()
         closedByUs = false
         socket = client.newWebSocket(request, object : WebSocketListener() {
-            override fun onOpen(webSocket: WebSocket, response: Response) = listener.onOpen()
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                if (!closedByUs) listener.onOpen()
+            }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
+                if (closedByUs) return
                 val o = runCatching { json.parseToJsonElement(text) as? JsonObject }.getOrNull() ?: return
                 val event = (o["event"] as? JsonPrimitive)?.contentOrNull
                 when (event) {
@@ -89,10 +92,12 @@ class ConsoleSocket(
         return true
     }
 
+    /** Closes the socket; if a clean close can't start (already failing or closing), it's cut off at once. */
     fun close() {
         closedByUs = true
-        socket?.close(1000, null)
+        val s = socket ?: return
         socket = null
+        if (!runCatching { s.close(1000, null) }.getOrDefault(false)) s.cancel()
     }
 
     companion object {
