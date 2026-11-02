@@ -716,7 +716,10 @@ fun CtrlDialog(
     )
 }
 
-/** Bottom sheet: surface fill, 26 dp top corners, 1 dp border. */
+/**
+ * Bottom sheet: surface fill and 26 dp top corners, with no outline (the scrim separates it). A border modifier
+ * here would be drawn before the sheet's own offset, so it showed up as a grey box partway down the screen.
+ */
 @Composable
 fun CtrlSheet(
     onDismissRequest: () -> Unit,
@@ -727,7 +730,6 @@ fun CtrlSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        modifier = Modifier.border(1.dp, CtrlColors.CardBorder, SheetShape),
         shape = SheetShape,
         containerColor = containerColor,
         contentColor = CtrlColors.Text,

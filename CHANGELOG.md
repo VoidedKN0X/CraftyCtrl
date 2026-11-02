@@ -3,6 +3,17 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.10.2] - 2026-11-02
+
+### Fixed
+
+- **Bottom sheets no longer show a stray grey box or outline.** The thin border added to bottom sheets in 2.7.0 wasn't drawn where the sheet actually is. Android places the sheet after drawing that border, so the border appeared as a grey rectangle partway down the open sheet, sometimes cutting across its first row, plus a stray rounded outline near the top of the screen. Sheets now have no outline at all: a plain card-coloured surface (near-black in dark mode, white in light mode) with 26 dp rounded top corners. The dimmed background behind them already sets them apart. Their contents, drag handle and behaviour are unchanged. This fixes:
+  - the pickers in **Settings** (alert interval, Lock again, refresh interval)
+  - the player sheet on a server's Overview (**Manage a player by name**, or tapping an online player)
+  - the schedule editor in the **Schedules** tab (new or edited scheduled task)
+  - the backup settings sheet in the **Backups** tab
+- Dialogs keep their thin border, which was always drawn in the right place, and popup menus keep the look from 2.10.1
+
 ## [2.10.1] - 2026-11-02
 
 ### Fixed
