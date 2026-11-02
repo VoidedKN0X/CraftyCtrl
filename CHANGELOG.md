@@ -3,6 +3,16 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Project updates (2026-11-02)
+
+- **New SECURITY.md** explaining how to report a security problem privately through GitHub's **Report a vulnerability** button instead of a public issue, what counts as a security problem for CraftyCtrl, and the SHA-256 fingerprint of the release signing key
+- **Issue forms**: opening a new issue now offers a **Bug report** form (what happened, steps, CraftyCtrl, Android and Crafty Controller versions, where you installed it from) and a **Feature request** form, plus a link to report security problems privately. Blank issues are turned off
+- **README: Install** now says exactly what to tap on the Releases page: the `.apk` file under **Assets**, not the "Source code" files
+- **README: new "Is it safe to install?" section** covering the open-source code, releases built by GitHub Actions, the release signing key and its fingerprint (to check with AppVerifier), and a table of every permission CraftyCtrl asks for and why
+- **README: new "How CraftyCtrl is made" section**, saying plainly that it's a one-person project written with the help of AI (Claude, by Anthropic)
+- **README: other changes**: the empty Screenshots section is gone, Requirements now says Crafty's own self-signed certificate isn't accepted for HTTPS, Support points to the issue forms and SECURITY.md, the Ctrl series table lists every current app, and the License section has a clearer not-affiliated note
+- No app changes, so no new version
+
 ## [2.10.2] - 2026-11-02
 
 ### Fixed
