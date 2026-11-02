@@ -2,6 +2,7 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlDropdownMenu
 import com.vknxworks.craftyctrl.ui.components.CtrlTopBar
 import com.vknxworks.craftyctrl.ui.components.CtrlBackButton
 import com.vknxworks.craftyctrl.ui.components.CtrlDialog
@@ -291,7 +292,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                 FilledTonalIconButton(onClick = { addMenu = true }, enabled = vm.filePath != null && vm.uploadProgress == null) {
                     Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add))
                 }
-                DropdownMenu(expanded = addMenu, onDismissRequest = { addMenu = false }) {
+                CtrlDropdownMenu(expanded = addMenu, onDismissRequest = { addMenu = false }) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.new_file)) },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, contentDescription = null) },
@@ -360,7 +361,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                         IconButton(onClick = { rowMenu = e.path }) {
                             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more_for_x, e.name))
                         }
-                        DropdownMenu(expanded = rowMenu == e.path, onDismissRequest = { rowMenu = null }) {
+                        CtrlDropdownMenu(expanded = rowMenu == e.path, onDismissRequest = { rowMenu = null }) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.rename)) },
                                 leadingIcon = { Icon(Icons.Filled.DriveFileRenameOutline, contentDescription = null) },

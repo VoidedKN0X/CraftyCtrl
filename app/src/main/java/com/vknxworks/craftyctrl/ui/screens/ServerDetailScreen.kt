@@ -2,6 +2,7 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlDropdownMenu
 import com.vknxworks.craftyctrl.ui.components.CtrlBottomBarSpace
 import com.vknxworks.craftyctrl.ui.components.CtrlHeroCard
 import com.vknxworks.craftyctrl.ui.components.CtrlLabel
@@ -275,7 +276,7 @@ fun ServerDetailScreen(
                 actions = {
                     Box {
                         com.vknxworks.craftyctrl.ui.components.CtrlIconButton(Icons.Filled.MoreVert, stringResource(R.string.more), onClick = { overflow = true })
-                        DropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
+                        CtrlDropdownMenu(expanded = overflow, onDismissRequest = { overflow = false }) {
                             ManagePage.entries.forEach { page ->
                                 DropdownMenuItem(
                                     text = { Text(page.title) },

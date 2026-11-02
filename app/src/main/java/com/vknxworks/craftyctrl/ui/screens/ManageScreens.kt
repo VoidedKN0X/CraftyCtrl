@@ -2,6 +2,7 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlExposedDropdownMenu
 import com.vknxworks.craftyctrl.ui.components.CtrlTopBar
 import com.vknxworks.craftyctrl.ui.components.CtrlBackButton
 import com.vknxworks.craftyctrl.ui.components.CtrlButton
@@ -283,7 +284,7 @@ private fun ChoiceField(def: PropDef, value: String, onChange: (String) -> Unit)
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
             modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
         )
-        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        CtrlExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             choices.forEach { c ->
                 DropdownMenuItem(text = { Text(c) }, onClick = { open = false; onChange(c) })
             }

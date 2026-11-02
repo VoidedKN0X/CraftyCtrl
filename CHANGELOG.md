@@ -3,6 +3,17 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.10.1] - 2026-11-02
+
+### Fixed
+
+- **Popup menus no longer show a grey box.** Menus still had Material's default shadow, which Android draws inside the menu's own popup window. It showed as a grey, square-ish edge around the menu, most visible in light mode. Menus are now flat Signal surfaces: the card colour (near-black in dark mode, white in light mode), 16 dp rounded corners, a thin 1 dp border, and no shadow or tint. Menu text and icons use the normal text and grey colours of the current mode. Nothing in the menus changed, only how they look. This applies to:
+  - the **⋮** menu on a server (management pages, Update server software, Clone server, Diagnostics, Delete server)
+  - the **Add** menu in a server's **Files** tab (new file, new folder, upload)
+  - the **⋮** menu on each file or folder in **Files** (rename, move, copy, extract here, delete)
+  - the drop-down pickers for choice settings in **Server settings** (server.properties)
+  - the Minecraft version picker when **creating a server**
+
 ## [2.10.0] - 2026-10-25
 
 ### Changed

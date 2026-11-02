@@ -2,6 +2,7 @@
 
 package com.vknxworks.craftyctrl.ui.screens
 
+import com.vknxworks.craftyctrl.ui.components.CtrlExposedDropdownMenu
 import com.vknxworks.craftyctrl.ui.components.CtrlTopBar
 import com.vknxworks.craftyctrl.ui.components.CtrlBackButton
 import com.vknxworks.craftyctrl.ui.components.CtrlButton
@@ -442,7 +443,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
                         .fillMaxWidth()
                         .menuAnchor(MenuAnchorType.PrimaryEditable),
                 )
-                ExposedDropdownMenu(expanded = versionMenu && versions.isNotEmpty(), onDismissRequest = { versionMenu = false }) {
+                CtrlExposedDropdownMenu(expanded = versionMenu && versions.isNotEmpty(), onDismissRequest = { versionMenu = false }) {
                     versions.take(60).forEach { v ->
                         DropdownMenuItem(text = { Text(v) }, onClick = { version = v; versionMenu = false })
                     }
