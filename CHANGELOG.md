@@ -8,6 +8,7 @@ Each version below becomes a GitHub release. To publish a new one: bump `version
 ### Project
 
 - **README:** the Ctrl series list now links to ChatCtrl, the Matrix chat app in the series. No app changes, so no new version.
+- **README:** the Ctrl series list now includes SumCtrl, the offline calculator, unit converter and work-tools app. No app changes, so no new version.
 
 ## Project updates (2026-11-02)
 
