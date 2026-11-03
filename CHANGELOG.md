@@ -3,6 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Project updates (2026-11-03)
+
+### Project
+
+- **README:** the Ctrl series list now links to ChatCtrl, the Matrix chat app in the series. No app changes, so no new version.
+
 ## Project updates (2026-11-02)
 
 - **New SECURITY.md** explaining how to report a security problem privately through GitHub's **Report a vulnerability** button instead of a public issue, what counts as a security problem for CraftyCtrl, and the SHA-256 fingerprint of the release signing key
