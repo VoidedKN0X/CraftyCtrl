@@ -151,10 +151,12 @@ data class HostStats(
                 is JsonArray -> e.filterIsInstance<JsonObject>()
                 is JsonObject -> e.values.filterIsInstance<JsonObject>()
                 // Some versions send the disk list as a JSON string.
+                // Crafty stores it as Python text ({'mount': '/', 'used': '1.2GB', ...}) rather than
+                // JSON, and its own web panel swaps the quotes before reading it, so do the same.
                 is JsonPrimitive -> e.contentOrNull?.let { s ->
-                    runCatching {
-                        kotlinx.serialization.json.Json.parseToJsonElement(s)
-                    }.getOrNull()?.let { parsed -> return parseDisks(parsed) }
+                    (parseJsonOrNull(s) ?: parseJsonOrNull(pythonToJson(s)))
+                        ?.takeIf { it !is JsonPrimitive || it.isString }
+                        ?.let { parsed -> return parseDisks(parsed) }
                     emptyList()
                 } ?: emptyList()
                 else -> emptyList()
@@ -195,6 +197,16 @@ data class HostStats(
     }
 }
 
+private fun parseJsonOrNull(s: String): JsonElement? =
+    runCatching { kotlinx.serialization.json.Json.parseToJsonElement(s) }.getOrNull()
+
+/** Turns a Python literal (single quotes, True/False/None) into JSON. */
+internal fun pythonToJson(s: String): String = s
+    .replace('\'', '"')
+    .replace(Regex("""\bTrue\b"""), "true")
+    .replace(Regex("""\bFalse\b"""), "false")
+    .replace(Regex("""\bNone\b"""), "null")
+
 /** Reads "93.4GB", "512 MB" or a raw byte count into bytes; null if it isn't a size. */
 internal fun parseSize(raw: String): Double? {
     val m = Regex("""^\s*([0-9]+(?:[.,][0-9]+)?)\s*([KMGTP]?i?B?)\s*$""", RegexOption.IGNORE_CASE)
@@ -208,13 +220,14 @@ internal fun parseSize(raw: String): Double? {
 
 /** Turns raw byte counts into "12.3 GB"; leaves already-formatted strings alone. */
 internal fun prettySize(raw: String): String {
-    val n = raw.trim().toDoubleOrNull() ?: return raw
+    val n = parseSize(raw) ?: return raw
     if (n < 1024) return "${n.toLong()} B"
-    val units = listOf("KB", "MB", "GB", "TB")
+    val units = listOf("KB", "MB", "GB", "TB", "PB")
     var v = n / 1024
     var i = 0
     while (v >= 1024 && i < units.lastIndex) { v /= 1024; i++ }
-    return "%.1f %s".format(v, units[i])
+    // Always a dot, so our numbers match the ones Crafty formats itself.
+    return String.format(java.util.Locale.ROOT, "%.1f %s", v, units[i])
 }
 
 private fun prettyFreq(raw: String): String {

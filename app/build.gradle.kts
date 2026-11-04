@@ -30,8 +30,8 @@ android {
         applicationId = "com.vknxworks.craftyctrl"
         minSdk = 33
         targetSdk = 35
-        versionCode = 53
-        versionName = "2.11.1"
+        versionCode = 54
+        versionName = "2.11.2"
         // 64-bit ARM phones only (arm64-v8a), like every Ctrl app.
         ndk { abiFilters += listOf("arm64-v8a") }
     }

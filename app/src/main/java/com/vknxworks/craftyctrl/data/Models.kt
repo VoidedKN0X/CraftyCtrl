@@ -178,7 +178,7 @@ data class ServerStats(
                 players = parsePlayers(o["players"]),
                 version = o.str("version").meaningful(),
                 worldName = o.str("world_name").meaningful(),
-                worldSize = o.str("world_size").meaningful(),
+                worldSize = o.str("world_size").meaningful()?.let(::prettySize),
                 started = o.str("started").meaningful(),
                 port = o.int("server_port"),
                 description = o.str("desc").meaningful()?.replace(minecraftFormatting, ""),

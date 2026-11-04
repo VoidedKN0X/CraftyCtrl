@@ -3,6 +3,13 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.11.2] - 2026-11-04
+
+### Fixed
+
+- **Disks now show on the Host tab.** Crafty sends its list of disks as text written in Python style (with single quotes) instead of proper JSON. CraftyCtrl couldn't read that, so the Storage card only showed your worlds: no disk bars, no **Total storage used** card, and no fill in the Storage tile on the Servers tab. CraftyCtrl now reads this format the same way Crafty's own web panel does, so your disks, their used, total and free space, and the overall total appear.
+- **Sizes are written the same way everywhere.** World sizes, memory and the new totals mixed styles, for example "92.3GB" next to "92,6 GB". All sizes now use one style with a space and a dot, like "92.3 GB" and "11.3 GB of 32.0 GB".
+
 ## [2.11.1] - 2026-11-04
 
 ### Changed
