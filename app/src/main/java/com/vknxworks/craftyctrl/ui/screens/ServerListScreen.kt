@@ -51,7 +51,9 @@ import com.vknxworks.craftyctrl.data.CraftyApi
 import com.vknxworks.craftyctrl.data.HostStats
 import com.vknxworks.craftyctrl.data.ServerState
 import com.vknxworks.craftyctrl.data.ServerSummary
+import com.vknxworks.craftyctrl.data.parseSize
 import com.vknxworks.craftyctrl.data.parseTimestamp
+import com.vknxworks.craftyctrl.data.prettySize
 import com.vknxworks.craftyctrl.ui.CtrlCard
 import com.vknxworks.craftyctrl.ui.CtrlHeader
 import com.vknxworks.craftyctrl.ui.EmptyState
@@ -353,13 +355,7 @@ private fun HostTab(vm: ServerListViewModel, host: String, bottomPadding: Dp, us
                 Meter("CPU", h.cpuPercent, h.cpuPercent?.let { "%.0f %%".format(it) + (h.cpuFreq?.let { f -> " · $f" } ?: "") })
                 Meter(stringResource(R.string.memory), h.memPercent, usedOf(h.memUsed, h.memTotal))
             }
-            if (h.disks.isNotEmpty()) {
-                CtrlCard(stringResource(R.string.storage)) {
-                    h.disks.forEach { d ->
-                        Meter(d.mount, d.percent, usedOf(d.used, d.total))
-                    }
-                }
-            }
+            StorageCard(h, vm.rows)
             h.bootTime?.let { boot ->
                 CtrlCard(stringResource(R.string.machine)) {
                     StatRow(stringResource(R.string.up_since), boot.substringBefore('.'))
@@ -368,6 +364,37 @@ private fun HostTab(vm: ServerListViewModel, host: String, bottomPadding: Dp, us
                         StatRow(stringResource(R.string.uptime), if (days > 0) pluralStringResource(R.plurals.x_days, days.toInt(), days.toInt()) else stringResource(R.string.under_a_day))
                     }
                 }
+            }
+        }
+    }
+}
+
+/** Disks on the host, then how much each server's world takes up. */
+@Composable
+private fun StorageCard(h: HostStats, rows: List<ServerRow>) {
+    val worlds = rows.mapNotNull { r -> r.stats?.worldSize?.let { r.summary.name to it } }
+        .sortedByDescending { (_, size) -> parseSize(size) ?: 0.0 }
+    if (h.disks.isEmpty() && worlds.isEmpty()) return
+    CtrlCard(stringResource(R.string.storage)) {
+        h.disks.forEach { d ->
+            val detail = listOfNotNull(
+                usedOf(d.used, d.total),
+                d.free?.let { stringResource(R.string.x_free, it) },
+            ).joinToString(" · ").ifEmpty { null }
+            if (d.percent != null) Meter(d.mount, d.percent, detail)
+            else StatRow(d.mount, detail ?: "—")
+        }
+        if (worlds.isNotEmpty()) {
+            if (h.disks.isNotEmpty()) Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.worlds),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            worlds.forEach { (name, size) -> StatRow(name, size) }
+            val sizes = worlds.map { parseSize(it.second) }
+            if (worlds.size > 1 && sizes.all { it != null }) {
+                StatRow(stringResource(R.string.total), prettySize(sizes.sumOf { it!! }.toLong().toString()))
             }
         }
     }

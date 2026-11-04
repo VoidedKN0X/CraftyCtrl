@@ -78,6 +78,7 @@ data class DiskUsage(
     val percent: Double?,
     val used: String?,
     val total: String?,
+    val free: String? = null,
 )
 
 data class HostStats(
@@ -139,16 +140,50 @@ data class HostStats(
                 } ?: emptyList()
                 else -> emptyList()
             }
-            return list.map { d ->
-                DiskUsage(
-                    mount = d.str("mount") ?: d.str("device") ?: str(R.string.disk),
-                    percent = d.num("percent"),
-                    used = d.str("used")?.let(::prettySize),
-                    total = d.str("total")?.let(::prettySize),
+            // Crafty sends {device, total, used, free, percent_used, fs, mount}; sizes are either raw
+            // bytes or already formatted ("93.4GB"). Older builds called the percentage "percent".
+            val disks = list.map { d ->
+                val total = d.str("total")
+                val used = d.str("used")
+                val percent = d.num("percent_used") ?: d.num("percent")
+                    ?: run {
+                        val t = total?.let(::parseSize)
+                        val u = used?.let(::parseSize)
+                        if (t != null && u != null && t > 0) u / t * 100 else null
+                    }
+                Triple(
+                    d.str("device") ?: "",
+                    DiskUsage(
+                        mount = d.str("mount") ?: d.str("device") ?: str(R.string.disk),
+                        percent = percent,
+                        used = used?.let(::prettySize),
+                        total = total?.let(::prettySize),
+                        free = d.str("free")?.let(::prettySize),
+                    ),
+                    "$total|$used",
                 )
-            }.filterNot { it.mount.startsWith("/snap") || it.mount.startsWith("/boot") }
+            }.filterNot { (_, u, _) ->
+                // Snap images, boot partitions and Docker's bind-mounted /etc files aren't storage.
+                listOf("/snap", "/boot", "/etc/", "/proc", "/sys", "/dev").any { u.mount.startsWith(it) }
+            }
+            // The same disk mounted in several places (common in Docker) shows once, under its
+            // shortest path.
+            return disks.groupBy { (dev, _, size) -> "$dev|$size" }.values
+                .map { same -> same.minBy { it.second.mount.length }.second }
+                .sortedBy { it.mount }
         }
     }
+}
+
+/** Reads "93.4GB", "512 MB" or a raw byte count into bytes; null if it isn't a size. */
+internal fun parseSize(raw: String): Double? {
+    val m = Regex("""^\s*([0-9]+(?:[.,][0-9]+)?)\s*([KMGTP]?i?B?)\s*$""", RegexOption.IGNORE_CASE)
+        .find(raw) ?: return null
+    val n = m.groupValues[1].replace(',', '.').toDoubleOrNull() ?: return null
+    val exp = when (m.groupValues[2].firstOrNull()?.uppercaseChar()) {
+        'K' -> 1; 'M' -> 2; 'G' -> 3; 'T' -> 4; 'P' -> 5; else -> 0
+    }
+    return n * Math.pow(1024.0, exp.toDouble())
 }
 
 /** Turns raw byte counts into "12.3 GB"; leaves already-formatted strings alone. */

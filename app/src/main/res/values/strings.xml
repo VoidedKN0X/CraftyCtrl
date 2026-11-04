@@ -715,6 +715,9 @@
     <string name="host_stats_unavailable">Host stats unavailable</string>
     <string name="system">System</string>
     <string name="storage">Storage</string>
+    <string name="x_free">%1$s free</string>
+    <string name="worlds">Worlds</string>
+    <string name="total">Total</string>
     <string name="machine">Machine</string>
     <string name="under_a_day">under a day</string>
     <string name="servers_running">Servers running</string>

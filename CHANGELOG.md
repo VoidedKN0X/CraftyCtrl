@@ -3,6 +3,18 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.11.0] - 2026-11-04
+
+### New
+
+- **See how much space each world takes.** The Storage card on the Host tab now has a **Worlds** list with every server's world size, biggest first, and a total when you have more than one server. It shows up even when your panel doesn't report its disks.
+- **Free space for each disk.** Each disk on the Host tab now shows how much space is left next to used and total, for example "120 GB of 500 GB · 380 GB free".
+
+### Fixed
+
+- **Disk usage shows again.** Crafty reports how full each disk is under a different name than CraftyCtrl was reading, so the disk meters on the Host tab had no bar and the Storage tile on the Servers tab showed no fill. The meters now fill in correctly and turn amber at 75 % and red at 90 % full.
+- **Each disk shows once.** When Crafty runs in Docker, the same disk is often mounted in several places, and system files like `/etc/hosts` show up as disks. These duplicates are now hidden, so every real disk appears once under its main path.
+
 ## Project updates (2026-11-03)
 
 ### Project
