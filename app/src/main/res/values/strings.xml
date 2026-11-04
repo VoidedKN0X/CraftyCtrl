@@ -718,6 +718,7 @@
     <string name="x_free">%1$s free</string>
     <string name="worlds">Worlds</string>
     <string name="total">Total</string>
+    <string name="total_storage">Total storage used</string>
     <string name="machine">Machine</string>
     <string name="under_a_day">under a day</string>
     <string name="servers_running">Servers running</string>
@@ -910,6 +911,10 @@
     <plurals name="cpu_cores">
         <item quantity="one">%1$d core</item>
         <item quantity="other">%1$d cores</item>
+    </plurals>
+    <plurals name="x_disks">
+        <item quantity="one">%d disk</item>
+        <item quantity="other">%d disks</item>
     </plurals>
     <plurals name="x_days">
         <item quantity="one">%1$d day</item>

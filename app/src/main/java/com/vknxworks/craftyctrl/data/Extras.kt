@@ -79,7 +79,15 @@ data class DiskUsage(
     val used: String?,
     val total: String?,
     val free: String? = null,
+    val usedBytes: Double? = null,
+    val totalBytes: Double? = null,
+    val freeBytes: Double? = null,
 )
+
+/** All disks added up. */
+data class StorageTotal(val used: Double, val total: Double, val free: Double, val disks: Int) {
+    val percent: Double get() = if (total > 0) used / total * 100 else 0.0
+}
 
 data class HostStats(
     val cpuPercent: Double?,
@@ -92,6 +100,17 @@ data class HostStats(
     val bootTime: String?,
 ) {
     val isEmpty: Boolean get() = cpuPercent == null && memPercent == null && disks.isEmpty()
+
+    /** Total space, used and free across every disk, or null if the sizes aren't known. */
+    val storageTotal: StorageTotal?
+        get() {
+            val known = disks.filter { it.totalBytes != null && it.usedBytes != null }
+            if (known.isEmpty()) return null
+            val total = known.sumOf { it.totalBytes!! }
+            val used = known.sumOf { it.usedBytes!! }
+            val free = known.sumOf { it.freeBytes ?: (it.totalBytes!! - it.usedBytes!!).coerceAtLeast(0.0) }
+            return StorageTotal(used, total, free, known.size)
+        }
 
     companion object {
         fun fromJson(root: JsonElement): HostStats {
@@ -145,12 +164,10 @@ data class HostStats(
             val disks = list.map { d ->
                 val total = d.str("total")
                 val used = d.str("used")
+                val t = total?.let(::parseSize)
+                val u = used?.let(::parseSize)
                 val percent = d.num("percent_used") ?: d.num("percent")
-                    ?: run {
-                        val t = total?.let(::parseSize)
-                        val u = used?.let(::parseSize)
-                        if (t != null && u != null && t > 0) u / t * 100 else null
-                    }
+                    ?: if (t != null && u != null && t > 0) u / t * 100 else null
                 Triple(
                     d.str("device") ?: "",
                     DiskUsage(
@@ -159,6 +176,9 @@ data class HostStats(
                         used = used?.let(::prettySize),
                         total = total?.let(::prettySize),
                         free = d.str("free")?.let(::prettySize),
+                        usedBytes = u,
+                        totalBytes = t,
+                        freeBytes = d.str("free")?.let(::parseSize),
                     ),
                     "$total|$used",
                 )

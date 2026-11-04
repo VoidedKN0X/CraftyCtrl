@@ -358,6 +358,7 @@ fun CtrlMetricCard(
     unit: String? = null,
     fraction: Float? = null,
     barColor: Color = CtrlColors.Text,
+    caption: String? = null,
 ) {
     Column(
         modifier.clip(CardShape).background(CtrlColors.Surface).border(CtrlCardBorder, CardShape).padding(16.dp),
@@ -375,6 +376,9 @@ fun CtrlMetricCard(
             overflow = TextOverflow.Ellipsis,
         )
         if (fraction != null) CtrlProgress(fraction, color = barColor)
+        if (caption != null) {
+            Text(caption, style = MaterialTheme.typography.bodySmall, color = CtrlColors.Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 

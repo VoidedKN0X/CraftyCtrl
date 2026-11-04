@@ -279,7 +279,16 @@ private fun ServersOverview(vm: ServerListViewModel, modifier: Modifier = Modifi
                         fraction = (mp / 100).toFloat(),
                     )
                 }
-                h.disks.firstOrNull()?.let { d ->
+                val st = h.storageTotal
+                if (st != null) {
+                    CtrlMetricCard(
+                        stringResource(R.string.storage),
+                        sizeText(st.used),
+                        Modifier.weight(1f),
+                        unit = " / " + sizeText(st.total),
+                        fraction = (st.percent / 100).toFloat(),
+                    )
+                } else h.disks.firstOrNull()?.let { d ->
                     CtrlMetricCard(
                         stringResource(R.string.storage),
                         d.used ?: d.percent?.let { "%.0f".format(it) } ?: "—",
@@ -355,6 +364,17 @@ private fun HostTab(vm: ServerListViewModel, host: String, bottomPadding: Dp, us
                 Meter("CPU", h.cpuPercent, h.cpuPercent?.let { "%.0f %%".format(it) + (h.cpuFreq?.let { f -> " · $f" } ?: "") })
                 Meter(stringResource(R.string.memory), h.memPercent, usedOf(h.memUsed, h.memTotal))
             }
+            h.storageTotal?.let { st ->
+                CtrlMetricCard(
+                    stringResource(R.string.total_storage),
+                    sizeText(st.used),
+                    unit = " / " + sizeText(st.total) + " · " + "%.0f%%".format(st.percent),
+                    fraction = (st.percent / 100).toFloat(),
+                    caption = stringResource(R.string.x_free, sizeText(st.free)) +
+                        if (st.disks > 1) " · " + pluralStringResource(R.plurals.x_disks, st.disks, st.disks) else "",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             StorageCard(h, vm.rows)
             h.bootTime?.let { boot ->
                 CtrlCard(stringResource(R.string.machine)) {
@@ -368,6 +388,9 @@ private fun HostTab(vm: ServerListViewModel, host: String, bottomPadding: Dp, us
         }
     }
 }
+
+/** Bytes as "1.2 TB". */
+private fun sizeText(bytes: Double): String = prettySize(bytes.toLong().toString())
 
 /** Disks on the host, then how much each server's world takes up. */
 @Composable
@@ -394,7 +417,7 @@ private fun StorageCard(h: HostStats, rows: List<ServerRow>) {
             worlds.forEach { (name, size) -> StatRow(name, size) }
             val sizes = worlds.map { parseSize(it.second) }
             if (worlds.size > 1 && sizes.all { it != null }) {
-                StatRow(stringResource(R.string.total), prettySize(sizes.sumOf { it!! }.toLong().toString()))
+                StatRow(stringResource(R.string.total), sizeText(sizes.sumOf { it!! }))
             }
         }
     }

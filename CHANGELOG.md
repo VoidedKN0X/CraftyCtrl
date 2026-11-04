@@ -3,6 +3,13 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.11.1] - 2026-11-04
+
+### Changed
+
+- **Total storage at a glance.** The Host tab now opens its storage section with a **Total storage used** card: all your disks added up, for example "120 GB / 500 GB · 24%", with a bar, how much is free and how many disks that covers. The per-disk meters and the Worlds list follow below it.
+- **The Storage tile on the Servers tab shows the total.** It used to show only the first disk; it now adds up every disk, so the used and total space and the bar match the Host tab.
+
 ## [2.11.0] - 2026-11-04
 
 ### New
