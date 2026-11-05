@@ -24,14 +24,14 @@ val allowDebugSigning = System.getenv("CRAFTY_ALLOW_DEBUG_SIGNING") == "true"
 
 android {
     namespace = "com.vknxworks.craftyctrl"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.vknxworks.craftyctrl"
         minSdk = 33
-        targetSdk = 35
-        versionCode = 56
-        versionName = "2.11.4"
+        targetSdk = 36
+        versionCode = 57
+        versionName = "2.11.5"
         // 64-bit ARM phones only (arm64-v8a), like every Ctrl app.
         ndk { abiFilters += listOf("arm64-v8a") }
     }

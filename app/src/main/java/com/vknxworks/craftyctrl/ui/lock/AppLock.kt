@@ -497,6 +497,13 @@ fun PinRequestScreen(request: PinRequest, vm: AppLockViewModel) {
     }
 }
 
-/** The lock and PIN screens are always kept out of screenshots, recordings and casting, like sign-in. */
+/**
+ * The lock and PIN screens are always kept out of screenshots, recordings and casting, like sign-in. Other apps'
+ * floating windows are hidden over them and they are hidden from apps that misuse accessibility.
+ */
 @Composable
-internal fun KeepOutOfScreenshots() = com.vknxworks.craftyctrl.ui.SecureScreen()
+internal fun KeepOutOfScreenshots() {
+    com.vknxworks.craftyctrl.ui.SecureScreen()
+    // And no other apps' floating windows over it, hidden from apps that misuse accessibility (screen readers still work).
+    SensitiveWindowEffect()
+}

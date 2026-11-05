@@ -69,6 +69,8 @@ import androidx.compose.ui.res.stringResource
 fun LoginScreen(vm: SessionViewModel) {
     // The API key and password are typed here: never allow screenshots or a Recents snapshot.
     SecureScreen()
+    // Password and token: no other apps' floating windows on top, hidden from apps that misuse accessibility.
+    com.vknxworks.craftyctrl.ui.lock.SensitiveWindowEffect()
     var url by rememberSaveable { mutableStateOf(vm.lastUrl) }
     var mode by rememberSaveable { mutableStateOf(AuthMode.API_KEY) }
     // Secrets use remember, not rememberSaveable, so they're never written into the saved-state Bundle.

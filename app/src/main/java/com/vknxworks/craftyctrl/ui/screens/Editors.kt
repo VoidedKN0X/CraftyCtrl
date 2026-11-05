@@ -279,6 +279,7 @@ fun TaskEditorSheet(
 
     if (confirmDelete && onDelete != null) {
         CtrlDialog(
+            sensitive = true,
             onDismissRequest = { confirmDelete = false },
             title = { Text(stringResource(R.string.delete_this_schedule)) },
             text = { Text(stringResource(R.string.x_will_stop_running_this_can, existing?.name.orEmpty())) },

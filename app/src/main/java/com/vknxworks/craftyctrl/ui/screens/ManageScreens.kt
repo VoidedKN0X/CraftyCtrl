@@ -458,6 +458,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
             PlayerList.BANNED_PLAYERS, PlayerList.BANNED_IPS -> stringResource(R.string.unban_x, e.label)
         }
         CtrlDialog(
+            sensitive = true,
             onDismissRequest = { removing = null },
             title = { Text(verb) },
             confirmButton = { TextButton(onClick = { vm.remove(list, e); removing = null }) { Text(if (list.name.startsWith("BANNED")) stringResource(R.string.unban) else stringResource(R.string.remove)) } },

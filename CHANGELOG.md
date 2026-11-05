@@ -3,6 +3,26 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.11.5] - 2026-11-05
+
+A security update for the app lock, sign-in and confirmations. Servers, alerts, push and settings work as before.
+
+### Security
+
+- **No floating windows over the app lock, sign-in and confirmations.** While the lock screen, a PIN screen (turning the lock on or off, changing the PIN), "Forgot PIN?", sign-in with your password, or a confirmation to delete a server, file, add-on or schedule, restore a backup, restart, stop or kill a server, or kick, ban or remove a player is showing, other apps' floating windows (chat heads, bubbles, overlays) are hidden on top of CraftyCtrl, so no app can draw over them or trick you into tapping a button. They come back as soon as that screen closes, and everywhere else in the app they keep working. This uses a new permission, "Hide other apps' floating windows", which Android grants at install without asking.
+- **Lock, PIN and sign-in screens are hidden from apps that misuse accessibility.** On Android 14 and newer, the same screens are marked sensitive, so only real accessibility tools such as screen readers (TalkBack) can read them, not other apps that use the accessibility API to watch the screen.
+- **Stricter requests from other apps.** On Android 16 and newer, other apps can only reach CraftyCtrl in the ways it offers (the launcher, and push messages from your UnifiedPush distributor such as ntfy). A request aimed directly at a part of CraftyCtrl that doesn't accept it is now refused by Android.
+
+### Changed
+
+- **Built for Android 16.** CraftyCtrl now targets Android 16 (API 36). Back gestures and the edge-to-edge layout work as before; on Android 16 the back gesture also shows Android's preview of where Back goes.
+
+### Project
+
+- **Check a download:** the release notes now list the APK's SHA-256 checksum, and the APK has a signed build provenance attestation: `gh attestation verify craftyctrl-2.11.5.apk -R VoidedKN0X/CraftyCtrl` proves it was built by this repo's build workflow from the tagged commit. The signing certificate fingerprint in the README still applies.
+- **Checked dependencies:** the build now checks every library and Gradle plugin it downloads against the SHA-256 checksums in `gradle/verification-metadata.xml`, and stops if one doesn't match.
+- README: the new permission is in the permissions table, with a "Check a download" note and how dependency verification works.
+
 ## [Project updates] - 2026-11-05
 
 ### Project

@@ -190,6 +190,7 @@ fun PlayerSheet(
 
     confirm?.let { c ->
         CtrlDialog(
+            sensitive = true,
             onDismissRequest = { confirm = null },
             title = { Text(c.title) },
             text = { Text(c.body) },

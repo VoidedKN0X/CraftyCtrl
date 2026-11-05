@@ -139,6 +139,7 @@ fun LockScreenButtons(showFingerprint: Boolean, onFingerprint: () -> Unit, onFor
 @Composable
 fun ForgotPinDialog(body: String, confirm: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     CtrlDialog(
+        sensitive = true,
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.lock_forgot_title)) },
         text = { Text(body) },

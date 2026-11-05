@@ -431,6 +431,7 @@ private fun DeleteServerDialog(
     var deleteFiles by remember { mutableStateOf(true) }
     val matches = typed.trim() == serverName.trim() && serverName.isNotBlank()
     CtrlDialog(
+        sensitive = true,
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Filled.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
         title = { Text(stringResource(R.string.delete_x_2, serverName)) },
@@ -1462,6 +1463,7 @@ private fun RestoreDialog(
     val armed = confirm.trim().equals("restore", ignoreCase = true)
 
     CtrlDialog(
+        sensitive = true,
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Filled.SettingsBackupRestore, contentDescription = null) },
         title = { Text(stringResource(R.string.restore_from_x, config.name)) },
@@ -1586,6 +1588,7 @@ private fun PowerDialog(
     var delay by remember { mutableStateOf(0) }
     var note by remember { mutableStateOf("") }
     CtrlDialog(
+        sensitive = true,
         onDismissRequest = onDismiss,
         title = { Text("${action.label} ${serverName.ifBlank { "server" }}?") },
         text = {

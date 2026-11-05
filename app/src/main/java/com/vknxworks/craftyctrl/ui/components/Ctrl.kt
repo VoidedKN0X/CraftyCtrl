@@ -701,10 +701,16 @@ fun CtrlDialog(
     title: (@Composable () -> Unit)? = null,
     text: (@Composable () -> Unit)? = null,
     properties: DialogProperties = DialogProperties(),
+    // A destructive confirmation (delete, restore, Forgot PIN?): other apps' floating windows are hidden over it and
+    // it is hidden from apps that misuse accessibility, while it shows.
+    sensitive: Boolean = false,
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        confirmButton = confirmButton,
+        confirmButton = {
+            if (sensitive) com.vknxworks.craftyctrl.ui.lock.SensitiveWindowEffect()
+            confirmButton()
+        },
         modifier = modifier.border(1.dp, CtrlColors.CardBorder, DialogShape),
         dismissButton = dismissButton,
         icon = icon,

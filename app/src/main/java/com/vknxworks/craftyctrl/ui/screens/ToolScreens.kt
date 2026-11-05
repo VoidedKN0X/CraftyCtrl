@@ -183,6 +183,7 @@ fun AddonsScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
 
     removing?.let { a ->
         CtrlDialog(
+            sensitive = true,
             onDismissRequest = { removing = null },
             title = { Text(stringResource(R.string.remove_x_2, a.name)) },
             text = { Text(stringResource(R.string.addon_delete_body, a.fileName, a.folder.substringAfterLast('/'))) },

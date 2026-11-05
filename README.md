@@ -62,6 +62,8 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
   ```
 
   Advanced users can compare it with [AppVerifier](https://github.com/soupslurpr/AppVerifier).
+- **Check a download.** Every release lists the APK's SHA-256 in its release notes, so you can compare it with `sha256sum craftyctrl-X.Y.Z.apk`. Each release APK also has a signed build provenance attestation: with the [GitHub CLI](https://cli.github.com/), `gh attestation verify craftyctrl-X.Y.Z.apk -R VoidedKN0X/CraftyCtrl` proves it was built by this repo's build workflow from the tagged commit. The signing certificate check above still applies.
+- **Checked dependencies and workflows.** Every library and Gradle plugin the build downloads is checked against the SHA-256 in [`gradle/verification-metadata.xml`](gradle/verification-metadata.xml), so a changed download fails the build. The workflows are checked with [zizmor](https://docs.zizmor.sh/), each job gets only the permissions it needs, and every action is pinned to a commit. [CodeQL](https://codeql.github.com/) scans the code every week.
 
 **Permissions** CraftyCtrl asks for, and why:
 
@@ -74,6 +76,7 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 | Prevent phone from sleeping (`WAKE_LOCK`) | The optional **Keep checking while the screen is off** setting for alerts |
 | Ask to ignore battery optimizations (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) | Asks Android to let alerts run without battery limits, only when you turn on that same setting |
 | Use biometrics (`USE_BIOMETRIC`) | Optional fingerprint unlock for the app lock, and the fingerprint or face check before restart, stop and kill |
+| Hide other apps' floating windows (`HIDE_OVERLAY_WINDOWS`) | Hide other apps' floating windows over the PIN screen, sign-in and delete confirmations, so nothing can be drawn over them. Granted at install, no prompt |
 
 Android also lists a "dynamic receiver" permission (`DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`) that AndroidX adds to every app so only CraftyCtrl itself can send it internal broadcasts; it gives the app no access to anything. CraftyCtrl has no location, camera, microphone, contacts, storage or phone permissions: files you upload are picked with Android's file picker, which only hands over the files you choose.
 
@@ -147,6 +150,8 @@ You need [Android Studio](https://developer.android.com/studio), or JDK 17 and t
 3. The APK is in `app/build/outputs/apk/debug/`. Copy it to your phone and install it.
 
 Or open the folder in Android Studio and press **Run** with your phone connected.
+
+**Dependency verification.** Gradle checks every library and plugin it downloads against the SHA-256 checksums in `gradle/verification-metadata.xml`, and the build fails if one doesn't match or is missing. When you add or update a dependency or plugin, run the **Dependency verification metadata** workflow (Actions tab, *Run workflow*), decode the file from its log (between the BEGIN and END markers: `base64 -d | gunzip`), check the diff and commit it together with the dependency change.
 
 ## Support the project
 

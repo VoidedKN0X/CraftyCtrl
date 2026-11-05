@@ -441,6 +441,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
 
     confirmDelete?.let { e ->
         CtrlDialog(
+            sensitive = true,
             onDismissRequest = { confirmDelete = null },
             title = { Text(stringResource(R.string.delete_x_2, e.name)) },
             text = {
