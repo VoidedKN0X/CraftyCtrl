@@ -643,6 +643,9 @@ class CraftyApi(
             .callTimeout(30, TimeUnit.SECONDS)
             // Checks every hop, so an https request is never redirected down to http.
             .addNetworkInterceptor(CleartextPolicy.interceptor)
+            // The token, cookies and request bodies (your password when signing in) never follow a redirect
+            // to another server.
+            .addNetworkInterceptor(RedirectGuard.interceptor)
             .build()
 
         /** Mojang is third party: HTTPS only, on every hop. */

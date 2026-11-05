@@ -3,6 +3,25 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.11.3] - 2026-11-05
+
+A security and privacy update. Servers, alerts, push and settings work as before.
+
+### Security
+
+- **Your login never follows a redirect to another server.** When your panel (or a reverse proxy in front of it) answered with a redirect to a different server, CraftyCtrl followed it, and for some kinds of redirect it sent the request again with its contents: your username, password and 2FA code when signing in, a console command, or a file you were uploading. CraftyCtrl now refuses to pass any request with contents on to another server and shows an error instead, and never sends your token or cookies there. A redirect from `http://` to `https://` on the same panel still works.
+
+### Privacy
+
+- **One unused permission removed.** The old Android 8 fingerprint permission (`USE_FINGERPRINT`) is gone: fingerprint unlock and the check before restart, stop and kill already use the current biometrics permission, so nothing changes there.
+- **No debug logging in release builds.** Debug, verbose and info messages from the libraries CraftyCtrl uses are now stripped from the app, so nothing about your panel can end up in the phone's system log. CraftyCtrl's own code already logged nothing.
+
+### Project
+
+- The build now checks that the Gradle wrapper is an official Gradle release, and fails if any Google Play services, Firebase, ML Kit, Play Core or Tink library ever ends up in the app.
+- `.gitignore` also covers `.p12` keys, `local.properties` everywhere and `google-services.json`, so they can't be committed by accident.
+- README: every permission in the app is listed with its Android name and what it's for, the ntfy and Minecraft EULA links are listed under Privacy, and the Ctrl series list now has all 28 apps.
+
 ## [2.11.2] - 2026-11-04
 
 ### Fixed

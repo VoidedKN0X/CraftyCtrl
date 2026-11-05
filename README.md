@@ -24,7 +24,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Create, clone, update and delete** Java and Bedrock servers; deleting asks you to type the server name
 - **Alerts** when a server stops or crashes, even with the app closed, and **player join and leave alerts** for the servers you pick, grouped into one notification
 - **Push from Crafty through ntfy** (UnifiedPush): one tap adds a webhook to every server so starts, stops, kills and crashes wake CraftyCtrl at once. Choose the foreground monitor or push only (no ongoing notification, with a check every 15 minutes as a fallback)
-- **HTTPS by default; plain HTTP only for your own panel after a warning**, never for anything else, and an HTTPS connection is never redirected to HTTP
+- **HTTPS by default; plain HTTP only for your own panel after a warning**, never for anything else. An HTTPS connection is never redirected to HTTP, and your login, password and anything you send are never passed on to another server by a redirect
 - **App lock** with its own PIN and optional fingerprint unlock; your Crafty login stays encrypted while the app is locked, and two switches keep the app out of screenshots and the recent apps view
 - The Ctrl / Signal look shared by every Ctrl app: dark and light modes that follow your phone, one violet accent, Space Grotesk and JetBrains Mono
 
@@ -54,7 +54,7 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 ## Is it safe to install?
 
 - **Open source.** All of CraftyCtrl's code is in this repo, under the GPL-3.0 licence. Anyone can read it.
-- **Built by GitHub, not on a personal computer.** Every APK on the Releases page is built by GitHub Actions from the code in this repo, using [the build workflow](.github/workflows/build.yml). You can see each build's log under the Actions tab.
+- **Built by GitHub, not on a personal computer.** Every APK on the Releases page is built by GitHub Actions from the code in this repo, using [the build workflow](.github/workflows/build.yml). You can see each build's log under the Actions tab. Each build also checks that the Gradle wrapper is an official Gradle release and that no Google Play services, Firebase, ML Kit, Play Core or Tink library is in the app.
 - **Always signed with the same key.** Every release is signed with the same release key. Android refuses to install an update signed with a different key over the app you have, and the CtrlF-Droid repo only accepts APKs signed with this key. Its SHA-256 certificate fingerprint is:
 
   ```
@@ -67,13 +67,15 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 
 | Permission | What it's for |
 | --- | --- |
-| Internet | Talking to your Crafty panel, and the two lookups in [Privacy](#privacy) |
-| Notifications | Server alerts and player alerts, only if you turn them on |
-| Foreground service (and its "special use" type) | The foreground monitor that watches your servers while alerts are on |
-| Run at startup | Turning alerts back on after the phone restarts or the app updates |
-| Prevent phone from sleeping | The optional **Keep checking while the screen is off** setting for alerts |
-| Ask to ignore battery optimizations | Asks Android to let alerts run without battery limits, only when you turn on that same setting |
-| Use biometrics | Optional fingerprint unlock for the app lock, and the fingerprint or face check before restart, stop and kill |
+| Internet (`INTERNET`) | Talking to your Crafty panel, and the two lookups in [Privacy](#privacy) |
+| Notifications (`POST_NOTIFICATIONS`) | Server alerts and player alerts, only if you turn them on |
+| Foreground service (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`) | The foreground monitor that watches your servers while alerts are on |
+| Run at startup (`RECEIVE_BOOT_COMPLETED`) | Turning alerts back on after the phone restarts or the app updates |
+| Prevent phone from sleeping (`WAKE_LOCK`) | The optional **Keep checking while the screen is off** setting for alerts |
+| Ask to ignore battery optimizations (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) | Asks Android to let alerts run without battery limits, only when you turn on that same setting |
+| Use biometrics (`USE_BIOMETRIC`) | Optional fingerprint unlock for the app lock, and the fingerprint or face check before restart, stop and kill |
+
+Android also lists a "dynamic receiver" permission (`DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`) that AndroidX adds to every app so only CraftyCtrl itself can send it internal broadcasts; it gives the app no access to anything. CraftyCtrl has no location, camera, microphone, contacts, storage or phone permissions: files you upload are picked with Android's file picker, which only hands over the files you choose.
 
 What CraftyCtrl sends and to whom is in the [Privacy](#privacy) section.
 
@@ -120,7 +122,9 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 
 Both are always HTTPS. Your panel is HTTPS by default too; plain HTTP is only used for a panel address you typed as `http://` and accepted after the warning.
 
-The Support, Report a bug, Source code and Licence links on the You page (tap your profile picture), and the Minecraft EULA link, open in your browser only when you tap them.
+Push alerts go through the [ntfy](https://f-droid.org/packages/io.heckel.ntfy/) app and your own ntfy server, only if you turn them on. CraftyCtrl itself never contacts the ntfy server: the ntfy app hands it the push address and the webhook messages, and every message only makes CraftyCtrl check with your panel.
+
+The Support, Report a bug, Source code and Licence links on the You page (tap your profile picture), the **Install ntfy** link (f-droid.org) in the push settings, and the Minecraft EULA links (aka.ms and minecraft.net) open in your browser only when you tap them.
 
 ## How CraftyCtrl is made
 
@@ -161,21 +165,29 @@ Native Android apps for self-hosted services and everyday tools, all with the sa
 | [AdCtrl](https://github.com/VoidedKN0X/AdCtrl) | Control your AdGuard Home DNS server |
 | [ArrCtrl](https://github.com/VoidedKN0X/ArrCtrl) | Radarr, Sonarr, Prowlarr, Bazarr, qBittorrent, autobrr and Cleanuparr in one app |
 | [BeamCtrl](https://github.com/VoidedKN0X/BeamCtrl) | TV remote for phones with an IR blaster |
+| [CallCtrl](https://github.com/VoidedKN0X/CallCtrl) | Phone app: dialer, call history and in-call screen |
 | [ChatCtrl](https://github.com/VoidedKN0X/ChatCtrl) | Matrix chat client for matrix.org and self-hosted Synapse |
+| [ClockCtrl](https://github.com/VoidedKN0X/ClockCtrl) | Alarms, timers, stopwatch and world clock |
+| [ContactCtrl](https://github.com/VoidedKN0X/ContactCtrl) | Contacts: browse, edit, import and export |
 | **CraftyCtrl** (this app) | Manage Minecraft servers on Crafty Controller |
+| [DateCtrl](https://github.com/VoidedKN0X/DateCtrl) | Calendar for the calendars on your phone and your accounts |
 | [FilesCtrl](https://github.com/VoidedKN0X/FilesCtrl) | File manager with NFS, SMB, SFTP, FTP and WebDAV |
 | [FrigateCtrl](https://github.com/VoidedKN0X/FrigateCtrl) | Watch and review your Frigate NVR cameras |
 | [ImmichCtrl](https://github.com/VoidedKN0X/ImmichCtrl) | Photos and backup for your Immich server |
 | [JellyCtrl](https://github.com/VoidedKN0X/JellyCtrl) | Movies, shows, music and Live TV from Jellyfin |
+| [LijnCtrl](https://github.com/VoidedKN0X/LijnCtrl) | Live De Lijn bus and tram departures |
+| [MailCtrl](https://github.com/VoidedKN0X/MailCtrl) | Email for Gmail and Proton Mail |
 | [MemoCtrl](https://github.com/VoidedKN0X/MemoCtrl) | Notes on your Memos server |
 | [NaviCtrl](https://github.com/VoidedKN0X/NaviCtrl) | Music player for Navidrome servers |
 | [PaperCtrl](https://github.com/VoidedKN0X/PaperCtrl) | Scan and browse documents on Paperless-ngx |
 | [PrintCtrl](https://github.com/VoidedKN0X/PrintCtrl) | Bambu Lab printers through Bambuddy, and Spoolman spools |
 | [ProxCtrl](https://github.com/VoidedKN0X/ProxCtrl) | Manage your Proxmox VE server |
+| [RecorderCtrl](https://github.com/VoidedKN0X/RecorderCtrl) | Private, offline voice recorder |
 | [RideCtrl](https://github.com/VoidedKN0X/RideCtrl) | Offline maintenance, fuel and mod log for your vehicles |
 | [SeerrCtrl](https://github.com/VoidedKN0X/SeerrCtrl) | Request movies and shows on Seerr / Jellyseerr |
 | [SumCtrl](https://github.com/VoidedKN0X/SumCtrl) | Offline calculator, unit converter and work tools |
 | [SynapseCtrl](https://github.com/VoidedKN0X/SynapseCtrl) | Administer your Matrix Synapse server |
+| [TextCtrl](https://github.com/VoidedKN0X/TextCtrl) | Private SMS and MMS messaging |
 | [TrueCtrl](https://github.com/VoidedKN0X/TrueCtrl) | Monitor and manage your TrueNAS server |
 | [WrtCtrl](https://github.com/VoidedKN0X/WrtCtrl) | Manage your OpenWrt router |
 
