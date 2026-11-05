@@ -4,7 +4,6 @@ import com.vknxworks.craftyctrl.ui.lock.findFragmentActivity
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.setContent
@@ -138,7 +137,6 @@ private fun AppRoot(
     LaunchedEffect(session, lockVm.locked) {
         val settings = AppSettings(context)
         if (session != null && !lockVm.locked && settings.alertsEnabled && !settings.notifyPermissionAsked &&
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             askNotify()

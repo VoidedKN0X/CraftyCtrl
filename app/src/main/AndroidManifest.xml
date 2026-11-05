@@ -14,7 +14,7 @@
          are on screen (Android 12+, granted at install, no prompt) -->
     <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS" />
     <!-- Fingerprint for the app lock goes through USE_BIOMETRIC. The biometric library also adds the old
-         USE_FINGERPRINT, which only Android 8 and older use (CraftyCtrl needs Android 13). -->
+         USE_FINGERPRINT, which only Android 8 and older use (CraftyCtrl needs Android 15). -->
     <uses-permission android:name="android.permission.USE_FINGERPRINT" tools:node="remove" />
 
     <!-- ntfy, the only push app CraftyCtrl uses. -->

@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,7 +39,7 @@ fun rememberNotifyPermission(onResult: (Boolean) -> Unit = {}): () -> Unit {
             if (MonitorService.canNotify(context)) {
                 latest(true)
             } else {
-                val permissionMissing = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                val permissionMissing =
                     ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
                     PackageManager.PERMISSION_GRANTED
                 // Android shows its dialog the first time and once more after a "Don't allow"; after that
