@@ -3,6 +3,14 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.11.4] - 2026-11-05
+
+A small security update. Servers, alerts, push and settings work as before.
+
+### Security
+
+- **One less way in for other apps.** A component from AndroidX's profile installer let any other app on the phone ask CraftyCtrl to rewrite or skip its app-start performance profile. CraftyCtrl never needed it, so it's removed; start-up works as before.
+
 ## [2.11.3] - 2026-11-05
 
 A security and privacy update. Servers, alerts, push and settings work as before.
