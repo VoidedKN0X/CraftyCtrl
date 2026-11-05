@@ -3,6 +3,14 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.11.6] - 2026-11-05
+
+Password managers work on the sign-in screen again.
+
+### Fixed
+
+- Password managers can fill the sign-in screen (server address, username and password) again. 2.11.5 hid it, and "can't be undone" confirmations, from every app that reads the screen through accessibility, which also blocked password managers that fill that way; now only the lock screen, the PIN screens and "Forgot PIN?" are hidden from them. Other apps' floating windows are still kept off the sign-in screen and confirmations, and screen readers such as TalkBack keep working everywhere.
+
 ## [2.11.5] - 2026-11-05
 
 A security update for the app lock, sign-in and confirmations. Servers, alerts, push and settings work as before.

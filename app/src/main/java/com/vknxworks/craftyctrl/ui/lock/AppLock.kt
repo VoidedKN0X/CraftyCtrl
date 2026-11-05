@@ -505,5 +505,5 @@ fun PinRequestScreen(request: PinRequest, vm: AppLockViewModel) {
 internal fun KeepOutOfScreenshots() {
     com.vknxworks.craftyctrl.ui.SecureScreen()
     // And no other apps' floating windows over it, hidden from apps that misuse accessibility (screen readers still work).
-    SensitiveWindowEffect()
+    SensitiveWindowEffect(sensitiveData = true)
 }
