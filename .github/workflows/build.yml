@@ -3,17 +3,17 @@ name: Build APK
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
-# Read-only by default; only the release job below gets write access.
-permissions:
-  contents: read
+# Nothing by default; each job gets only what it needs (the release job alone can write).
+permissions: {}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       release_signed: ${{ steps.signature.outputs.release_signed }}
     steps:
@@ -131,7 +131,9 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && needs.build.outputs.release_signed == '1'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write      # create the release and its tag
+      id-token: write      # sign the build provenance attestation
+      attestations: write  # store the attestation
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -141,7 +143,8 @@ jobs:
         with:
           name: craftyctrl-apk
 
-      - name: Publish release
+      - name: Prepare release
+        id: prep
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -152,6 +155,7 @@ jobs:
           gh release delete latest-test --cleanup-tag --yes 2>/dev/null || true
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Release $tag already exists; bump versionName to publish a new one."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           awk -v v="$version" '
@@ -163,9 +167,37 @@ jobs:
             echo "::error::CHANGELOG.md has no section for [$version]"
             exit 1
           fi
-          cp craftyctrl.apk "craftyctrl-$version.apk"
-          gh release create "$tag" "craftyctrl-$version.apk" \
+          apk="craftyctrl-$version.apk"
+          cp craftyctrl.apk "$apk"
+          # The APK's SHA-256, so a download can be checked against it.
+          printf '\nSHA-256: `%s`  %s\n' "$(sha256sum "$apk" | cut -d' ' -f1)" "$apk" >> notes.md
+          cat notes.md
+          {
+            echo "publish=true"
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "apk=$apk"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Attest build provenance
+        # Proves the APK was built by this workflow from the tagged commit:
+        # gh attestation verify <apk> -R VoidedKN0X/CraftyCtrl
+        if: steps.prep.outputs.publish == 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: craftyctrl-*.apk
+
+      - name: Publish release
+        if: steps.prep.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ steps.prep.outputs.version }}
+          TAG: ${{ steps.prep.outputs.tag }}
+          APK: ${{ steps.prep.outputs.apk }}
+        run: |
+          gh release create "$TAG" "$APK" \
             --target "$GITHUB_SHA" \
-            --title "CraftyCtrl $version" \
+            --title "CraftyCtrl $VERSION" \
             --notes-file notes.md \
             --latest

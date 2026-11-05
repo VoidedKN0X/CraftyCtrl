@@ -3,6 +3,15 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [Project updates] - 2026-11-05
+
+### Project
+
+- **Release checks:** from the next release, the release notes list the APK's SHA-256 checksum, and every release APK gets a signed build provenance attestation, so anyone can check with `gh attestation verify` that it was built by this repo's workflow from the tagged commit.
+- **Workflow security:** a new zizmor check scans the GitHub Actions workflows on every change to them. Every workflow now starts with no permissions and gives each job only what it needs, and pushing a `v*` tag no longer starts a build (releases are made from `main` only, as before).
+- **Code scanning:** CodeQL scans the code every week and on every app change; results go to the repo's Security tab.
+- **Dependency checksums:** a new manual workflow writes the SHA-256 checksums of every library and Gradle plugin the build downloads, ready for the build to check them in the next release.
+
 ## [2.11.4] - 2026-11-05
 
 A small security update. Servers, alerts, push and settings work as before.
