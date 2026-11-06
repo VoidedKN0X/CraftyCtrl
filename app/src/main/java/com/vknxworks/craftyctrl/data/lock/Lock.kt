@@ -4,6 +4,9 @@ import android.content.Context
 import android.os.SystemClock
 import com.vknxworks.craftyctrl.data.AppSettings
 import com.vknxworks.craftyctrl.data.CredentialStore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Process-wide app lock state shared by the lock screen, Settings and the API client.
@@ -20,8 +23,21 @@ object Lock {
             vaultInstance ?: LockVault(context.applicationContext, "craftyctrl").also { vaultInstance = it }
         }
 
+    private val tokenState = MutableStateFlow<String?>(null)
+
+    /** [liveToken] as a flow, so screens can wait for the app to unlock and refresh straight away. */
+    val tokenFlow: StateFlow<String?> = tokenState.asStateFlow()
+
     /** The token the open screens use; null while the app is locked or signed out. */
-    @Volatile var liveToken: String? = null
+    var liveToken: String?
+        get() = tokenState.value
+        set(value) {
+            val unlocking = tokenState.value == null && value != null
+            // Connections from before the lock may have died while the phone slept or the network
+            // changed; start fresh so the first request after unlocking doesn't hang on one.
+            if (unlocking) com.vknxworks.craftyctrl.data.CraftyApi.dropIdleConnections()
+            tokenState.value = value
+        }
 
     /** The app lock is on: a PIN is set (in the vault, or the old PIN hash not migrated yet). */
     fun isOn(context: Context): Boolean = vault(context).enabled || AppSettings(context).pinSet

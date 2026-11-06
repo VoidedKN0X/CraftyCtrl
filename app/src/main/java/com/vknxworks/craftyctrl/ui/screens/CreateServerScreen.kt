@@ -384,7 +384,7 @@ private fun CreateForm(vm: CreateServerViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        vm.error?.let { ErrorBanner(it, onRetry = vm::clearError) }
+        vm.error?.let { ErrorBanner(it, onRetry = vm::clearError, retryOnUnlock = false) }
 
         SectionLabel(stringResource(R.string.edition))
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {

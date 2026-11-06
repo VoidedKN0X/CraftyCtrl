@@ -1,5 +1,9 @@
 package com.vknxworks.craftyctrl.ui
 
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import com.vknxworks.craftyctrl.ui.theme.Mono
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -65,6 +69,9 @@ fun PollWhileVisible(key: Any?, intervalMs: Long, block: suspend () -> Unit) {
     LaunchedEffect(key, owner) {
         owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
+                // While the app is locked there's no token, so asking would only fail. Wait for the
+                // unlock instead, then refresh straight away.
+                com.vknxworks.craftyctrl.data.lock.Lock.tokenFlow.first { it != null }
                 latest()
                 delay(intervalMs)
             }
@@ -143,7 +150,19 @@ fun ErrorBanner(
     message: String,
     modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
+    /** Retry by itself when the app is unlocked, since errors from while it was locked can't fix themselves. */
+    retryOnUnlock: Boolean = true,
 ) {
+    if (onRetry != null && retryOnUnlock) {
+        val retry by rememberUpdatedState(onRetry)
+        LaunchedEffect(Unit) {
+            com.vknxworks.craftyctrl.data.lock.Lock.tokenFlow
+                .map { it != null }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { unlocked -> if (unlocked) retry() }
+        }
+    }
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),

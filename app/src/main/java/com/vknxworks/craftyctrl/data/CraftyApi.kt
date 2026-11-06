@@ -277,7 +277,7 @@ class CraftyApi(
             ).plus(extra).forEach { (k, v) -> b.header(k, v) }
             b.post(body.toRequestBody(OCTET))
             return try {
-                http.newCall(b.build()).execute().use { it.code to it.body?.string().orEmpty() }
+                client().newCall(b.build()).execute().use { it.code to it.body?.string().orEmpty() }
             } catch (e: IOException) {
                 throw CraftyException(0, "NETWORK", networkMessage(e))
             }
@@ -416,7 +416,7 @@ class CraftyApi(
             .apply { token?.let { header("Authorization", "Bearer $it") } }
             .build()
         try {
-            http.newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
+            client().newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
         } catch (e: IOException) {
             0 to str(R.string.network_error_x, networkMessage(e))
         }
@@ -439,7 +439,7 @@ class CraftyApi(
             .post(json.toRequestBody(JSON_TYPE))
             .build()
         try {
-            http.newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
+            client().newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
         } catch (e: IOException) {
             0 to str(R.string.network_error_x, networkMessage(e))
         }
@@ -583,7 +583,7 @@ class CraftyApi(
             .build()
 
         val response = try {
-            http.newCall(request).execute()
+            client().newCall(request).execute()
         } catch (e: IOException) {
             throw CraftyException(0, "NETWORK", networkMessage(e))
         }
@@ -647,6 +647,25 @@ class CraftyApi(
             // to another server.
             .addNetworkInterceptor(RedirectGuard.interceptor)
             .build()
+
+        @Volatile private var dropPooled = false
+
+        /**
+         * Pooled connections can be dead after the phone slept or switched networks (a VPN reconnecting,
+         * Wi-Fi to mobile data). The next request closes them first, on its own background thread.
+         */
+        fun dropIdleConnections() {
+            dropPooled = true
+        }
+
+        /** The shared client, after closing old connections if [dropIdleConnections] asked for it. */
+        private fun client(): OkHttpClient {
+            if (dropPooled) {
+                dropPooled = false
+                runCatching { http.connectionPool.evictAll() }
+            }
+            return http
+        }
 
         /** Mojang is third party: HTTPS only, on every hop. */
         private val thirdParty = OkHttpClient.Builder()

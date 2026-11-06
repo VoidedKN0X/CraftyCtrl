@@ -3,6 +3,14 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.11.8] - 2026-11-06
+
+### Fixed
+
+- **No more Retry after unlocking.** CraftyCtrl keeps your login out of reach while it's locked, but open screens kept asking Crafty for updates anyway, so you came back to an error and had to tap **Retry**. Live screens like the server list, Host tab and server overview now wait while the app is locked and refresh the moment you unlock.
+- **Screens that load once retry by themselves.** If backups, schedules, files, stats history, server settings, players or plugins showed an error from while the app was locked, unlocking now retries for you, exactly like tapping **Retry**.
+- **The first refresh after unlocking doesn't hang.** After your phone has slept or switched networks (for example a VPN reconnecting), the old connection to Crafty can be dead, which made the first request after unlocking hang until it timed out. CraftyCtrl now starts a fresh connection when you unlock.
+
 ## [2.11.7] - 2026-11-05
 
 CraftyCtrl now needs Android 15 or newer.
