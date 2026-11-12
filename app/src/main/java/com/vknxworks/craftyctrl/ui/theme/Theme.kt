@@ -267,19 +267,13 @@ private val SignalShapes = Shapes(
     extraLarge = RoundedCornerShape(26.dp),
 )
 
-@OptIn(ExperimentalTextApi::class)
-private fun spaceGroteskVariable(weight: Int) = Font(
-    R.font.space_grotesk_variable,
-    FontWeight(weight),
-    variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
-)
 
 /** Space Grotesk (SIL OFL 1.1), bundled: all UI text and headings. */
 val SpaceGrotesk: FontFamily = FontFamily(
-    Font(R.font.space_grotesk_regular, FontWeight.Normal),
-    Font(R.font.space_grotesk_medium, FontWeight.Medium),
-    spaceGroteskVariable(600),
-    Font(R.font.space_grotesk_bold, FontWeight.Bold),
+    groteskFont(400),
+    groteskFont(500),
+    groteskFont(600),
+    groteskFont(700),
 )
 
 /** JetBrains Mono (SIL OFL 1.1), bundled: numbers, data readouts, section labels, logs and the wordmark. */
@@ -372,3 +366,14 @@ val ConsoleError: Color
     @Composable @ReadOnlyComposable get() = CtrlColors.Dark.error
 val ConsoleDim: Color
     @Composable @ReadOnlyComposable get() = CtrlColors.Dark.muted
+
+/**
+ * Space Grotesk at [weight], from the one variable font file (300 to 700): one file covers every weight the
+ * app uses, instead of a separate file for each.
+ */
+@OptIn(ExperimentalTextApi::class)
+private fun groteskFont(weight: Int) = Font(
+    R.font.space_grotesk,
+    FontWeight(weight),
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
+)

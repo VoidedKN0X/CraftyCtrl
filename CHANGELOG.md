@@ -3,6 +3,13 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## [2.11.9] - 2026-11-12
+
+### Changed
+
+- **Slightly smaller download.** The bundled JetBrains Mono font (numbers, readouts and labels) no longer carries the Cyrillic, Vietnamese and maths-alphabet letters CraftyCtrl never shows itself, which takes about 0.1 MB off the download and 0.2 MB off the installed app. Everything looks the same; if a name or a log line shown in that font uses one of those scripts, those letters are now drawn with your phone's own font.
+- **One font file for Space Grotesk instead of four.** Regular, Medium, SemiBold and Bold now all come from one variable font file, which takes about another 0.15 MB off the download. Text should look the same as before.
+
 ## [2.11.8] - 2026-11-06
 
 ### Fixed
