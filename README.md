@@ -125,6 +125,8 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 
 Both are always HTTPS. Your panel is HTTPS by default too; plain HTTP is only used for a panel address you typed as `http://` and accepted after the warning.
 
+**On the phone**, CraftyCtrl keeps your encrypted login, the panel address and user name, your settings and, while server alerts are on, what the last check saw per server (running or not, and the names of the players online). That last part is encrypted too, with a separate key that is itself protected by the Android Keystore; an older version of CraftyCtrl can't read it and would just start its checks fresh. Server lists, stats and console lines are never saved, and CraftyCtrl is left out of Android backups.
+
 Push alerts go through the [ntfy](https://f-droid.org/packages/io.heckel.ntfy/) app and your own ntfy server, only if you turn them on. CraftyCtrl itself never contacts the ntfy server: the ntfy app hands it the push address and the webhook messages, and every message only makes CraftyCtrl check with your panel.
 
 The Support, Report a bug, Source code and Licence links on the You page (tap your profile picture), the **Install ntfy** link (f-droid.org) in the push settings, and the Minecraft EULA links (aka.ms and minecraft.net) open in your browser only when you tap them.

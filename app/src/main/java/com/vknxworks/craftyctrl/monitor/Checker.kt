@@ -5,12 +5,16 @@ import com.vknxworks.craftyctrl.R
 import com.vknxworks.craftyctrl.data.AppSettings
 import com.vknxworks.craftyctrl.data.CraftyApi
 import com.vknxworks.craftyctrl.data.ServerStats
+import com.vknxworks.craftyctrl.data.crypto.DataAtRest
+import com.vknxworks.craftyctrl.data.crypto.SealedText
 import com.vknxworks.craftyctrl.str
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -34,6 +38,8 @@ data class CheckSummary(
 /**
  * One check of every server, shared by the foreground monitor, the background check and push wake-ups.
  * What it saw last time is saved, so a check started by a push hours later still compares with the one before.
+ * Those saved snapshots (they hold player names) are encrypted at rest with the app's data key ([SealedText]);
+ * one that can't be opened counts as "never seen", so that check only sets a new starting point.
  *
  * Alerts:
  * - a crash, straight away;
@@ -87,13 +93,17 @@ object Checker {
             val playerServers = settings.playerAlertServers
             val p = prefs(context)
             val edit = p.edit()
+            // The key the saved snapshots are encrypted with; without one they're saved the ordinary way, as before.
+            val dataKey = withContext(Dispatchers.IO) { DataAtRest.key(context) }
             var running = 0
             var playersOnline = 0
             var confirmSoon = false
             for ((server, stats) in results) {
                 // Unknown or half-filled replies change nothing, so they can't cause false alerts.
                 if (stats == null || !stats.runningReported) continue
-                val before = p.getString(server.id, null)?.let(::decode)
+                val stored = p.getString(server.id, null)
+                val storedPlain = stored?.let { SealedText.open(dataKey, it) }
+                val before = storedPlain?.let(::decode)
                 var now = snapshotOf(stats)
                 if (before != null) {
                     val down = !now.running && !stats.waitingStart && !stats.updating
@@ -108,7 +118,12 @@ object Checker {
                 }
                 if (now.running) running++
                 playersOnline += now.online
-                edit.putString(server.id, encode(now))
+                val encoded = encode(now)
+                // An encrypted copy looks different every time it's made, so it's only written again when the
+                // snapshot changed, or to encrypt a copy that was saved the ordinary way.
+                if (storedPlain != encoded || (dataKey != null && stored != null && !SealedText.isSealed(stored))) {
+                    edit.putString(server.id, SealedText.seal(dataKey, encoded))
+                }
                 if (before == null) continue // first sighting is the baseline, not an event
 
                 when {

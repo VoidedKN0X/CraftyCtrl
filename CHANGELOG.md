@@ -3,6 +3,29 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Unreleased
+
+Built and checked by CI only: none of this has been run on a phone yet.
+
+### Security
+
+- **What server alerts remember between checks is now encrypted on the phone.** To notice a crash, a stop or a player joining or leaving, CraftyCtrl saves what each check saw per server: running or not, crashed or not, how many players were online and **the names of the players online**. That saved state is now encrypted (AES-256-GCM) before it is saved. It is the only thing CraftyCtrl keeps on the phone about what happens on your servers: server lists, stats and console lines are never saved.
+
+  It is encrypted with a new random "data key" kept in CraftyCtrl's private folder (`data.key`), itself encrypted by a key in the phone's secure hardware (the Android Keystore; StrongBox, the separate security chip, on phones that have one). That key needs no PIN or fingerprint, so the alert monitor, the 15-minute background check and push wake-ups keep working while the phone or CraftyCtrl is locked. It is separate from the key that protects your Crafty login and from the app lock, and neither of those changed.
+- **How the switch happens.** Nothing is converted up front: the state of each server is replaced by an encrypted copy at the first check after updating. CraftyCtrl reads both the old and the encrypted form, so no alert is missed during the switch.
+- **If the key is ever lost** (the phone's Keystore was reset, for example), the encrypted state can't be opened. It is only a memory of the last check, so CraftyCtrl treats those servers as "never seen": the next check sets a new starting point, and one change that happened in between might not be notified. Nothing you entered is lost and there is no error screen. CraftyCtrl never replaces an existing `data.key` by itself, so from then on it saves this state unencrypted as before, until its data is cleared or it is reinstalled.
+
+### Not encrypted, and why
+
+- **The panel address and your user name** (your token was already encrypted): they are read the moment the app opens, also while it is locked, to decide between the sign-in screen and your servers.
+- **The panels you accepted plain HTTP for**: checked before every network request, from the first one on.
+- **Settings**, the list of servers with player alerts on (server ids only), **the push address from ntfy and its secret token** (needed the instant a push arrives), and the times a stop was last notified (a server id and a time).
+
+### Good to know
+
+- **Going back to an older version:** CraftyCtrl 2.11.11 and older can't read the encrypted state. It would simply start from "never seen" (see above); nothing else is affected.
+- The encryption protects this state in a copy of the app's files (a backup pulled off the phone, a stolen phone image). It does not protect against something that can already run code as CraftyCtrl while it is running: the data key is in the app's memory then.
+
 ## [2.11.11] - 2026-11-20
 
 Built and checked by CI only: nothing in this release had been run on a phone when it was published.
