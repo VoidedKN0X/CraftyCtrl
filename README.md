@@ -54,7 +54,7 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 ## Is it safe to install?
 
 - **Open source.** All of CraftyCtrl's code is in this repo, under the GPL-3.0 licence. Anyone can read it.
-- **Built by GitHub, not on a personal computer.** Every APK on the Releases page is built by GitHub Actions from the code in this repo, using [the build workflow](.github/workflows/build.yml). You can see each build's log under the Actions tab. Each build also checks that the Gradle wrapper is an official Gradle release and that no Google Play services, Firebase, ML Kit, Play Core or Tink library is in the app.
+- **Built by GitHub, not on a personal computer.** Every APK on the Releases page is built by GitHub Actions from the code in this repo, using [the build workflow](.github/workflows/build.yml). You can see each build's log under the Actions tab. Each build also checks that the Gradle wrapper is an official Gradle release and that no Google Play services, Firebase, ML Kit, Play Core or Tink library is in the app. The signing key is kept away from the build: one job builds the APK without any secrets, and a separate job that runs no code from this repo signs it and checks the signature against the fingerprint below.
 - **Always signed with the same key.** Every release is signed with the same release key. Android refuses to install an update signed with a different key over the app you have, and the CtrlF-Droid repo only accepts APKs signed with this key. Its SHA-256 certificate fingerprint is:
 
   ```

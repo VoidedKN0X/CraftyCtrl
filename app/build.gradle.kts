@@ -6,9 +6,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// Release signing comes from environment variables (CI) or keystore.properties (local).
-// Without either, local release builds fall back to the debug key so they still install;
-// on CI a missing key fails the build instead of publishing a debug-signed APK.
+// Release signing. On GitHub Actions the build job has no signing key at all: it sets
+// UNSIGNED_RELEASE=true and gets app-release-unsigned.apk, which a separate job signs with apksigner
+// (see .github/workflows/build.yml). An unsigned APK cannot be installed, so nothing unsigned can ship.
+// A key from environment variables (CRAFTY_KEYSTORE_PATH, CRAFTY_KEYSTORE_PASSWORD, CRAFTY_KEY_ALIAS,
+// CRAFTY_KEY_PASSWORD) or keystore.properties (local) still works. Without either, local release
+// builds fall back to the debug key so they still install; on CI a build that has neither a key nor
+// UNSIGNED_RELEASE=true fails instead of publishing a debug-signed APK.
 val keystoreProps = Properties().apply {
     val f = rootProject.file("keystore.properties")
     if (f.exists()) f.inputStream().use { load(it) }
@@ -19,8 +23,9 @@ fun signingValue(env: String, prop: String): String? =
 
 val releaseStorePath = signingValue("CRAFTY_KEYSTORE_PATH", "storeFile")
 val onCi = System.getenv("CI") == "true" || System.getenv("GITHUB_ACTIONS") == "true"
-// Set by the workflow for pull requests only, which build but never publish.
+// Set by the CodeQL and verification-metadata workflows, which build but never publish.
 val allowDebugSigning = System.getenv("CRAFTY_ALLOW_DEBUG_SIGNING") == "true"
+val unsignedRelease = System.getenv("UNSIGNED_RELEASE") == "true"
 
 android {
     namespace = "com.vknxworks.craftyctrl"
@@ -55,12 +60,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = if (releaseStorePath != null) {
+            signingConfig = if (unsignedRelease) {
+                // Asked for explicitly: no signing here at all, the output is app-release-unsigned.apk.
+                null
+            } else if (releaseStorePath != null) {
                 signingConfigs.getByName("release")
             } else if (onCi && !allowDebugSigning) {
                 throw GradleException(
-                    "Release signing key is missing on CI (CRAFTY_KEYSTORE_PATH). " +
-                        "Set the KEYSTORE_BASE64, KEYSTORE_PASSWORD and KEY_PASSWORD secrets.",
+                    "Release signing key is missing on CI (CRAFTY_KEYSTORE_PATH) and UNSIGNED_RELEASE=true " +
+                        "is not set. Refusing to sign the release with the debug key.",
                 )
             } else {
                 signingConfigs.getByName("debug")
