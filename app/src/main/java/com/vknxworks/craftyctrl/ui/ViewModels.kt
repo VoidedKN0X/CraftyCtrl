@@ -191,17 +191,22 @@ class ServerListViewModel(private val api: CraftyApi) : ViewModel() {
                     }
                 }.awaitAll()
             }
-            // Fill in versions the stats ping didn't report, once per server.
-            for (s in servers) {
-                val st = stats[servers.indexOf(s)]
-                if (st?.version == null && s.id !in fallbackVersions) {
-                    fallbackVersions[s.id] = runCatching { api.versionFallback(s.id, s.executable) }.getOrNull()
-                }
-            }
-            rows = servers.zip(stats) { summary, st ->
+            fun build() = servers.zip(stats) { summary, st ->
                 ServerRow(summary, st?.let { it.copy(version = it.version ?: fallbackVersions[summary.id]) })
             }
+            // Versions the stats ping didn't report are looked up once per server. That takes up to two more
+            // requests each, so the list is shown first and the versions are filled in when they arrive.
+            val missing = servers.zip(stats).filter { (s, st) -> st?.version == null && s.id !in fallbackVersions }.map { it.first }
+            rows = build()
             error = null
+            if (missing.isNotEmpty()) {
+                loading = false
+                val found = coroutineScope {
+                    missing.map { s -> async { runCatching { api.versionFallback(s.id, s.executable) }.getOrNull() } }.awaitAll()
+                }
+                missing.forEachIndexed { i, s -> fallbackVersions[s.id] = found[i] }
+                rows = build()
+            }
         } catch (e: Exception) {
             error = e.userMessage()
         } finally {
@@ -624,6 +629,8 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     suspend fun refreshLogs() {
         try {
             logs = api.logs(serverId)
+            // Lines that came in over the socket before this answer are part of it already.
+            pendingLines.clear()
             consoleError = null
         } catch (e: Exception) {
             consoleError = e.userMessage()
@@ -641,6 +648,22 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     private var consoleWanted = false
     private var socketFailures = 0
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /**
+     * Lines from the socket waiting to be shown (main thread only). A busy server prints hundreds of lines a
+     * second; adding them to [logs] one by one redraws the console for every line, so they're added together
+     * a few times a second instead.
+     */
+    private val pendingLines = ArrayList<String>()
+    private var flushPosted = false
+    private val flushLines = Runnable {
+        flushPosted = false
+        if (pendingLines.isNotEmpty()) {
+            val batch = ArrayList(pendingLines)
+            pendingLines.clear()
+            logs = (logs + batch).takeLast(MAX_CONSOLE_LINES)
+        }
+    }
 
     /** The console tab is showing: connect the live console, reconnecting on its own until [stopConsole]. */
     fun startConsole() {
@@ -684,7 +707,13 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
             override fun onLine(line: String) {
                 mainHandler.post {
-                    if (consoleWanted && socket === self && self != null) logs = (logs + line).takeLast(MAX_CONSOLE_LINES)
+                    if (consoleWanted && socket === self && self != null) {
+                        pendingLines.add(line)
+                        if (!flushPosted) {
+                            flushPosted = true
+                            mainHandler.postDelayed(flushLines, CONSOLE_FLUSH_MS)
+                        }
+                    }
                 }
             }
 
@@ -720,6 +749,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
     override fun onCleared() {
         stopConsole()
+        mainHandler.removeCallbacks(flushLines)
         super.onCleared()
     }
 
@@ -1100,6 +1130,8 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         private const val LIVE_SAMPLES = 200
         /** About what Crafty's own console keeps. */
         private const val MAX_CONSOLE_LINES = 1000
+        /** How long live console lines are collected before they're shown together. */
+        private const val CONSOLE_FLUSH_MS = 50L
     }
 }
 

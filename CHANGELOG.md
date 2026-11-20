@@ -3,6 +3,19 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Unreleased
+
+Not in a release yet: these changes are built, and go out with the next version.
+
+### Changed
+
+- **The server list shows sooner.** For a server whose version Crafty's status doesn't report (a stopped server, for example), CraftyCtrl looks the version up with up to two more requests. It used to do that for one server after the other before showing anything; now the list appears as soon as the servers' status is in, the lookups run side by side, and the version text is filled in a moment later.
+- **A busy live console stays smooth.** When a server prints a burst of lines (starting up, generating a world, a long error), the console was redrawn for every single line. New lines are now collected for a twentieth of a second and added together, so the console keeps up without stuttering. The lines, their order, Follow, search and the level filter are the same.
+
+### Security
+
+- **Push messages from ntfy:** the secret token that keeps other apps out is now compared in a way that can't be guessed bit by bit from timing.
+
 ## Project updates (2026-11-19)
 
 ### Project

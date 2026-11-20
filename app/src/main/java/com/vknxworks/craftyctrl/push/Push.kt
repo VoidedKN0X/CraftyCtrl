@@ -216,7 +216,9 @@ object Push {
 class PushReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val token = intent.getStringExtra(UnifiedPush.EXTRA_TOKEN) ?: return
-        if (token != UnifiedPush.token(context)) return
+        val expected = UnifiedPush.token(context) ?: return
+        // Compared in constant time, so the secret can't be guessed bit by bit from how long the check takes.
+        if (!java.security.MessageDigest.isEqual(token.toByteArray(), expected.toByteArray())) return
         val sender = sentFromPackage
         if (sender != null && sender != UnifiedPush.NTFY) return
         val app = context.applicationContext
