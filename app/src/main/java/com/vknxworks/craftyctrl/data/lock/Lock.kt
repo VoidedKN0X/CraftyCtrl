@@ -28,16 +28,59 @@ object Lock {
     /** [liveToken] as a flow, so screens can wait for the app to unlock and refresh straight away. */
     val tokenFlow: StateFlow<String?> = tokenState.asStateFlow()
 
-    /** The token the open screens use; null while the app is locked or signed out. */
+    private val tokenLock = Any()
+
+    /** Counts every change of [liveToken], so the read at start can tell whether something else set it meanwhile. */
+    private var tokenWrites = 0
+
+    /** Open while the saved token is still being read at start (see [readTokenAtStart]). */
+    @Volatile private var startRead: java.util.concurrent.CountDownLatch? = null
+
+    /**
+     * The token the open screens use; null while the app is locked or signed out. Reading it waits for the
+     * read at start to finish first, so nothing ever sees "no token" only because that read wasn't done yet.
+     */
     var liveToken: String?
-        get() = tokenState.value
-        set(value) {
-            val unlocking = tokenState.value == null && value != null
-            // Connections from before the lock may have died while the phone slept or the network
-            // changed; start fresh so the first request after unlocking doesn't hang on one.
-            if (unlocking) com.vknxworks.craftyctrl.data.CraftyApi.dropIdleConnections()
-            tokenState.value = value
+        get() {
+            startRead?.let { pending -> runCatching { pending.await() } }
+            return tokenState.value
         }
+        set(value) {
+            synchronized(tokenLock) {
+                tokenWrites++
+                val unlocking = tokenState.value == null && value != null
+                // Connections from before the lock may have died while the phone slept or the network
+                // changed; start fresh so the first request after unlocking doesn't hang on one.
+                if (unlocking) com.vknxworks.craftyctrl.data.CraftyApi.dropIdleConnections()
+                tokenState.value = value
+            }
+        }
+
+    /**
+     * Reads the saved token with [read] on a background thread when the app starts (it asks the phone's
+     * Keystore, which can be slow) and puts it in [liveToken], exactly as if it had been read on the spot:
+     * anything that asks for [liveToken] before the read is done waits for it, and screens that wait on
+     * [tokenFlow] carry on when it arrives. If the token was set in another way meanwhile (unlocking, signing
+     * in or out, locking), that newer value stays and what was read is dropped.
+     */
+    fun readTokenAtStart(read: () -> String?) {
+        val pending = java.util.concurrent.CountDownLatch(1)
+        val stamp = synchronized(tokenLock) {
+            startRead = pending
+            tokenWrites
+        }
+        Thread({
+            try {
+                val token = runCatching(read).getOrNull()
+                synchronized(tokenLock) {
+                    if (tokenWrites == stamp) liveToken = token
+                }
+            } finally {
+                pending.countDown()
+                if (startRead === pending) startRead = null
+            }
+        }, "token-read").start()
+    }
 
     /** The app lock is on: a PIN is set (in the vault, or the old PIN hash not migrated yet). */
     fun isOn(context: Context): Boolean = vault(context).enabled || AppSettings(context).pinSet

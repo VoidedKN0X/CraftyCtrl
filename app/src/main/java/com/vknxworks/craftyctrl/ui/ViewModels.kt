@@ -60,8 +60,9 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     init {
-        // Null while the app lock keeps the token sealed; the lock fills it in when you unlock.
-        com.vknxworks.craftyctrl.data.lock.Lock.liveToken = store.token()
+        // Null while the app lock keeps the token sealed; the lock fills it in when you unlock. Read off the
+        // main thread (it asks the Keystore); whatever needs the token before then waits for it.
+        com.vknxworks.craftyctrl.data.lock.Lock.readTokenAtStart { store.token() }
     }
     var busy by mutableStateOf(false)
         private set
