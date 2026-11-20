@@ -40,7 +40,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -847,8 +846,17 @@ private enum class LogLevel(@StringRes private val labelRes: Int) {
     val label: String get() = str(labelRes)
 }
 
-internal fun isError(line: String) = "ERROR" in line || "SEVERE" in line || "Exception" in line
-internal fun isWarn(line: String) = "WARN" in line
+/** A live console line: what kind of line it is was worked out once, when it came in. */
+@Composable
+private fun lineColor(line: com.vknxworks.craftyctrl.data.ConsoleLine): Color = when {
+    line.isError -> ConsoleError
+    line.isWarn -> ConsoleWarn
+    line.fromCrafty -> ConsoleDim
+    else -> ConsoleText
+}
+
+internal fun isError(line: String) = com.vknxworks.craftyctrl.data.consoleIsError(line)
+internal fun isWarn(line: String) = com.vknxworks.craftyctrl.data.consoleIsWarn(line)
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -883,10 +891,17 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
     val clipboard = com.vknxworks.craftyctrl.ui.rememberSensitiveClipboard()
     val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
 
-    val shown = remember(vm.logs, query, level, searching) {
-        vm.logs.filter { line ->
-            (level == LogLevel.ALL || (level == LogLevel.ERROR && isError(line)) || (level == LogLevel.WARN && (isWarn(line) || isError(line)))) &&
-                (!searching || query.isBlank() || line.contains(query, ignoreCase = true))
+    val logs = vm.logs
+    val shown: List<com.vknxworks.craftyctrl.data.ConsoleLine> = remember(logs, query, level, searching) {
+        val search = searching && query.isNotBlank()
+        if (level == LogLevel.ALL && !search) {
+            // Nothing to filter out: the lines as they are, without going through them.
+            logs.list
+        } else {
+            logs.list.filter { line ->
+                (level == LogLevel.ALL || (level == LogLevel.ERROR && line.isError) || (level == LogLevel.WARN && (line.isWarn || line.isError))) &&
+                    (!search || line.text.contains(query, ignoreCase = true))
+            }
         }
     }
 
@@ -960,9 +975,10 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                 .padding(horizontal = 12.dp),
         ) {
             LazyColumn(state = listState, contentPadding = PaddingValues(12.dp)) {
-                itemsIndexed(shown) { _, line ->
+                // Keyed by the line's own id: lines already on screen are kept as they are while new ones come in.
+                items(shown, key = { it.id }, contentType = { "line" }) { line ->
                     Text(
-                        line,
+                        line.text,
                         color = lineColor(line),
                         fontFamily = Mono,
                         fontSize = 12.sp,
@@ -973,7 +989,7 @@ private fun ConsoleTab(vm: ServerDetailViewModel) {
                                 onClick = {},
                                 onLongClick = {
                                     haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                                    clipboard.copy(line)
+                                    clipboard.copy(line.text)
                                     vm.notify(str(R.string.line_copied))
                                 },
                             ),

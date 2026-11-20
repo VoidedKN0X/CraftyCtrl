@@ -3,6 +3,15 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Unreleased
+
+Built and checked by CI only: nothing here had been run on a phone when it was written.
+
+### Changed
+
+- **The live console does less work per line.** Every console line now gets a number of its own when it comes in, and the list on screen follows lines by that number. Lines that are already on screen are left alone while new ones are added, instead of every visible line being drawn again. Whether a line is an error, a warning or a message from Crafty (its colour, and what the level filter keeps) is worked out once when the line arrives, not every time the console is redrawn or filtered. The last 1000 lines are kept in a buffer that new lines are added to, instead of copying the whole list a few times a second. With the filter on "All" and no search, the lines are shown without going through them at all. The lines, their order, their colours, Follow, search, the level filter and copying a line are the same.
+- **Reading back in a full console:** when you have scrolled up (Follow off) and the console already holds its 1000 lines, the line you are reading now stays where it is while new lines come in at the bottom and the oldest ones drop off. It used to slide up by as many lines as were added. Once that line itself drops off, the console moves on as before.
+
 ## [2.12.0] - 2026-11-20
 
 **This release encrypts some of what the app stores on the phone. An older version cannot read it afterwards, so export or back up anything you need before you update (details below).** Built and checked by CI only: nothing in this release had been run on a phone when it was published.

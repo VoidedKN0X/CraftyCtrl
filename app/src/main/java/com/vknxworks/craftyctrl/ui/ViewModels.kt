@@ -270,7 +270,11 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         private set
     var statsError by mutableStateOf<String?>(null)
         private set
-    var logs by mutableStateOf<List<String>>(emptyList())
+    /** Main thread only, like everything that changes [logs]. */
+    private val console = com.vknxworks.craftyctrl.data.ConsoleBuffer(MAX_CONSOLE_LINES)
+
+    /** The console's lines. Each has an id of its own, so the list on screen can follow them as they move up. */
+    var logs by mutableStateOf(console.lines)
         private set
     var consoleError by mutableStateOf<String?>(null)
         private set
@@ -628,7 +632,9 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
     suspend fun refreshLogs() {
         try {
-            logs = api.logs(serverId)
+            val fetched = api.logs(serverId)
+            // The same lines as on screen: nothing to redraw, and the lines keep their ids.
+            if (!logs.sameText(fetched)) logs = console.replace(fetched)
             // Lines that came in over the socket before this answer are part of it already.
             pendingLines.clear()
             consoleError = null
@@ -659,9 +665,9 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     private val flushLines = Runnable {
         flushPosted = false
         if (pendingLines.isNotEmpty()) {
-            val batch = ArrayList(pendingLines)
+            // Added to the end of the buffer; only the last MAX_CONSOLE_LINES stay in view.
+            logs = console.append(pendingLines)
             pendingLines.clear()
-            logs = (logs + batch).takeLast(MAX_CONSOLE_LINES)
         }
     }
 
