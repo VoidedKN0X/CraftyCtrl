@@ -38,7 +38,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 ## Requirements
 
 - Android 15 or newer, on a 64-bit ARM phone (nearly every phone from the last several years)
-- Crafty Controller 4.x. **HTTPS by default** (with a certificate Android trusts, for example behind a reverse proxy; Crafty's own self-signed certificate isn't accepted); plain `http://` only for your own panel, after a warning
+- Crafty Controller 4.x. **HTTPS by default** (with a certificate Android trusts, for example behind a reverse proxy, or Crafty's own self-signed certificate after you confirm its fingerprint); plain `http://` only for your own panel, after a warning
 - Notification permission, only if you turn on server alerts
 - For push: the [ntfy](https://f-droid.org/packages/io.heckel.ntfy/) app connected to your own ntfy server, and Crafty 4.4 or newer for webhooks
 - **Google-free and de-Googled:** no Google Play services, Firebase or other Google services, and the app never contacts Google. It works the same on de-Googled phones (GrapheneOS, CalyxOS, /e/OS, LineageOS without Google apps).
