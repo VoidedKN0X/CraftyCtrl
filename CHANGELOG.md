@@ -3,9 +3,9 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
-## Unreleased
+## [2.14.0] - 2026-11-21
 
-Changes on `main` that aren't in a release yet. They ship with the next version. Built and checked by CI only: none of this has been run on a phone yet.
+Built and checked by CI only: nothing in this release had been run on a phone when it was published.
 
 ### New
 
