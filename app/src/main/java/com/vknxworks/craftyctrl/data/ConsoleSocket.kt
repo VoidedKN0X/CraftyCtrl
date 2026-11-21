@@ -64,7 +64,7 @@ class ConsoleSocket(
             .header("Origin", "${http.scheme}://${http.host}" + if (http.port != okhttp3.HttpUrl.defaultPort(http.scheme)) ":${http.port}" else "")
             .build()
         closedByUs = false
-        socket = client.newWebSocket(request, object : WebSocketListener() {
+        socket = Tls.clientFor(client, "ws", http).newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 if (!closedByUs) listener.onOpen()
             }

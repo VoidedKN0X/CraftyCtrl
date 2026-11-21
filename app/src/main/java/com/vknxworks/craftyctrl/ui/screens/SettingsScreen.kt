@@ -323,7 +323,113 @@ fun SettingsScreen(api: com.vknxworks.craftyctrl.data.CraftyApi, onBack: () -> U
                     icon = Icons.Outlined.Refresh,
                 ) { settings.liveRefreshSeconds = it; liveRefresh = it }
             }
+
+            SettingsBackupGroup(onApplied = {
+                liveRefresh = settings.liveRefreshSeconds
+                interval = settings.alertIntervalSeconds
+                ScreenPrivacy.load(context)
+                if (alerts) MonitorService.restart(context)
+            })
         }
+    }
+}
+
+/**
+ * "Back up and restore": saves CraftyCtrl's own settings to a file and reads them back. The file has no
+ * login, PIN or address in it, and reading one shows what would change and asks first (see [SettingsBackup]).
+ */
+@Composable
+private fun SettingsBackupGroup(onApplied: () -> Unit) {
+    val context = LocalContext.current
+    var pending by remember { mutableStateOf<com.vknxworks.craftyctrl.data.SettingsBackup?>(null) }
+    fun toast(id: Int) = Toast.makeText(context, id, Toast.LENGTH_LONG).show()
+
+    val exporter = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val ok = runCatching {
+            val text = com.vknxworks.craftyctrl.data.SettingsBackup.current(context).toJson()
+            context.contentResolver.openOutputStream(uri, "w")?.use { it.write(text.toByteArray(Charsets.UTF_8)) } ?: error("no stream")
+        }.isSuccess
+        toast(if (ok) R.string.backup_settings_exported else R.string.backup_settings_export_failed)
+    }
+    val importer = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val text = runCatching {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                // A settings file is tiny; stop reading anything that isn't.
+                val bytes = input.readNBytes(com.vknxworks.craftyctrl.data.SettingsBackup.MAX_BYTES + 1)
+                if (bytes.size > com.vknxworks.craftyctrl.data.SettingsBackup.MAX_BYTES) null else String(bytes, Charsets.UTF_8)
+            }
+        }.getOrNull()
+        val parsed = text?.let { com.vknxworks.craftyctrl.data.SettingsBackup.parse(it) }
+        when {
+            parsed == null -> toast(R.string.backup_settings_not_a_file)
+            parsed.changesFrom(com.vknxworks.craftyctrl.data.SettingsBackup.current(context)).isEmpty() -> toast(R.string.backup_settings_nothing_to_change)
+            else -> pending = parsed
+        }
+    }
+
+    Group(stringResource(R.string.backup_settings_group), footer = stringResource(R.string.backup_settings_footer)) {
+        GroupRow(
+            stringResource(R.string.backup_settings_export),
+            stringResource(R.string.backup_settings_export_subtitle),
+            icon = Icons.Outlined.Layers,
+            showChevron = true,
+            onClick = {
+                Lock.expectReturn()
+                exporter.launch("craftyctrl-settings.json")
+            },
+        )
+        GroupRow(
+            stringResource(R.string.backup_settings_import),
+            stringResource(R.string.backup_settings_import_subtitle),
+            icon = Icons.Outlined.Refresh,
+            showChevron = true,
+            onClick = {
+                Lock.expectReturn()
+                importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+            },
+        )
+    }
+
+    pending?.let { incoming ->
+        val changes = incoming.changesFrom(com.vknxworks.craftyctrl.data.SettingsBackup.current(context))
+        com.vknxworks.craftyctrl.ui.components.CtrlDialog(
+            onDismissRequest = { pending = null },
+            title = { Text(stringResource(R.string.backup_settings_confirm_title)) },
+            text = {
+                androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.backup_settings_confirm_body))
+                    changes.forEach { c ->
+                        val label = stringResource(
+                            when (c.key) {
+                                com.vknxworks.craftyctrl.data.SettingsBackup.K_LIVE -> R.string.backup_change_live
+                                com.vknxworks.craftyctrl.data.SettingsBackup.K_INTERVAL -> R.string.backup_change_interval
+                                com.vknxworks.craftyctrl.data.SettingsBackup.K_SCREENSHOTS -> R.string.backup_change_screenshots
+                                com.vknxworks.craftyctrl.data.SettingsBackup.K_RECENTS -> R.string.backup_change_recents
+                                else -> R.string.backup_change_players
+                            },
+                            c.from,
+                            c.to,
+                        )
+                        Text("• $label", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    com.vknxworks.craftyctrl.data.SettingsBackup.apply(context, incoming)
+                    pending = null
+                    onApplied()
+                    toast(R.string.backup_settings_imported)
+                }) { Text(stringResource(R.string.backup_settings_replace)) }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { pending = null }) { Text(stringResource(R.string.cancel)) } },
+        )
     }
 }
 

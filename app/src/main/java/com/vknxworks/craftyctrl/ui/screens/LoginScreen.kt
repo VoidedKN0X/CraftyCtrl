@@ -66,16 +66,17 @@ import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(vm: SessionViewModel) {
+fun LoginScreen(vm: SessionViewModel, adding: Boolean = false) {
     // The API key and password are typed here: never allow screenshots or a Recents snapshot.
     SecureScreen()
     // Password and token: no other apps' floating windows on top, hidden from apps that misuse accessibility.
     com.vknxworks.craftyctrl.ui.lock.SensitiveWindowEffect()
-    var url by rememberSaveable { mutableStateOf(vm.lastUrl) }
+    // Adding a panel next to the one that's signed in starts with an empty form.
+    var url by rememberSaveable { mutableStateOf(if (adding) "" else vm.lastUrl) }
     var mode by rememberSaveable { mutableStateOf(AuthMode.API_KEY) }
     // Secrets use remember, not rememberSaveable, so they're never written into the saved-state Bundle.
     var apiKey by remember { mutableStateOf("") }
-    var username by rememberSaveable { mutableStateOf(vm.lastUsername) }
+    var username by rememberSaveable { mutableStateOf(if (adding) "" else vm.lastUsername) }
     var password by remember { mutableStateOf("") }
     var totp by remember { mutableStateOf("") }
     var reveal by rememberSaveable { mutableStateOf(false) }
@@ -112,6 +113,32 @@ fun LoginScreen(vm: SessionViewModel) {
                 }) { Text(stringResource(R.string.http_confirm), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { confirmHttp = null }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+
+    // The phone doesn't trust the panel's certificate: confirm it by its fingerprint, then connect again.
+    vm.certPrompt?.let { cert ->
+        CtrlDialog(
+            onDismissRequest = { vm.dismissCertPrompt() },
+            icon = { Icon(Icons.Outlined.LockOpen, contentDescription = null) },
+            title = { Text(stringResource(if (cert.replacesOther) R.string.cert_changed_title else R.string.cert_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(stringResource(if (cert.replacesOther) R.string.cert_changed_body else R.string.cert_body, cert.host))
+                    Text(stringResource(R.string.cert_subject, cert.subject), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.cert_valid_until, cert.validUntil), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.cert_fingerprint_label), style = MaterialTheme.typography.labelMedium)
+                    Text(cert.fingerprint, style = com.vknxworks.craftyctrl.ui.theme.CtrlType.MonoSmall)
+                    Text(stringResource(R.string.cert_how_to_check), style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.trustCertificate(cert)
+                    vm.signIn(url, mode, apiKey, username, password, totp)
+                }) { Text(stringResource(R.string.cert_trust), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { vm.dismissCertPrompt() }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -263,6 +290,26 @@ fun LoginScreen(vm: SessionViewModel) {
                     )
                 } else {
                     Text(stringResource(R.string.connect))
+                }
+            }
+
+            if (adding) {
+                // Back to the panel that is still signed in.
+                TextButton(onClick = { vm.cancelAddPanel() }, enabled = !vm.busy, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.cancel))
+                }
+            } else if (vm.otherPanels.isNotEmpty()) {
+                // Signed out of one panel while others are still signed in: switch to one of those.
+                com.vknxworks.craftyctrl.ui.settings.Group(stringResource(R.string.panels_signed_in), gutter = 0.dp) {
+                    vm.otherPanels.forEach { panel ->
+                        com.vknxworks.craftyctrl.ui.settings.GroupRow(
+                            panel.baseUrl.substringAfter("://"),
+                            panel.username ?: stringResource(R.string.you_api_key_user),
+                            showChevron = true,
+                            enabled = !vm.busy,
+                            onClick = { vm.switchTo(panel) },
+                        )
+                    }
                 }
             }
         }

@@ -20,13 +20,17 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Server settings**: every `server.properties` option, whitelist, operators and bans
 - **Players**: message, kick, ban, make operator, change game mode or clear inventory for any player
 - **Plugins and mods**: turn them on or off, add or remove jars
-- **File browser** with a built-in text editor, upload, unzip and more
-- **Backups and scheduled tasks**: run, edit, restore and schedule; restoring asks you to type RESTORE first
+- **File browser** with a built-in text editor, upload, unzip, download to the phone (a folder as a zip) and more
+- **Backups and scheduled tasks**: run, edit, restore and schedule; restoring asks you to type RESTORE first; download a backup to the phone
 - **A progress notification** while a server starts or stops or a backup runs, ending with how it went
 - **Create, clone, update and delete** Java and Bedrock servers; deleting asks you to type the server name
+- **Users, roles and the audit log** of the panel: add, change and delete users and roles, and read who did what
+- **Several panels**: stay signed in to more than one Crafty panel and switch between them from the You page
 - **Alerts** when a server stops or crashes, even with the app closed, and **player join and leave alerts** for the servers you pick, grouped into one notification
 - **Push from Crafty through ntfy** (UnifiedPush): one tap adds a webhook to every server so starts, stops, kills and crashes wake CraftyCtrl at once. Choose the foreground monitor or push only (no ongoing notification, with a check every 15 minutes as a fallback)
+- **Self-signed certificates only after you confirm the fingerprint**: Crafty's own certificate is shown with its SHA-256 fingerprint and accepted for that one panel once you say so; nothing is trusted silently
 - **HTTPS by default; plain HTTP only for your own panel after a warning**, never for anything else. An HTTPS connection is never redirected to HTTP, and your login, password and anything you send are never passed on to another server by a redirect
+- **Back up and restore settings** to a file that never holds a login, address or PIN
 - **App lock** with its own PIN and optional fingerprint unlock; your Crafty login stays encrypted while the app is locked, and two switches keep the app out of screenshots and the recent apps view
 - The Ctrl / Signal look shared by every Ctrl app: dark and light modes that follow your phone, one violet accent, Space Grotesk and JetBrains Mono
 
@@ -80,7 +84,7 @@ If the Obtainium button doesn't open the app, add `https://github.com/VoidedKN0X
 | Use biometrics (`USE_BIOMETRIC`) | Optional fingerprint unlock for the app lock, and the fingerprint or face check before restart, stop and kill |
 | Hide other apps' floating windows (`HIDE_OVERLAY_WINDOWS`) | Hide other apps' floating windows over the PIN screen, sign-in and delete confirmations, so nothing can be drawn over them. Granted at install, no prompt |
 
-Android also lists a "dynamic receiver" permission (`DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`) that AndroidX adds to every app so only CraftyCtrl itself can send it internal broadcasts; it gives the app no access to anything. CraftyCtrl has no location, camera, microphone, contacts, storage or phone permissions: files you upload are picked with Android's file picker, which only hands over the files you choose.
+Android also lists a "dynamic receiver" permission (`DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`) that AndroidX adds to every app so only CraftyCtrl itself can send it internal broadcasts; it gives the app no access to anything. CraftyCtrl has no location, camera, microphone, contacts, storage or phone permissions: files you upload are picked with Android's file picker, which only hands over the files you choose, and files you download are written through Android's "save as" screen to the place you pick.
 
 What CraftyCtrl sends and to whom is in the [Privacy](#privacy) section.
 
@@ -89,6 +93,10 @@ What CraftyCtrl sends and to whom is in the [Privacy](#privacy) section.
 1. Enter your panel address, e.g. `https://crafty.example.com`. Without `https://` or `http://` in front, HTTPS is used. For a panel on your home network without HTTPS, type `http://` in front: CraftyCtrl warns that your login and everything else are then sent unencrypted, and only connects after you tap **Use HTTP**. The panel then shows **Not encrypted (HTTP)** on the Servers tab and the You page.
 2. Sign in with an **API key** (in Crafty: your profile → *API Keys* → *Generate*) or your **username and password**, plus your 2FA code if you use one.
 3. Tap **Connect**. Your login is stored encrypted on the phone; with a password, only the token Crafty sends back is kept, never the password itself.
+
+**A panel with Crafty's own certificate** (no reverse proxy in front of it): Android doesn't trust that certificate, so CraftyCtrl shows it instead of connecting: who it was issued to, until when it is valid, and its SHA-256 fingerprint. Compare the fingerprint with the one on the computer that runs Crafty (`openssl x509 -in app/config/web/certs/commander.cert.pem -noout -fingerprint -sha256`, or the certificate details in a browser) and tap **Trust this certificate** only if they match. After that, only that exact certificate is accepted for that panel. If it ever changes, CraftyCtrl refuses to connect and asks again the next time you sign in.
+
+**More than one panel:** on the You page, **Other panels > Add a panel** signs in to another panel (or to the same one as another user) without signing out. Tap a panel there to switch. Alerts and push follow the panel that is on screen.
 
 Settings, signing out and About are behind your profile picture at the top right of the Servers and Host tabs: tap it to open the You page, then **Settings**. **Broadcast** (a chat message to every running server) is the megaphone button next to it.
 
@@ -127,7 +135,7 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 
 Both are always HTTPS. Your panel is HTTPS by default too; plain HTTP is only used for a panel address you typed as `http://` and accepted after the warning.
 
-**On the phone**, CraftyCtrl keeps your encrypted login, the panel address and user name, your settings and, while server alerts are on, what the last check saw per server (running or not, and the names of the players online). That last part is encrypted too, with a separate key that is itself protected by the Android Keystore; an older version of CraftyCtrl can't read it and would just start its checks fresh. Server lists, stats and console lines are never saved, and CraftyCtrl is left out of Android backups.
+**On the phone**, CraftyCtrl keeps your encrypted login (one per panel you added), the panel address and user name, the fingerprints of certificates you confirmed, your settings and, while server alerts are on, what the last check saw per server (running or not, and the names of the players online). That last part is encrypted too, with a separate key that is itself protected by the Android Keystore; an older version of CraftyCtrl can't read it and would just start its checks fresh. Server lists, stats and console lines are never saved, and CraftyCtrl is left out of Android backups.
 
 Push alerts go through the [ntfy](https://f-droid.org/packages/io.heckel.ntfy/) app and your own ntfy server, only if you turn them on. CraftyCtrl itself never contacts the ntfy server: the ntfy app hands it the push address and the webhook messages, and every message only makes CraftyCtrl check with your panel.
 

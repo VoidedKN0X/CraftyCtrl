@@ -47,6 +47,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Backup
@@ -1112,6 +1113,19 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
     var editingBackup by remember { mutableStateOf<BackupConfig?>(null) }
     var restoring by remember { mutableStateOf<BackupConfig?>(null) }
     val activity = LocalContext.current.findFragmentActivity()
+    // Download a backup to the phone: Android's "save as" screen makes the document, the app writes into it.
+    val resolver = LocalContext.current.contentResolver
+    var backupDownload by remember { mutableStateOf<Pair<BackupConfig, String>?>(null) }
+    val backupSaver = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
+    ) { uri ->
+        val pick = backupDownload
+        backupDownload = null
+        if (uri != null && pick != null) {
+            vm.downloadBackup(resolver, uri, pick.first, pick.second)
+            restoring = null
+        }
+    }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -1137,6 +1151,9 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
                     onAction = { vm.runBackup(null) },
                 )
             }
+        }
+        if (vm.downloadedBytes != null) {
+            item(key = "download-progress") { DownloadProgress(vm) }
         }
         vm.backupPercent?.let { percent ->
             item(key = "backup-progress") {
@@ -1187,6 +1204,11 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
             busy = vm.managing,
             running = vm.stats?.running == true,
             onDismiss = { if (!vm.managing) restoring = null },
+            onDownload = { name ->
+                backupDownload = b to name
+                com.vknxworks.craftyctrl.data.lock.Lock.expectReturn()
+                backupSaver.launch(name)
+            },
             onRestore = { name, inPlace ->
                 verifyUser(activity, str(R.string.restore_x, name), str(R.string.the_server_is_stopped_first), onSuccess = {
                     vm.restoreBackup(b, name, inPlace) { restoring = null }
@@ -1496,6 +1518,7 @@ private fun RestoreDialog(
     busy: Boolean,
     running: Boolean,
     onDismiss: () -> Unit,
+    onDownload: (fileName: String) -> Unit,
     onRestore: (fileName: String, inPlace: Boolean) -> Unit,
 ) {
     var picked by remember { mutableStateOf<String?>(null) }
@@ -1548,6 +1571,14 @@ private fun RestoreDialog(
                             enabled = !busy,
                             modifier = Modifier.fillMaxWidth(),
                         )
+                    }
+                }
+                // Save the picked archive on the phone instead of restoring it (Crafty 4.4+).
+                if (config.id != null) {
+                    TextButton(onClick = { onDownload(name) }, enabled = name.isNotEmpty() && !busy) {
+                        Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.download_backup_to_phone))
                     }
                 }
                 Row(

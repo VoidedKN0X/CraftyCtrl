@@ -78,6 +78,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
@@ -266,6 +267,13 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) vm.upload(resolver, uri)
     }
+    // Download to the phone: Android's "save as" screen makes the document, the app only writes into it.
+    var downloading by remember { mutableStateOf<FileEntry?>(null) }
+    val saver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        val entry = downloading
+        downloading = null
+        if (uri != null && entry != null) vm.downloadEntry(resolver, uri, entry)
+    }
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -317,6 +325,7 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                 LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth())
             }
         }
+        DownloadProgress(vm)
         if (vm.files.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         vm.files.error?.let { ErrorBanner(it, Modifier.padding(12.dp), onRetry = { vm.openFolder(vm.filePath) }) }
 
@@ -380,6 +389,17 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
                                 leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
                                 enabled = copyable,
                                 onClick = { rowMenu = null; vm.startClip(e, copy = true) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(if (e.isDir) R.string.download_folder_as_zip else R.string.download_to_phone)) },
+                                leadingIcon = { Icon(Icons.Filled.Download, contentDescription = null) },
+                                enabled = vm.downloadedBytes == null,
+                                onClick = {
+                                    rowMenu = null
+                                    downloading = e
+                                    com.vknxworks.craftyctrl.data.lock.Lock.expectReturn()
+                                    saver.launch(if (e.isDir) e.name + ".zip" else e.name)
+                                },
                             )
                             if (!e.isDir && e.name.endsWith(".zip", ignoreCase = true)) {
                                 DropdownMenuItem(
@@ -475,6 +495,27 @@ fun FilesTab(vm: ServerDetailViewModel, onOpenFile: (String) -> Unit) {
             text = { Text(stringResource(R.string.this_looks_like_a_binary_file)) },
             confirmButton = { TextButton(onClick = { binaryWarning = null }) { Text(stringResource(R.string.ok)) } },
         )
+    }
+}
+
+/** The line with a Cancel button shown while a file or a backup is being saved to the phone. */
+@Composable
+fun DownloadProgress(vm: ServerDetailViewModel) {
+    val bytes = vm.downloadedBytes ?: return
+    val context = LocalContext.current
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.downloading_x_y, vm.downloadName, android.text.format.Formatter.formatShortFileSize(context, bytes)),
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            androidx.compose.material3.TextButton(onClick = { vm.cancelDownload() }) { Text(stringResource(R.string.cancel)) }
+        }
+        // Crafty doesn't say how big a download is, so the bar can't show a percentage.
+        LinearProgressIndicator(Modifier.fillMaxWidth())
     }
 }
 

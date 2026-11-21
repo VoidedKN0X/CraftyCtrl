@@ -9,6 +9,8 @@ class CraftyCtrlApp : Application() {
         AppStrings.context = this
         // The panels the user accepted plain HTTP for.
         com.vknxworks.craftyctrl.data.CleartextPolicy.init(this)
+        // The self-signed certificates the user confirmed by fingerprint.
+        com.vknxworks.craftyctrl.data.CertPins.init(this)
         // Registers with ntfy again (same address) when push from Crafty is on.
         com.vknxworks.craftyctrl.push.Push.start(this)
     }

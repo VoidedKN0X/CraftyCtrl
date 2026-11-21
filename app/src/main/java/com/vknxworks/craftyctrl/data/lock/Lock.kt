@@ -141,6 +141,7 @@ object Lock {
         settings.alertsEnabled = false
         CredentialStore(context).wipe()
         com.vknxworks.craftyctrl.data.CleartextPolicy.forgetAll()
+        com.vknxworks.craftyctrl.data.CertPins.forgetAll()
         vault(context).disable()
         settings.clearPin()
         deleteLegacyBiometricKey()

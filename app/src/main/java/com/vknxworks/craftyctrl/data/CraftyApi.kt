@@ -277,9 +277,9 @@ class CraftyApi(
             ).plus(extra).forEach { (k, v) -> b.header(k, v) }
             b.post(body.toRequestBody(OCTET))
             return try {
-                client().newCall(b.build()).execute().use { it.code to it.body?.string().orEmpty() }
+                client(baseUrl).newCall(b.build()).execute().use { it.code to it.body?.string().orEmpty() }
             } catch (e: IOException) {
-                throw CraftyException(0, "NETWORK", networkMessage(e))
+                throw networkError(e)
             }
         }
 
@@ -416,7 +416,7 @@ class CraftyApi(
             .apply { token?.let { header("Authorization", "Bearer $it") } }
             .build()
         try {
-            client().newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
+            client(baseUrl).newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
         } catch (e: IOException) {
             0 to str(R.string.network_error_x, networkMessage(e))
         }
@@ -439,7 +439,7 @@ class CraftyApi(
             .post(json.toRequestBody(JSON_TYPE))
             .build()
         try {
-            client().newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
+            client(baseUrl).newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
         } catch (e: IOException) {
             0 to str(R.string.network_error_x, networkMessage(e))
         }
@@ -567,6 +567,131 @@ class CraftyApi(
         }
     }
 
+    // ------------------------------------------------------------ panel: audit log, users, roles
+
+    /** Crafty's audit log, newest first. Only a superuser may read it. */
+    suspend fun auditLog(): List<AuditEntry> =
+        call("GET", "/crafty/logs/audit").dataArray().mapNotNull { (it as? JsonObject)?.let(AuditEntry::from) }
+
+    /** Every user (with the "user config" permission), or only yourself without it. */
+    suspend fun users(): List<PanelUser> =
+        call("GET", "/users").dataArray().mapNotNull { (it as? JsonObject)?.let(PanelUser::from) }
+
+    /** One user, with the roles they have. */
+    suspend fun user(userId: String): PanelUser =
+        (call("GET", "/users/$userId") as? JsonObject)?.obj("data")?.let(PanelUser::from)
+            ?: throw CraftyException(0, "BAD_RESPONSE", str(R.string.got_a_response_that_isn_t))
+
+    suspend fun userPermissions(userId: String): UserPermissions =
+        UserPermissions.from(call("GET", "/users/$userId/permissions"))
+
+    /** Creates a user; returns the new user's id. */
+    suspend fun createUser(fields: JsonObject): String? =
+        (call("POST", "/users", jsonBody(fields)) as? JsonObject)?.obj("data")?.str("user_id")
+
+    /** Changes a user; only the given fields change. */
+    suspend fun updateUser(userId: String, fields: JsonObject) {
+        call("PATCH", "/users/$userId", jsonBody(fields))
+    }
+
+    suspend fun deleteUser(userId: String) {
+        call("DELETE", "/users/$userId")
+    }
+
+    suspend fun roles(): List<PanelRole> =
+        call("GET", "/roles").dataArray().mapNotNull { (it as? JsonObject)?.let(PanelRole::from) }
+
+    /** The servers a role gives access to, with what it may do on each. Only a superuser may read this. */
+    suspend fun roleServers(roleId: String): List<RoleServer> =
+        call("GET", "/roles/$roleId/servers").dataArray().mapNotNull { (it as? JsonObject)?.let(RoleServer::from) }
+
+    suspend fun createRole(fields: JsonObject) {
+        call("POST", "/roles", jsonBody(fields))
+    }
+
+    suspend fun updateRole(roleId: String, fields: JsonObject) {
+        call("PATCH", "/roles/$roleId", jsonBody(fields))
+    }
+
+    suspend fun deleteRole(roleId: String) {
+        call("DELETE", "/roles/$roleId")
+    }
+
+    // ------------------------------------------------------------ downloads
+
+    /**
+     * Downloads a file from the server's folder; for a folder Crafty makes a zip of it first and sends that.
+     * [path] is the item's path as the file browser lists it.
+     */
+    suspend fun downloadFile(serverId: String, path: String, sink: java.io.OutputStream, onProgress: (Long) -> Unit) {
+        // Crafty's panel sends the whole path as one encoded segment (encodeURIComponent), so do the same.
+        val url = "$baseUrl/api/v2/servers/$serverId/files".toHttpUrlOrNull()?.newBuilder()
+            ?.addPathSegment(path)?.addPathSegment("download")?.build()
+            ?: throw CraftyException(0, "BAD_URL", str(R.string.that_panel_address_isn_t_a))
+        download(url, sink, onProgress)
+    }
+
+    /** Downloads one archive of a backup profile (Crafty 4.4+, where every profile has an id). */
+    suspend fun downloadBackup(serverId: String, backupId: String, fileName: String, sink: java.io.OutputStream, onProgress: (Long) -> Unit) {
+        val url = "$baseUrl/api/v2/servers/$serverId/backups/backup/$backupId/download".toHttpUrlOrNull()?.newBuilder()
+            ?.addPathSegment(fileName)?.build()
+            ?: throw CraftyException(0, "BAD_URL", str(R.string.that_panel_address_isn_t_a))
+        download(url, sink, onProgress)
+    }
+
+    /**
+     * Streams [url] into [sink], reporting the bytes written so far. Crafty sends downloads in pieces without
+     * saying the total size, and a big backup can take a while, so this request has no overall time limit
+     * (it still gives up when nothing arrives for a minute).
+     */
+    private suspend fun download(url: okhttp3.HttpUrl, sink: java.io.OutputStream, onProgress: (Long) -> Unit) = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url(url)
+            .header("Accept", "application/octet-stream, application/json")
+            .apply { token?.let { header("Authorization", "Bearer $it") } }
+            .build()
+        val call = downloadClient(baseUrl).newCall(request)
+        // Leaving the screen cancels the coroutine; that must also stop the transfer.
+        val job = coroutineContext[kotlinx.coroutines.Job]
+        val handle = job?.invokeOnCompletion { call.cancel() }
+        try {
+            val response = try {
+                call.execute()
+            } catch (e: IOException) {
+                throw networkError(e)
+            }
+            response.use { resp ->
+                val body = resp.body
+                val type = resp.header("Content-Type").orEmpty()
+                if (!resp.isSuccessful || body == null || type.startsWith("application/json")) {
+                    // An error comes back as Crafty's usual JSON, not as a file.
+                    val text = runCatching { body?.string().orEmpty() }.getOrDefault("")
+                    val obj = runCatching { json.parseToJsonElement(text) as? JsonObject }.getOrNull()
+                    if (resp.code == 401) main.post { onUnauthorized() }
+                    val code = obj?.str("error") ?: "HTTP_${resp.code}"
+                    throw CraftyException(resp.code, code, describeError(resp.code, code, obj?.str("error_data")))
+                }
+                try {
+                    val buffer = ByteArray(64 * 1024)
+                    var total = 0L
+                    val input = body.byteStream()
+                    while (true) {
+                        val n = input.read(buffer)
+                        if (n < 0) break
+                        sink.write(buffer, 0, n)
+                        total += n
+                        onProgress(total)
+                    }
+                    sink.flush()
+                } catch (e: IOException) {
+                    throw networkError(e)
+                }
+            }
+        } finally {
+            handle?.dispose()
+        }
+    }
+
     private suspend fun call(
         method: String,
         path: String,
@@ -583,16 +708,16 @@ class CraftyApi(
             .build()
 
         val response = try {
-            client().newCall(request).execute()
+            client(baseUrl).newCall(request).execute()
         } catch (e: IOException) {
-            throw CraftyException(0, "NETWORK", networkMessage(e))
+            throw networkError(e)
         }
 
         response.use { resp ->
             val text = try {
                 resp.body?.string().orEmpty()
             } catch (e: IOException) {
-                throw CraftyException(0, "NETWORK", networkMessage(e))
+                throw networkError(e)
             }
             val root = runCatching { json.parseToJsonElement(text) }.getOrNull()
             val obj = root as? JsonObject
@@ -658,13 +783,42 @@ class CraftyApi(
             dropPooled = true
         }
 
-        /** The shared client, after closing old connections if [dropIdleConnections] asked for it. */
-        private fun client(): OkHttpClient {
+        /**
+         * The shared client, after closing old connections if [dropIdleConnections] asked for it. For a panel
+         * whose self-signed certificate was confirmed by fingerprint, a client that also accepts exactly that
+         * certificate (same connection pool, timeouts and checks otherwise).
+         */
+        private fun client(baseUrl: String): OkHttpClient {
             if (dropPooled) {
                 dropPooled = false
                 runCatching { http.connectionPool.evictAll() }
             }
-            return http
+            val url = baseUrl.toHttpUrlOrNull() ?: return http
+            return Tls.clientFor(http, "rest", url)
+        }
+
+        /**
+         * A failed connection as the app's own error. "CERT" means the panel's certificate isn't trusted by
+         * the phone (the sign-in screen then offers to confirm it by fingerprint); "CERT_CHANGED" means the
+         * panel no longer shows the certificate that was confirmed.
+         */
+        private fun networkError(e: IOException): CraftyException = when {
+            Tls.isPinMismatch(e) -> CraftyException(0, "CERT_CHANGED", str(R.string.cert_pin_mismatch))
+            Tls.isCertificateError(e) -> CraftyException(0, "CERT", str(R.string.secure_connection_failed_android_doesn_t))
+            else -> CraftyException(0, "NETWORK", networkMessage(e))
+        }
+
+        /** The panel's client without the 30-second limit on a whole request, for downloads. */
+        private val httpDownloads by lazy {
+            http.newBuilder()
+                .callTimeout(0, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .build()
+        }
+
+        private fun downloadClient(baseUrl: String): OkHttpClient {
+            val url = baseUrl.toHttpUrlOrNull() ?: return httpDownloads
+            return Tls.clientFor(httpDownloads, "download", url)
         }
 
         /** Mojang is third party: HTTPS only, on every hop. */

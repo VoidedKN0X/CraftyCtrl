@@ -151,7 +151,13 @@ private fun AppRoot(
     // While locked, the screens underneath are hidden from accessibility services and screen readers.
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().then(if (lockVm.locked) Modifier.clearAndSetSemantics {} else Modifier)) {
-            AppContent(session, sessionVm)
+            // Adding another panel: the sign-in form, with the lock still on top of it like any other screen.
+            if (sessionVm.addingPanel) {
+                androidx.activity.compose.BackHandler { sessionVm.cancelAddPanel() }
+                LoginScreen(sessionVm, adding = true)
+            } else {
+                AppContent(session, sessionVm)
+            }
         }
         // Turning the lock on or off, or changing the PIN (from Settings, behind the profile picture), on top of the app.
         val request = PinRequests.request
@@ -294,10 +300,26 @@ private fun AppContent(session: Session, sessionVm: SessionViewModel) {
             composable("you") { entry ->
                 YouScreen(
                     session = session,
+                    otherPanels = sessionVm.otherPanels,
+                    onSwitchPanel = { sessionVm.switchTo(it) },
+                    onAddPanel = { sessionVm.startAddPanel() },
+                    onRemovePanel = { sessionVm.removePanel(it) },
+                    onUsers = { nav.go(entry, "users") },
+                    onRoles = { nav.go(entry, "roles") },
+                    onAuditLog = { nav.go(entry, "audit") },
                     onBack = { nav.back(entry) },
                     onSettings = { nav.go(entry, "settings") },
                     onSignOut = { sessionVm.signOut() },
                 )
+            }
+            composable("users") { entry ->
+                com.vknxworks.craftyctrl.ui.screens.UsersScreen(api = api, onBack = { nav.back(entry) })
+            }
+            composable("roles") { entry ->
+                com.vknxworks.craftyctrl.ui.screens.RolesScreen(api = api, onBack = { nav.back(entry) })
+            }
+            composable("audit") { entry ->
+                com.vknxworks.craftyctrl.ui.screens.AuditLogScreen(api = api, onBack = { nav.back(entry) })
             }
             composable("settings") { entry ->
                 SettingsScreen(api = api, onBack = { nav.back(entry) })

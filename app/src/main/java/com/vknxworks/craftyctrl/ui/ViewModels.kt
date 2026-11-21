@@ -72,6 +72,79 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
     val lastUrl: String get() = store.lastUrl
     val lastUsername: String get() = store.lastUsername
 
+    /** The other panels CraftyCtrl is signed in to (the one on screen is [session]). */
+    var otherPanels by mutableStateOf(store.others())
+        private set
+
+    /** True while the sign-in form is open to add another panel next to the one that's signed in. */
+    var addingPanel by mutableStateOf(false)
+        private set
+
+    /** The panel's certificate isn't trusted by the phone: shown so the user can confirm it by its fingerprint. */
+    var certPrompt by mutableStateOf<com.vknxworks.craftyctrl.data.CertInfo?>(null)
+        private set
+
+    fun dismissCertPrompt() {
+        certPrompt = null
+    }
+
+    /** The fingerprint on screen was confirmed: from now on exactly this certificate is accepted for this panel. */
+    fun trustCertificate(info: com.vknxworks.craftyctrl.data.CertInfo) {
+        com.vknxworks.craftyctrl.data.CertPins.accept(info.baseUrl, info.fingerprint)
+        certPrompt = null
+    }
+
+    fun startAddPanel() {
+        loginError = null
+        addingPanel = true
+    }
+
+    fun cancelAddPanel() {
+        loginError = null
+        certPrompt = null
+        addingPanel = false
+    }
+
+    /** Switches to another signed-in panel. Its token is read off the main thread (it asks the Keystore). */
+    fun switchTo(panel: com.vknxworks.craftyctrl.data.SavedPanel) {
+        if (busy) return
+        viewModelScope.launch {
+            busy = true
+            try {
+                val token = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    if (!store.activate(panel)) return@withContext null
+                    store.syncBackgroundCopy(settings.alertsEnabled)
+                    store.token()
+                }
+                otherPanels = store.others()
+                if (token == null) {
+                    // The saved login can't be read any more: this panel needs a new sign-in.
+                    store.clear()
+                    com.vknxworks.craftyctrl.data.lock.Lock.liveToken = null
+                    session = null
+                    loginError = str(R.string.panel_login_unreadable)
+                } else {
+                    com.vknxworks.craftyctrl.data.lock.Lock.liveToken = token
+                    loginError = null
+                    addingPanel = false
+                    // What the alert checks remembered belongs to the panel that was on screen before.
+                    com.vknxworks.craftyctrl.monitor.Checker.reset(getApplication<Application>())
+                    signIns++
+                    session = store.load()
+                }
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /** Forgets one of the other panels on this phone. */
+    fun removePanel(panel: com.vknxworks.craftyctrl.data.SavedPanel) {
+        store.removeOther(panel)
+        otherPanels = store.others()
+        if (!store.usesAddress(panel.baseUrl)) com.vknxworks.craftyctrl.data.CertPins.forget(panel.baseUrl)
+    }
+
     fun signIn(
         url: String,
         mode: AuthMode,
@@ -100,9 +173,13 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
                 // Proves the address and token work before saving anything.
                 CraftyApi(base, token).servers()
                 val s = Session(base, mode, username.trim().takeIf { mode == AuthMode.PASSWORD })
+                // Adding a panel: the one that was signed in stays signed in and waits with the others.
+                if (session != null && session != s) store.stashActive()
                 store.save(s, token)
                 store.syncBackgroundCopy(settings.alertsEnabled)
                 com.vknxworks.craftyctrl.data.lock.Lock.liveToken = token
+                otherPanels = store.others()
+                addingPanel = false
                 signIns++
                 session = s
             } catch (e: Exception) {
@@ -110,6 +187,16 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
                     str(R.string.crafty_rejected_that_api_key)
                 } else {
                     e.userMessage()
+                }
+                // A certificate the phone doesn't trust (Crafty's own self-signed one, or one that changed):
+                // read it without sending anything and let the user confirm it by its fingerprint.
+                if (e is CraftyException && e.errorCode in listOf("CERT", "CERT_CHANGED")) {
+                    val base = runCatching { CraftyApi.normalizeUrl(url) }.getOrNull()
+                    if (base != null) {
+                        certPrompt = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            runCatching { com.vknxworks.craftyctrl.data.CertPins.inspect(base) }.getOrNull()
+                        }
+                    }
                 }
             } finally {
                 busy = false
@@ -119,6 +206,8 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
 
     fun signOut(reason: String? = null) {
         store.clear()
+        otherPanels = store.others()
+        addingPanel = false
         com.vknxworks.craftyctrl.data.lock.Lock.liveToken = null
         session = null
         loginError = reason
@@ -713,6 +802,98 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 _messages.send(e.userMessage())
             } finally {
                 uploadProgress = null
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ downloads to the phone
+
+    /** Bytes received so far while a download to the phone is running, otherwise null. */
+    var downloadedBytes by mutableStateOf<Long?>(null)
+        private set
+
+    /** What is being downloaded, for the progress line. */
+    var downloadName by mutableStateOf("")
+        private set
+
+    private var downloadJob: kotlinx.coroutines.Job? = null
+
+    /** Saves a file (or a folder, which Crafty zips first) from the server's folder into [target], a document the user just created. */
+    fun downloadEntry(resolver: android.content.ContentResolver, target: android.net.Uri, entry: FileEntry) {
+        if (!insideServer(entry.path)) return
+        startDownload(resolver, target, entry.name) { sink, progress -> api.downloadFile(serverId, entry.path, sink, progress) }
+    }
+
+    /** Saves a backup archive into [target], a document the user just created. */
+    fun downloadBackup(resolver: android.content.ContentResolver, target: android.net.Uri, config: BackupConfig, fileName: String) {
+        val backupId = config.id
+        if (backupId == null) {
+            viewModelScope.launch {
+                runCatching { android.provider.DocumentsContract.deleteDocument(resolver, target) }
+                _messages.send(str(R.string.download_backup_needs_newer_crafty))
+            }
+            return
+        }
+        startDownload(resolver, target, fileName) { sink, progress -> api.downloadBackup(serverId, backupId, fileName, sink, progress) }
+    }
+
+    fun cancelDownload() {
+        downloadJob?.cancel()
+    }
+
+    private fun startDownload(
+        resolver: android.content.ContentResolver,
+        target: android.net.Uri,
+        name: String,
+        fetch: suspend (java.io.OutputStream, (Long) -> Unit) -> Unit,
+    ) {
+        if (downloadedBytes != null) {
+            // One download at a time; the document that was just created for this one stays empty, so remove it.
+            runCatching { android.provider.DocumentsContract.deleteDocument(resolver, target) }
+            viewModelScope.launch { _messages.send(str(R.string.download_already_running)) }
+            return
+        }
+        downloadName = name
+        downloadedBytes = 0L
+        downloadJob = viewModelScope.launch {
+            var done = false
+            try {
+                val out = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { resolver.openOutputStream(target, "w") }
+                if (out == null) {
+                    _messages.send(str(R.string.download_cant_write))
+                    return@launch
+                }
+                var lastShown = 0L
+                out.use { sink ->
+                    fetch(sink) { bytes ->
+                        // Not every 64 KB piece needs to redraw the screen.
+                        if (bytes - lastShown >= 512 * 1024) {
+                            lastShown = bytes
+                            downloadedBytes = bytes
+                        }
+                    }
+                }
+                done = true
+                _messages.send(str(R.string.downloaded_x, name))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val message = if (e is CraftyException && e.httpCode in listOf(404, 405)) {
+                    str(R.string.download_not_supported)
+                } else {
+                    e.userMessage()
+                }
+                _messages.send(message)
+            } finally {
+                downloadedBytes = null
+                downloadJob = null
+                // A download that failed or was cancelled leaves no half-written file behind. It is the
+                // document that was created for this download a moment ago, never an existing file.
+                if (!done) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) {
+                        runCatching { android.provider.DocumentsContract.deleteDocument(resolver, target) }
+                    }
+                }
             }
         }
     }

@@ -78,7 +78,20 @@ private const val LICENCE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
  * on which Crafty panel, the way into Settings, signing out, and the About section every Ctrl app ends with.
  */
 @Composable
-fun YouScreen(session: Session, onBack: () -> Unit, onSettings: () -> Unit, onSignOut: () -> Unit) {
+fun YouScreen(
+    session: Session,
+    otherPanels: List<com.vknxworks.craftyctrl.data.SavedPanel>,
+    onSwitchPanel: (com.vknxworks.craftyctrl.data.SavedPanel) -> Unit,
+    onAddPanel: () -> Unit,
+    onRemovePanel: (com.vknxworks.craftyctrl.data.SavedPanel) -> Unit,
+    onUsers: () -> Unit,
+    onRoles: () -> Unit,
+    onAuditLog: () -> Unit,
+    onBack: () -> Unit,
+    onSettings: () -> Unit,
+    onSignOut: () -> Unit,
+) {
+    var removing by remember { mutableStateOf<com.vknxworks.craftyctrl.data.SavedPanel?>(null) }
     val cs = MaterialTheme.colorScheme
     val uriHandler = LocalUriHandler.current
     var confirmSignOut by remember { mutableStateOf(false) }
@@ -153,6 +166,67 @@ fun YouScreen(session: Session, onBack: () -> Unit, onSettings: () -> Unit, onSi
                     icon = if (notEncrypted) Icons.Outlined.LockOpen else Icons.Outlined.Dns,
                     iconTint = if (notEncrypted) CtrlColors.Error else CtrlColors.Muted,
                 )
+                // A self-signed certificate that was confirmed by its fingerprint when signing in.
+                com.vknxworks.craftyctrl.data.CertPins.pinFor(session.baseUrl)?.let { pin ->
+                    GroupRow(
+                        stringResource(R.string.cert_confirmed_title),
+                        pin,
+                        icon = Icons.Outlined.Gavel,
+                    )
+                }
+            }
+
+            // Panel-wide things. Crafty decides who may open them (users and roles need those permissions,
+            // the audit log a superuser); without the right the page says so.
+            Group(stringResource(R.string.panel_manage_group)) {
+                GroupRow(
+                    stringResource(R.string.users_title),
+                    stringResource(R.string.users_subtitle),
+                    icon = Icons.Outlined.AccountCircle,
+                    showChevron = true,
+                    onClick = onUsers,
+                )
+                GroupRow(
+                    stringResource(R.string.roles_title),
+                    stringResource(R.string.roles_subtitle),
+                    icon = Icons.Outlined.Gavel,
+                    showChevron = true,
+                    onClick = onRoles,
+                )
+                GroupRow(
+                    stringResource(R.string.audit_title),
+                    stringResource(R.string.audit_subtitle),
+                    icon = Icons.Outlined.BugReport,
+                    showChevron = true,
+                    onClick = onAuditLog,
+                )
+            }
+
+            // The other panels CraftyCtrl is signed in to: tap one to switch to it.
+            Group(
+                stringResource(R.string.panels_other_group),
+                footer = stringResource(R.string.panels_footer),
+            ) {
+                otherPanels.forEach { panel ->
+                    GroupRow(
+                        panel.baseUrl.substringAfter("://"),
+                        panel.username ?: stringResource(R.string.you_api_key_user),
+                        icon = Icons.Outlined.Dns,
+                        onClick = { onSwitchPanel(panel) },
+                        trailing = {
+                            IconButton(onClick = { removing = panel }) {
+                                Icon(Icons.AutoMirrored.Filled.Logout, stringResource(R.string.panel_remove), tint = CtrlColors.Muted)
+                            }
+                        },
+                    )
+                }
+                GroupRow(
+                    stringResource(R.string.panel_add),
+                    stringResource(R.string.panel_add_subtitle),
+                    icon = Icons.Outlined.AccountCircle,
+                    showChevron = true,
+                    onClick = onAddPanel,
+                )
             }
 
             Group {
@@ -219,6 +293,21 @@ fun YouScreen(session: Session, onBack: () -> Unit, onSettings: () -> Unit, onSi
                 textAlign = TextAlign.Center,
             )
         }
+    }
+
+    removing?.let { panel ->
+        CtrlDialog(
+            onDismissRequest = { removing = null },
+            icon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
+            title = { Text(stringResource(R.string.panel_remove_title)) },
+            text = { Text(stringResource(R.string.panel_remove_body, panel.baseUrl.substringAfter("://"))) },
+            confirmButton = {
+                TextButton(onClick = { removing = null; onRemovePanel(panel) }) {
+                    Text(stringResource(R.string.panel_remove), color = cs.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { removing = null }) { Text(stringResource(R.string.cancel)) } },
+        )
     }
 
     if (confirmSignOut) {
