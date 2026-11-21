@@ -97,6 +97,11 @@
     <string name="list_operators">Operators</string>
     <string name="list_banned_players">Gebande spelers</string>
     <string name="list_banned_ips">Gebande IP-adressen</string>
+    <string name="list_whitelist_in_sentence">whitelist</string>
+    <string name="list_allowlist_in_sentence">allowlist</string>
+    <string name="list_operators_in_sentence">operatorlijst</string>
+    <string name="list_banned_players_in_sentence">lijst met gebande spelers</string>
+    <string name="list_banned_ips_in_sentence">lijst met gebande IP-adressen</string>
     <string name="list_allowlist">Allowlist</string>
     <string name="unknown">Onbekend</string>
     <string name="state_running">Actief</string>
@@ -587,7 +592,11 @@
     <string name="message_sent_to_x">Bericht verstuurd naar %1$s</string>
     <string name="send">Versturen</string>
     <string name="game_mode">Spelmodus</string>
-    <string name="x_is_now_in_x">%1$s zit nu in %2$s</string>
+    <string name="game_mode_survival">Overleven</string>
+    <string name="game_mode_creative">Creatief</string>
+    <string name="game_mode_adventure">Avontuur</string>
+    <string name="game_mode_spectator">Toeschouwer</string>
+    <string name="x_is_now_in_x">%1$s zit nu in spelmodus %2$s</string>
     <string name="permissions">Rechten</string>
     <string name="x_is_now_an_operator">%1$s is nu operator</string>
     <string name="remove_operator">Operator afnemen</string>

@@ -221,7 +221,7 @@ class PlayersViewModel(api: CraftyApi, serverId: String) : ManageBase(api, serve
         val name = list.fileName(isBedrock) ?: return
         val loaded = lists[list]
         if (loaded?.data == null || loaded.error != null) {
-            throw CraftyException(0, "NOT_LOADED", str(R.string.the_x_hasn_t_loaded_so, list.titleFor(isBedrock).lowercase()))
+            throw CraftyException(0, "NOT_LOADED", str(R.string.the_x_hasn_t_loaded_so, list.sentenceTitleFor(isBedrock)))
         }
         val text = api.readText(serverId, join(folder(), name))
         if (text == null && loaded.data.isNotEmpty()) {

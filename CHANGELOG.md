@@ -5,6 +5,11 @@ Each version below becomes a GitHub release. To publish a new one: bump `version
 
 ## Unreleased
 
+### Fixed
+
+- **Game mode buttons and message in your language.** The Survival, Creative, Adventure and Spectator buttons on a player's sheet, and the "… is now in … mode" message after tapping one, used Minecraft's English command words. They now use the phone's language (for example "Überleben" in German, "Survie" in French). The command sent to the server is unchanged.
+- **Player list names inside sentences read right.** "Remove … from the whitelist?" and "The … list hasn't loaded" put the list's title in lower case, which broke German nouns ("whitelist", "gebannte spieler") and lowered "IPs" to "ips" in every language. Each language now has its own wording for the list inside a sentence, such as "the banned IPs list", "die Liste der gebannten Spieler" or "la liste des joueurs bannis".
+
 ### Documentation
 
 - **README Requirements corrected:** it still said Crafty's own self-signed certificate isn't accepted. Since 2.14.0 it is, once you confirm its fingerprint, as the Features list already said.

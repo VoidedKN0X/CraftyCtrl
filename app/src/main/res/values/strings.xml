@@ -99,6 +99,11 @@
     <string name="list_operators">Operators</string>
     <string name="list_banned_players">Banned players</string>
     <string name="list_banned_ips">Banned IPs</string>
+    <string name="list_whitelist_in_sentence">whitelist</string>
+    <string name="list_allowlist_in_sentence">allowlist</string>
+    <string name="list_operators_in_sentence">operators list</string>
+    <string name="list_banned_players_in_sentence">banned players list</string>
+    <string name="list_banned_ips_in_sentence">banned IPs list</string>
     <string name="list_allowlist">Allowlist</string>
     <string name="unknown">Unknown</string>
     <string name="state_running">Running</string>
@@ -591,7 +596,11 @@
     <string name="message_sent_to_x">Message sent to %1$s</string>
     <string name="send">Send</string>
     <string name="game_mode">Game mode</string>
-    <string name="x_is_now_in_x">%1$s is now in %2$s</string>
+    <string name="game_mode_survival">Survival</string>
+    <string name="game_mode_creative">Creative</string>
+    <string name="game_mode_adventure">Adventure</string>
+    <string name="game_mode_spectator">Spectator</string>
+    <string name="x_is_now_in_x">%1$s is now in %2$s mode</string>
     <string name="permissions">Permissions</string>
     <string name="x_is_now_an_operator">%1$s is now an operator</string>
     <string name="remove_operator">Remove operator</string>

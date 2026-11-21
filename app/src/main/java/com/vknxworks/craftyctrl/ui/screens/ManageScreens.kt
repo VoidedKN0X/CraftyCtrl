@@ -453,7 +453,7 @@ fun PlayersScreen(api: CraftyApi, serverId: String, onBack: () -> Unit) {
 
     removing?.let { (list, e) ->
         val verb = when (list) {
-            PlayerList.WHITELIST -> stringResource(R.string.remove_x_from_the_x, e.label, list.titleFor(vm.isBedrock).lowercase())
+            PlayerList.WHITELIST -> stringResource(R.string.remove_x_from_the_x, e.label, list.sentenceTitleFor(vm.isBedrock))
             PlayerList.OPS -> stringResource(R.string.remove_operator_rights_from_x, e.label)
             PlayerList.BANNED_PLAYERS, PlayerList.BANNED_IPS -> stringResource(R.string.unban_x, e.label)
         }

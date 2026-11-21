@@ -136,12 +136,18 @@ fun PlayerSheet(
 
             SectionLabel(stringResource(R.string.game_mode))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("survival", "creative", "adventure", "spectator").forEach { mode ->
+                listOf(
+                    "survival" to R.string.game_mode_survival,
+                    "creative" to R.string.game_mode_creative,
+                    "adventure" to R.string.game_mode_adventure,
+                    "spectator" to R.string.game_mode_spectator,
+                ).forEach { (mode, labelRes) ->
+                    val label = stringResource(labelRes)
                     FilterChip(
                         selected = false,
                         enabled = ready,
-                        onClick = { run("gamemode $mode $t", str(R.string.x_is_now_in_x, name, mode)) },
-                        label = { Text(mode.replaceFirstChar { it.uppercase() }) },
+                        onClick = { run("gamemode $mode $t", str(R.string.x_is_now_in_x, name, label)) },
+                        label = { Text(label) },
                     )
                 }
             }

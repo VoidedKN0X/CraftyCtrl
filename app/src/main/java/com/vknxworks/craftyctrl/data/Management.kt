@@ -104,11 +104,11 @@ fun withMemory(command: String, minMb: Int, maxMb: Int): String {
 // ---------------------------------------------------------------- player lists
 
 /** The player lists a server keeps as JSON files next to server.properties. */
-enum class PlayerList(@StringRes private val titleRes: Int) {
-    WHITELIST(R.string.list_whitelist),
-    OPS(R.string.list_operators),
-    BANNED_PLAYERS(R.string.list_banned_players),
-    BANNED_IPS(R.string.list_banned_ips);
+enum class PlayerList(@StringRes private val titleRes: Int, @StringRes private val sentenceRes: Int) {
+    WHITELIST(R.string.list_whitelist, R.string.list_whitelist_in_sentence),
+    OPS(R.string.list_operators, R.string.list_operators_in_sentence),
+    BANNED_PLAYERS(R.string.list_banned_players, R.string.list_banned_players_in_sentence),
+    BANNED_IPS(R.string.list_banned_ips, R.string.list_banned_ips_in_sentence);
 
     val title: String get() = str(titleRes)
 
@@ -120,6 +120,9 @@ enum class PlayerList(@StringRes private val titleRes: Int) {
     }
 
     fun titleFor(bedrock: Boolean) = if (this == WHITELIST && bedrock) str(R.string.list_allowlist) else title
+
+    /** The list's name as it reads inside a sentence ("the whitelist", German "die Whitelist"), with each language's own case. */
+    fun sentenceTitleFor(bedrock: Boolean) = if (this == WHITELIST && bedrock) str(R.string.list_allowlist_in_sentence) else str(sentenceRes)
 
     companion object {
         fun forServer(bedrock: Boolean): List<PlayerList> =

@@ -101,6 +101,11 @@
     <string name="list_operators">Opérateurs</string>
     <string name="list_banned_players">Joueurs bannis</string>
     <string name="list_banned_ips">IP bannies</string>
+    <string name="list_whitelist_in_sentence">whitelist</string>
+    <string name="list_allowlist_in_sentence">allowlist</string>
+    <string name="list_operators_in_sentence">liste des opérateurs</string>
+    <string name="list_banned_players_in_sentence">liste des joueurs bannis</string>
+    <string name="list_banned_ips_in_sentence">liste des IP bannies</string>
     <string name="list_allowlist">Allowlist</string>
     <string name="unknown">Inconnu</string>
     <string name="state_running">En marche</string>
@@ -383,7 +388,7 @@
     <string name="this_server_has_no_server_properties">Ce serveur n\'a pas encore de server.properties. Démarrez-le une fois et le serveur en crée un.</string>
     <string name="couldn_t_read_server_properties_just">Impossible de lire server.properties pour l\'instant. Rien n\'a été modifié.</string>
     <string name="x_isn_t_valid_json_so">%1$s n\'est pas du JSON valide, l\'application ne le modifiera donc pas. Corrigez-le dans l\'onglet Fichiers.</string>
-    <string name="the_x_hasn_t_loaded_so">La liste %1$s n\'est pas chargée, elle ne peut donc pas être modifiée en sécurité. Rechargez et réessayez.</string>
+    <string name="the_x_hasn_t_loaded_so">La %1$s n\'est pas chargée, elle ne peut donc pas être modifiée en sécurité. Rechargez et réessayez.</string>
     <string name="couldn_t_read_x_just_now">Impossible de lire %1$s pour l\'instant. Rien n\'a été modifié.</string>
     <string name="x_isn_t_valid_json_so_2">%1$s n\'est pas du JSON valide, l\'application ne le modifiera donc pas.</string>
     <string name="there_s_no_minecraft_account_named">Il n\'existe pas de compte Minecraft nommé %1$s.</string>
@@ -552,7 +557,7 @@
     <string name="operators_get_permission_level_4_full">Les opérateurs reçoivent le niveau d\'autorisation 4 (accès complet).</string>
     <string name="ban">Bannir</string>
     <string name="add">Ajouter</string>
-    <string name="remove_x_from_the_x">Retirer %1$s de la liste %2$s ?</string>
+    <string name="remove_x_from_the_x">Retirer %1$s de la %2$s ?</string>
     <string name="remove_operator_rights_from_x">Retirer les droits d\'opérateur de %1$s ?</string>
     <string name="unban_x">Débannir %1$s ?</string>
     <string name="crafty_s_settings_for_this_server">Réglages de Crafty pour ce serveur</string>
@@ -593,7 +598,11 @@
     <string name="message_sent_to_x">Message envoyé à %1$s</string>
     <string name="send">Envoyer</string>
     <string name="game_mode">Mode de jeu</string>
-    <string name="x_is_now_in_x">%1$s est maintenant en %2$s</string>
+    <string name="game_mode_survival">Survie</string>
+    <string name="game_mode_creative">Créatif</string>
+    <string name="game_mode_adventure">Aventure</string>
+    <string name="game_mode_spectator">Spectateur</string>
+    <string name="x_is_now_in_x">%1$s est maintenant en mode %2$s</string>
     <string name="permissions">Autorisations</string>
     <string name="x_is_now_an_operator">%1$s est maintenant opérateur</string>
     <string name="remove_operator">Retirer opérateur</string>
