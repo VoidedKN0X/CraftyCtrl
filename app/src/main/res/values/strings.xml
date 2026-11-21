@@ -671,7 +671,7 @@
     <string name="no_backup_profiles_found">No backup profiles found</string>
     <string name="you_can_still_trigger_the_server">You can still trigger the server\'s default backup.</string>
     <string name="back_up_now">Back up now</string>
-    <string name="backups_run_on_the_crafty_host">Backups run on the Crafty host. Downloading backup archives stays in the web panel.</string>
+    <string name="backups_run_on_the_crafty_host">Backups run on the Crafty host. To save an archive on this phone, open Restore a backup and pick it.</string>
     <string name="restore_x">Restore %1$s</string>
     <string name="default_label">Default</string>
     <string name="last_result">Last result</string>
@@ -836,7 +836,7 @@
     <string name="logs_folder">logs folder</string>
     <string name="no_log_files_yet">No log files yet.</string>
     <string name="current_session">Current session</string>
-    <string name="compressed_download_it_from_the_web">Compressed: download it from the web panel to read it</string>
+    <string name="compressed_download_it_from_the_web">Compressed: download it in the Files tab to read it</string>
     <string name="older_log">Older log</string>
     <string name="search_this_log">Search this log</string>
     <string name="showing_the_last_x_lines">Showing the last %1$s lines.</string>
