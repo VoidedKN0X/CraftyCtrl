@@ -432,7 +432,7 @@ class AddonsViewModel(api: CraftyApi, serverId: String) : ManageBase(api, server
             busy = a.path
             try {
                 api.renameEntry(serverId, a.path, newName)
-                _messages.send("${a.name} ${if (on) "enabled" else "disabled"}. Restart the server to apply.")
+                _messages.send(str(if (on) R.string.enabled_x_restart_the_server_to else R.string.disabled_x_restart_the_server_to, a.name))
                 load()
             } catch (e: Exception) {
                 _messages.send(e.msg())
@@ -486,7 +486,7 @@ class AddonsViewModel(api: CraftyApi, serverId: String) : ManageBase(api, server
                         uploadProgress = p
                     }
                 }
-                _messages.send("Added ${name.removeSuffix(".jar")}. Restart the server to load it.")
+                _messages.send(str(R.string.added_x_restart_the_server_to, name.removeSuffix(".jar")))
                 load()
             } catch (e: Exception) {
                 _messages.send(e.msg())

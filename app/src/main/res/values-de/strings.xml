@@ -401,6 +401,9 @@
     <string name="this_server_has_no_server_properties_2">Dieser Server hat noch keine server.properties.</string>
     <string name="server_options_saved">Serveroptionen gespeichert</string>
     <string name="removed_x_restart_the_server_to">%1$s entfernt. Starte den Server neu, um es zu übernehmen.</string>
+    <string name="enabled_x_restart_the_server_to">%1$s aktiviert. Starte den Server neu, um es zu übernehmen.</string>
+    <string name="disabled_x_restart_the_server_to">%1$s deaktiviert. Starte den Server neu, um es zu übernehmen.</string>
+    <string name="added_x_restart_the_server_to">%1$s hinzugefügt. Starte den Server neu, um es zu laden.</string>
     <string name="pick_a_jar_file">Wähle eine .jar-Datei.</string>
     <string name="couldn_t_read_the_file_size">Die Dateigröße konnte nicht gelesen werden.</string>
     <string name="couldn_t_open_that_file">Diese Datei konnte nicht geöffnet werden.</string>

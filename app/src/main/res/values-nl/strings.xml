@@ -395,6 +395,9 @@
     <string name="this_server_has_no_server_properties_2">Deze server heeft nog geen server.properties.</string>
     <string name="server_options_saved">Serveropties opgeslagen</string>
     <string name="removed_x_restart_the_server_to">%1$s verwijderd. Herstart de server om het toe te passen.</string>
+    <string name="enabled_x_restart_the_server_to">%1$s ingeschakeld. Herstart de server om het toe te passen.</string>
+    <string name="disabled_x_restart_the_server_to">%1$s uitgeschakeld. Herstart de server om het toe te passen.</string>
+    <string name="added_x_restart_the_server_to">%1$s toegevoegd. Herstart de server om het te laden.</string>
     <string name="pick_a_jar_file">Kies een .jar-bestand.</string>
     <string name="couldn_t_read_the_file_size">De bestandsgrootte kon niet worden gelezen.</string>
     <string name="couldn_t_open_that_file">Dat bestand kon niet worden geopend.</string>

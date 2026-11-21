@@ -399,6 +399,9 @@
     <string name="this_server_has_no_server_properties_2">This server has no server.properties yet.</string>
     <string name="server_options_saved">Server options saved</string>
     <string name="removed_x_restart_the_server_to">Removed %1$s. Restart the server to apply.</string>
+    <string name="enabled_x_restart_the_server_to">%1$s enabled. Restart the server to apply.</string>
+    <string name="disabled_x_restart_the_server_to">%1$s disabled. Restart the server to apply.</string>
+    <string name="added_x_restart_the_server_to">Added %1$s. Restart the server to load it.</string>
     <string name="pick_a_jar_file">Pick a .jar file.</string>
     <string name="couldn_t_read_the_file_size">Couldn\'t read the file size.</string>
     <string name="couldn_t_open_that_file">Couldn\'t open that file.</string>
