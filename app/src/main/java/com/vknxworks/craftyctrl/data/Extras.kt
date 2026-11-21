@@ -128,6 +128,25 @@ data class HostStats(
             )
         }
 
+        /**
+         * [prev] with the numbers from the dashboard WebSocket's "update_host_stats" filled in. The message
+         * has the processor, memory and disks, but no memory total or boot time.
+         */
+        fun merged(prev: HostStats?, live: JsonObject): HostStats {
+            val fresh = fromJson(JsonObject(live + mapOf("disk_json" to (live["disk_usage"] ?: JsonPrimitive("")))))
+            if (prev == null) return fresh
+            return fresh.copy(
+                cpuPercent = fresh.cpuPercent ?: prev.cpuPercent,
+                cpuCores = fresh.cpuCores ?: prev.cpuCores,
+                cpuFreq = fresh.cpuFreq ?: prev.cpuFreq,
+                memPercent = fresh.memPercent ?: prev.memPercent,
+                memUsed = fresh.memUsed ?: prev.memUsed,
+                memTotal = prev.memTotal,
+                disks = fresh.disks.ifEmpty { prev.disks },
+                bootTime = prev.bootTime,
+            )
+        }
+
         /** Prometheus/OpenMetrics text from /metrics/host, e.g. "CPU_Usage 1.54". */
         fun fromMetrics(text: String): HostStats {
             val values = text.lineSequence()

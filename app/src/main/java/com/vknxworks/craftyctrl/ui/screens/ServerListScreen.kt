@@ -89,6 +89,22 @@ fun ServerListScreen(
     // The list asks for every server at once, so it refreshes a little less often than one server.
     val refreshMs = rememberRefreshMs().coerceAtLeast(3_000)
     PollWhileVisible(api to refreshMs, refreshMs) { vm.refresh() }
+    // Live stats over Crafty's dashboard WebSocket while the list is on screen; the timer above then asks less often.
+    val liveOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(vm, liveOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_START -> vm.startLive()
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> vm.stopLive()
+                else -> Unit
+            }
+        }
+        liveOwner.lifecycle.addObserver(observer)
+        onDispose {
+            liveOwner.lifecycle.removeObserver(observer)
+            vm.stopLive()
+        }
+    }
 
     val host = remember(api.baseUrl) { runCatching { URI(api.baseUrl).host }.getOrNull() ?: api.baseUrl }
     var tab by rememberSaveable { mutableIntStateOf(0) }

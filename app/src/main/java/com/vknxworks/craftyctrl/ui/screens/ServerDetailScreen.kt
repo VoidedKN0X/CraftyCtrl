@@ -245,6 +245,22 @@ fun ServerDetailScreen(
     LaunchedEffect(vm) { vm.messages.collect { snackbar.showSnackbar(it) } }
     val refreshMs = rememberRefreshMs()
     PollWhileVisible(serverId to refreshMs, refreshMs) { vm.refreshStats() }
+    // Live stats over Crafty's WebSocket while this page is on screen; the timer above then asks less often.
+    val liveOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(vm, liveOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_START -> vm.startLiveStats()
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> vm.stopLiveStats()
+                else -> Unit
+            }
+        }
+        liveOwner.lifecycle.addObserver(observer)
+        onDispose {
+            liveOwner.lifecycle.removeObserver(observer)
+            vm.stopLiveStats()
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -1120,6 +1136,18 @@ private fun BackupsTab(vm: ServerDetailViewModel) {
                     busy = vm.backupInFlight != null,
                     onAction = { vm.runBackup(null) },
                 )
+            }
+        }
+        vm.backupPercent?.let { percent ->
+            item(key = "backup-progress") {
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        stringResource(R.string.backup_running_percent, percent),
+                        style = CtrlType.MonoStatus,
+                        color = CtrlColors.AccentText,
+                    )
+                    com.vknxworks.craftyctrl.ui.components.CtrlProgress(percent / 100f, Modifier.fillMaxWidth(), color = CtrlColors.AccentText)
+                }
             }
         }
         if (list != null) {

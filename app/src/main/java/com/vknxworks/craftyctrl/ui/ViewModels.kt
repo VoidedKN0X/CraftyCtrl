@@ -170,10 +170,136 @@ class ServerListViewModel(private val api: CraftyApi) : ViewModel() {
         }
     }
 
-    /** Refreshes servers and host stats side by side. */
-    suspend fun refresh() = coroutineScope {
+    /**
+     * Refreshes servers and host stats side by side. While Crafty's dashboard WebSocket is delivering both
+     * ([live]), the timer's requests are thinned out to one every [LIST_LIVE_REST_MS]; [force] always asks.
+     */
+    suspend fun refresh(force: Boolean = false) = coroutineScope {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (!force && live && now - lastSocketEvent < LIST_SOCKET_FRESH_MS && now - lastRest < LIST_LIVE_REST_MS) return@coroutineScope
+        lastRest = now
         launch { refreshHost() }
         refreshServers()
+    }
+
+    // ------------------------------------------------------------ live stats (WebSocket)
+
+    /** True while Crafty's dashboard WebSocket is delivering server and host stats. */
+    var live by mutableStateOf(false)
+        private set
+    private var lastSocketEvent = 0L
+    private var lastRest = 0L
+    private var liveWanted = false
+    private var socket: com.vknxworks.craftyctrl.data.ConsoleSocket? = null
+    private var reconnect: kotlinx.coroutines.Job? = null
+    private var socketFailures = 0
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /** The list is on screen: open the dashboard socket, reconnecting on its own until [stopLive]. */
+    fun startLive() {
+        liveWanted = true
+        if (socket != null || reconnect?.isActive == true) return
+        connectSocket()
+    }
+
+    /** The list left the screen. */
+    fun stopLive() {
+        liveWanted = false
+        reconnect?.cancel()
+        reconnect = null
+        val s = socket
+        socket = null
+        s?.close()
+        live = false
+    }
+
+    private fun connectSocket() {
+        // No token while the app is locked: nothing is opened until it unlocks.
+        val token = api.currentToken()
+        if (token == null) {
+            scheduleReconnect()
+            return
+        }
+        var self: com.vknxworks.craftyctrl.data.ConsoleSocket? = null
+        val s = com.vknxworks.craftyctrl.data.ConsoleSocket(api.baseUrl, null, token, object : com.vknxworks.craftyctrl.data.ConsoleSocket.Listener {
+            override fun onOpen() {
+                mainHandler.post { if (socket === self && self != null) socketFailures = 0 }
+            }
+
+            override fun onLine(line: String) {}
+
+            override fun onEvent(event: String, data: kotlinx.serialization.json.JsonElement) {
+                mainHandler.post { if (liveWanted && socket === self && self != null) onSocketEvent(event, data) }
+            }
+
+            override fun onClosed(unauthorized: Boolean) {
+                mainHandler.post {
+                    if (socket !== self || self == null) return@post
+                    socket = null
+                    live = false
+                    socketFailures++
+                    if (liveWanted) scheduleReconnect()
+                }
+            }
+        })
+        self = s
+        socket = s
+        if (!s.connect()) {
+            socket = null
+            socketFailures++
+            scheduleReconnect()
+        }
+    }
+
+    /** Tries again after 2, 4, 8 … up to 60 seconds; the stats are polled meanwhile. */
+    private fun scheduleReconnect() {
+        if (!liveWanted || reconnect?.isActive == true) return
+        val wait = (2_000L shl socketFailures.coerceIn(0, 5)).coerceAtMost(60_000L)
+        reconnect = viewModelScope.launch {
+            delay(wait)
+            reconnect = null
+            if (liveWanted && socket == null) connectSocket()
+        }
+    }
+
+    private fun onSocketEvent(event: String, data: kotlinx.serialization.json.JsonElement) {
+        when (event) {
+            // A list with the stats of the servers that changed (one message per server).
+            "update_server_status" -> {
+                val updates = (data as? kotlinx.serialization.json.JsonArray).orEmpty()
+                    .filterIsInstance<kotlinx.serialization.json.JsonObject>()
+                    .mapNotNull { o -> (o["id"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull?.let { it to o } }
+                    .toMap()
+                if (updates.isEmpty()) return
+                var changed = false
+                val next = rows.map { row ->
+                    val o = updates[row.summary.id] ?: return@map row
+                    changed = true
+                    val merged = ServerStats.merged(row.stats, o)
+                    row.copy(stats = merged.copy(version = merged.version ?: fallbackVersions[row.summary.id]))
+                }
+                if (changed) {
+                    rows = next
+                    lastSocketEvent = android.os.SystemClock.elapsedRealtime()
+                    live = true
+                }
+            }
+            "update_host_stats" -> {
+                if (hostDenied) return
+                val o = data as? kotlinx.serialization.json.JsonObject ?: return
+                val h = HostStats.merged(host, o)
+                if (h.isEmpty) return
+                host = h
+                hostError = null
+                h.cpuPercent?.let { hostCpuSamples = (hostCpuSamples + it.toFloat()).takeLast(HOST_SAMPLES) }
+                h.memPercent?.let { hostMemSamples = (hostMemSamples + it.toFloat()).takeLast(HOST_SAMPLES) }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        stopLive()
+        super.onCleared()
     }
 
     private suspend fun refreshServers() {
@@ -244,13 +370,17 @@ class ServerListViewModel(private val api: CraftyApi) : ViewModel() {
     fun refreshNow() {
         viewModelScope.launch {
             refreshing = true
-            refresh()
+            refresh(force = true)
             refreshing = false
         }
     }
 }
 
 private const val HOST_SAMPLES = 60
+/** Socket stats older than this no longer count as live. */
+private const val LIST_SOCKET_FRESH_MS = 20_000L
+/** While the socket delivers the stats, a full answer is still fetched this often. */
+private const val LIST_LIVE_REST_MS = 15_000L
 
 // ---------------------------------------------------------------- server detail
 
@@ -596,7 +726,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 api.sendCommand(serverId, command)
                 _messages.send(done)
                 delay(1200)
-                refreshStats()
+                refreshStats(force = true)
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
             }
@@ -615,19 +745,79 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     private val _messages = Channel<String>(Channel.BUFFERED)
     val messages: Flow<String> = _messages.receiveAsFlow()
 
-    suspend fun refreshStats() {
+    /**
+     * Asks Crafty for the stats. While the WebSocket is delivering them ([statsLive]), the timer's requests
+     * are thinned out to one every [LIVE_REST_MS]: the socket's messages have the numbers but not the
+     * "waiting to start" and "updating" flags, so a full answer is still needed now and then. [force] always asks.
+     */
+    suspend fun refreshStats(force: Boolean = false) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (!force && statsLive && now - lastSocketStats < SOCKET_FRESH_MS && now - lastRestStats < LIVE_REST_MS) return
         try {
             val s = api.stats(serverId)
+            lastRestStats = android.os.SystemClock.elapsedRealtime()
             stats = s
             statsError = null
-            liveSamples = (liveSamples + HistoryPoint(
-                time = System.currentTimeMillis(),
-                cpu = s.cpu,
-                memPercent = s.memPercent,
-                players = s.online,
-            )).takeLast(LIVE_SAMPLES)
+            addLiveSample(s)
         } catch (e: Exception) {
             statsError = e.userMessage()
+        }
+    }
+
+    private fun addLiveSample(s: ServerStats) {
+        liveSamples = (liveSamples + HistoryPoint(
+            time = System.currentTimeMillis(),
+            cpu = s.cpu,
+            memPercent = s.memPercent,
+            players = s.online,
+        )).takeLast(LIVE_SAMPLES)
+    }
+
+    // ------------------------------------------------------------ live stats (WebSocket)
+
+    /** True while Crafty's WebSocket is delivering this server's stats; false means they're polled instead. */
+    var statsLive by mutableStateOf(false)
+        private set
+
+    /** Percent of the backup that is running now, as Crafty reports it over the WebSocket; null when none is. */
+    var backupPercent by mutableStateOf<Int?>(null)
+        private set
+
+    private var statsWanted = false
+    private var lastSocketStats = 0L
+    private var lastRestStats = 0L
+
+    /** The server page is on screen: keep the socket open for live stats, whatever tab is showing. */
+    fun startLiveStats() {
+        statsWanted = true
+        if (socket != null || reconnect?.isActive == true) return
+        connectSocket()
+    }
+
+    /** The server page left the screen. */
+    fun stopLiveStats() {
+        statsWanted = false
+        statsLive = false
+        if (!consoleWanted) closeSocket()
+    }
+
+    private fun onSocketEvent(event: String, data: kotlinx.serialization.json.JsonElement) {
+        val o = data as? kotlinx.serialization.json.JsonObject ?: return
+        when (event) {
+            "update_server_details" -> {
+                val s = ServerStats.merged(stats, o)
+                stats = s
+                statsError = null
+                lastSocketStats = android.os.SystemClock.elapsedRealtime()
+                statsLive = true
+                addLiveSample(s)
+            }
+            "backup_status" -> {
+                val p = (o["percent"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull() ?: return
+                backupPercent = if (p >= 100.0) null else p.toInt().coerceIn(0, 100)
+                // A finished (or failed) backup changed the profile's status and the list of archives.
+                if (p >= 100.0 && backups.data != null) viewModelScope.launch { delay(2_000); loadBackups() }
+            }
         }
     }
 
@@ -653,6 +843,8 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     private var socket: com.vknxworks.craftyctrl.data.ConsoleSocket? = null
     private var reconnect: kotlinx.coroutines.Job? = null
     private var consoleWanted = false
+    private val socketWanted: Boolean get() = consoleWanted || statsWanted
+    private var socketOpen = false
     private var socketFailures = 0
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
@@ -675,19 +867,34 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     /** The console tab is showing: connect the live console, reconnecting on its own until [stopConsole]. */
     fun startConsole() {
         consoleWanted = true
-        if (socket != null || reconnect?.isActive == true) return
+        if (socket != null) {
+            // The socket is already open for the live stats: the console is live from now on.
+            if (socketOpen && !consoleLive) {
+                consoleLive = true
+                viewModelScope.launch { refreshLogs() }
+            }
+            return
+        }
+        if (reconnect?.isActive == true) return
         connectSocket()
     }
 
     /** The console tab is gone or the app left the screen. */
     fun stopConsole() {
         consoleWanted = false
+        consoleLive = false
+        if (!statsWanted) closeSocket()
+    }
+
+    private fun closeSocket() {
         reconnect?.cancel()
         reconnect = null
         val s = socket
         socket = null
+        socketOpen = false
         s?.close()
         consoleLive = false
+        statsLive = false
     }
 
     private fun connectSocket() {
@@ -703,12 +910,21 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         val s = com.vknxworks.craftyctrl.data.ConsoleSocket(api.baseUrl, serverId, token, object : com.vknxworks.craftyctrl.data.ConsoleSocket.Listener {
             override fun onOpen() {
                 mainHandler.post {
-                    if (consoleWanted && socket === self && self != null) {
+                    if (socketWanted && socket === self && self != null) {
                         socketFailures = 0
-                        consoleLive = true
-                        // Fill in anything that was printed while the socket was down.
-                        viewModelScope.launch { refreshLogs() }
+                        socketOpen = true
+                        if (consoleWanted) {
+                            consoleLive = true
+                            // Fill in anything that was printed while the socket was down.
+                            viewModelScope.launch { refreshLogs() }
+                        }
                     }
+                }
+            }
+
+            override fun onEvent(event: String, data: kotlinx.serialization.json.JsonElement) {
+                mainHandler.post {
+                    if (statsWanted && socket === self && self != null) onSocketEvent(event, data)
                 }
             }
 
@@ -728,9 +944,11 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 mainHandler.post {
                     if (socket !== self || self == null) return@post
                     socket = null
+                    socketOpen = false
                     consoleLive = false
+                    statsLive = false
                     socketFailures++
-                    if (consoleWanted) scheduleReconnect()
+                    if (socketWanted) scheduleReconnect()
                 }
             }
         })
@@ -745,17 +963,19 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
     /** Tries again after 2, 4, 8 … up to 60 seconds; the logs are polled meanwhile. */
     private fun scheduleReconnect() {
-        if (!consoleWanted || reconnect?.isActive == true) return
+        if (!socketWanted || reconnect?.isActive == true) return
         val wait = (2_000L shl socketFailures.coerceIn(0, 5)).coerceAtMost(60_000L)
         reconnect = viewModelScope.launch {
             delay(wait)
             reconnect = null
-            if (consoleWanted && socket == null) connectSocket()
+            if (socketWanted && socket == null) connectSocket()
         }
     }
 
     override fun onCleared() {
-        stopConsole()
+        consoleWanted = false
+        statsWanted = false
+        closeSocket()
         mainHandler.removeCallbacks(flushLines)
         super.onCleared()
     }
@@ -824,8 +1044,19 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 }
                 api.action(serverId, action.apiName)
                 _messages.send(str(R.string.x_sent, action.label))
+                // The progress notification follows a start or a stop until Crafty reports the new state.
+                val kind = when (action) {
+                    PowerAction.START -> com.vknxworks.craftyctrl.monitor.ActionProgress.Kind.START
+                    PowerAction.STOP -> com.vknxworks.craftyctrl.monitor.ActionProgress.Kind.STOP
+                    else -> null
+                }
+                if (kind != null) {
+                    com.vknxworks.craftyctrl.monitor.ActionProgress.watch(
+                        com.vknxworks.craftyctrl.AppStrings.context, api, serverId, info?.name ?: serverId, kind,
+                    )
+                }
                 delay(1500)
-                refreshStats()
+                refreshStats(force = true)
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
             } finally {
@@ -886,6 +1117,10 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                     api.action(serverId, "backup_server")
                 }
                 _messages.send(str(R.string.backup_started_x, config?.name ?: str(R.string.backup_default)))
+                com.vknxworks.craftyctrl.monitor.ActionProgress.watch(
+                    com.vknxworks.craftyctrl.AppStrings.context, api, serverId, info?.name ?: serverId,
+                    com.vknxworks.craftyctrl.monitor.ActionProgress.Kind.BACKUP, config?.id,
+                )
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
             } finally {
@@ -1011,7 +1246,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 }
                 _messages.send(str(R.string.ran_x, task.name))
                 delay(1200)
-                refreshStats()
+                refreshStats(force = true)
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
             }
@@ -1064,7 +1299,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 api.action(serverId, "update_executable")
                 _messages.send(str(R.string.update_started_crafty_downloads_the_new))
                 delay(1500)
-                refreshStats()
+                refreshStats(force = true)
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
             } finally {
@@ -1123,7 +1358,7 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                 _messages.send(str(R.string.restoring_x_start_the_server_when, fileName))
                 onDone()
                 delay(1500)
-                refreshStats()
+                refreshStats(force = true)
             } catch (e: Exception) {
                 _messages.send(e.userMessage())
             } finally {
@@ -1139,6 +1374,10 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         private const val MAX_CONSOLE_LINES = 1000
         /** How long live console lines are collected before they're shown together. */
         private const val CONSOLE_FLUSH_MS = 50L
+        /** Socket stats older than this no longer count as live. */
+        private const val SOCKET_FRESH_MS = 20_000L
+        /** While the socket delivers the stats, a full answer is still fetched this often. */
+        private const val LIVE_REST_MS = 15_000L
     }
 }
 

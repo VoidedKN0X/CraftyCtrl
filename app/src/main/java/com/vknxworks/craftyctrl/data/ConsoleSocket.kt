@@ -2,6 +2,7 @@ package com.vknxworks.craftyctrl.data
 
 import android.text.Html
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -22,7 +23,8 @@ import java.util.concurrent.TimeUnit
  */
 class ConsoleSocket(
     baseUrl: String,
-    private val serverId: String,
+    /** The server whose page this socket says it shows, or null for the dashboard (every server and the host). */
+    private val serverId: String?,
     private val token: String,
     private val listener: Listener,
 ) {
@@ -31,6 +33,12 @@ class ConsoleSocket(
         fun onLine(line: String)
         /** The socket closed or failed; [unauthorized] when Crafty refused the login. */
         fun onClosed(unauthorized: Boolean)
+        /**
+         * Crafty's live numbers. On a server's page: "update_server_details" (that server's stats) and
+         * "backup_status" (percent of a running backup). On the dashboard: "update_server_status" (a list
+         * of servers' stats) and "update_host_stats". Called on the socket's thread.
+         */
+        fun onEvent(event: String, data: JsonElement) {}
     }
 
     private val base = CraftyApi.normalizeUrl(baseUrl)
@@ -45,8 +53,8 @@ class ConsoleSocket(
         // Crafty's panel connects to <panel>/ws?page=<page path>&page_query_params=<page query>.
         val url = http.newBuilder()
             .addPathSegment("ws")
-            .addQueryParameter("page", "/panel/server_detail")
-            .addQueryParameter("page_query_params", "?id=$serverId")
+            .addQueryParameter("page", if (serverId != null) "/panel/server_detail" else "/panel/dashboard")
+            .addQueryParameter("page_query_params", if (serverId != null) "?id=$serverId" else "")
             .build()
         val request = Request.Builder()
             .url(url)
@@ -77,6 +85,8 @@ class ConsoleSocket(
                             if (line.isNotBlank()) listener.onLine(line)
                         }
                     }
+                    "update_server_details", "backup_status", "update_server_status", "update_host_stats" ->
+                        o["data"]?.let { listener.onEvent(event, it) }
                 }
             }
 

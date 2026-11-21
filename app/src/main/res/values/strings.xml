@@ -933,4 +933,25 @@
     <string name="signal_profile">Profile</string>
     <string name="signal_status">Status</string>
     <string name="signal_footer">Google-free · Telemetry-free · ARM64</string>
+
+    <!-- Progress notifications for a start, a stop or a backup -->
+    <string name="channel_progress">Start, stop and backup progress</string>
+    <string name="channel_progress_desc">Shows how a start, a stop or a backup you asked for in the app is getting on</string>
+    <string name="progress_starting_x">Starting %1$s…</string>
+    <string name="progress_stopping_x">Stopping %1$s…</string>
+    <string name="progress_started_x">%1$s is running</string>
+    <string name="progress_stopped_x">%1$s has stopped</string>
+    <string name="progress_crashed_x">%1$s crashed</string>
+    <string name="progress_still_starting_x">%1$s is still starting</string>
+    <string name="progress_still_stopping_x">%1$s is still stopping</string>
+    <string name="progress_open_to_check">Open CraftyCtrl to see how it went.</string>
+    <string name="progress_backing_up_x">Backing up %1$s…</string>
+    <string name="progress_percent">%1$d%%</string>
+    <string name="progress_backup_still_x">The backup of %1$s is still running</string>
+    <string name="progress_backup_failed_x">The backup of %1$s failed</string>
+    <string name="progress_backup_done_x">The backup of %1$s is finished</string>
+    <string name="progress_public_power">A server is starting or stopping</string>
+    <string name="progress_public_backup">A backup is running</string>
+    <string name="progress_public_done">A server action finished</string>
+    <string name="backup_running_percent">Backup running: %1$d%%</string>
 </resources>

@@ -5,7 +5,13 @@ Each version below becomes a GitHub release. To publish a new one: bump `version
 
 ## Unreleased
 
-Changes on `main` that aren't in a release yet. They ship with the next version.
+Changes on `main` that aren't in a release yet. They ship with the next version. Built and checked by CI only: none of this has been run on a phone yet.
+
+### New
+
+- **Live stats over Crafty's WebSocket.** The server page and the server list now get their numbers pushed by Crafty the moment they change, over the same WebSocket its web panel uses: a server's status, CPU, memory, players and world size on its page, and every server's status plus the host's CPU, memory and disks on the list and the Host tab. While that works, CraftyCtrl asks Crafty the old way only once every 15 seconds (the pushed messages don't say whether a server is still "waiting to start" or "updating", so a full answer is still fetched now and then). When the socket can't connect, everything is refreshed on the timer from Settings as before. The console already streamed live; it now shares one connection with the stats.
+- **A progress notification for start, stop and backup.** When you start or stop a server or run a backup from the app, a notification stays in the shade while Crafty works on it and ends with how it went: "is running", "has stopped", "crashed", or the backup finished or failed (with Crafty's reason). A backup shows its percentage, which Crafty reports over the WebSocket; on a Crafty version that doesn't send it the bar just keeps moving. A start or stop is followed for up to 5 minutes and a backup for up to an hour; after that the notification says it is still going and to open the app. It needs the notification permission (the same one server alerts use) and has its own channel, "Start, stop and backup progress", that you can turn off in Android's settings. It only runs while the app's process is alive: if Android closes CraftyCtrl, the notification removes itself. While the app is locked it can't ask Crafty anything, so it waits until you unlock. On a locked phone it shows no server name.
+- **The Backups tab shows a running backup's percentage** while the server page is open.
 
 ### Project
 

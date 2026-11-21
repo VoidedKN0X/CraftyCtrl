@@ -13,6 +13,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 ## Features
 
 - **Server list** with live status, CPU, memory, players and uptime, and a broadcast to every running server
+- **Live stats pushed by Crafty** over its own WebSocket on the server list, the Host tab and each server's page, falling back to refreshing on a timer
 - **Start, restart, stop and kill**, with a fingerprint or face check (or your phone's screen lock) before restart, stop and kill, and an optional in-game countdown
 - **Live console** streamed over Crafty's own WebSocket as lines are printed, reconnecting by itself and falling back to refreshing the log; with search, filters, quick commands and player-name completion
 - **Logs and stats history** charts for CPU, memory and players
@@ -21,6 +22,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Plugins and mods**: turn them on or off, add or remove jars
 - **File browser** with a built-in text editor, upload, unzip and more
 - **Backups and scheduled tasks**: run, edit, restore and schedule; restoring asks you to type RESTORE first
+- **A progress notification** while a server starts or stops or a backup runs, ending with how it went
 - **Create, clone, update and delete** Java and Bedrock servers; deleting asks you to type the server name
 - **Alerts** when a server stops or crashes, even with the app closed, and **player join and leave alerts** for the servers you pick, grouped into one notification
 - **Push from Crafty through ntfy** (UnifiedPush): one tap adds a webhook to every server so starts, stops, kills and crashes wake CraftyCtrl at once. Choose the foreground monitor or push only (no ongoing notification, with a check every 15 minutes as a fallback)

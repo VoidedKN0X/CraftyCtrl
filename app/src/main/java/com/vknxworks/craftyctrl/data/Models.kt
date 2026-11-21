@@ -186,6 +186,34 @@ data class ServerStats(
             )
         }
 
+        /**
+         * [prev] with the numbers Crafty pushed over its WebSocket ("update_server_details" and the
+         * dashboard's "update_server_status") filled in. Those messages carry no "waiting to start",
+         * "updating" or "importing" flags, so these stay as the last full answer had them.
+         */
+        fun merged(prev: ServerStats?, live: JsonObject): ServerStats {
+            val fresh = from(live)
+            if (prev == null) return fresh
+            return fresh.copy(
+                running = if (fresh.runningReported) fresh.running else prev.running,
+                runningReported = fresh.runningReported || prev.runningReported,
+                crashed = live.bool("crashed") ?: prev.crashed,
+                importing = prev.importing,
+                // A server that reports running is no longer waiting to start.
+                waitingStart = prev.waitingStart && !fresh.running,
+                updating = prev.updating,
+                cpu = fresh.cpu ?: prev.cpu,
+                mem = fresh.mem ?: prev.mem,
+                memPercent = fresh.memPercent ?: prev.memPercent,
+                version = fresh.version ?: prev.version,
+                worldName = fresh.worldName ?: prev.worldName,
+                worldSize = fresh.worldSize ?: prev.worldSize,
+                started = fresh.started ?: prev.started,
+                port = fresh.port ?: prev.port,
+                description = fresh.description ?: prev.description,
+            )
+        }
+
         private fun parsePlayers(e: JsonElement?): List<String> = when (e) {
             is JsonArray -> e.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
             is JsonPrimitive -> e.contentOrNull.orEmpty().let { raw ->
