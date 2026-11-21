@@ -31,7 +31,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Self-signed certificates only after you confirm the fingerprint**: Crafty's own certificate is shown with its SHA-256 fingerprint and accepted for that one panel once you say so; nothing is trusted silently
 - **HTTPS by default; plain HTTP only for your own panel after a warning**, never for anything else. An HTTPS connection is never redirected to HTTP, and your login, password and anything you send are never passed on to another server by a redirect
 - **Back up and restore settings** to a file that never holds a login, address or PIN
-- **English and Dutch**, following the phone's language
+- **English, Dutch, French and German**, following the phone's language
 - **App lock** with its own PIN and optional fingerprint unlock; your Crafty login stays encrypted while the app is locked, and two switches keep the app out of screenshots and the recent apps view
 - The Ctrl / Signal look shared by every Ctrl app: dark and light modes that follow your phone, one violet accent, Space Grotesk and JetBrains Mono
 

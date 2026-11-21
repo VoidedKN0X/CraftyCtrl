@@ -3,6 +3,12 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Unreleased
+
+### New
+
+- **CraftyCtrl in French and German, following the phone's language.** With the phone set to French or German, every screen, message and notification of CraftyCtrl is now in that language (French with the polite "vous", German with the informal "du"); Dutch stays Dutch and any other language gets English. There is still no language switch in the app, but CraftyCtrl now tells Android which languages it has, so Android's per-app language setting (Settings > Apps > CraftyCtrl > Language) lists English, Dutch, French and German. As in Dutch, names from Minecraft and Crafty (whitelist, allowlist, server.properties keys, RESTORE, the webhook fields to copy into Crafty) stay as they are. The translation has not been read on a phone yet.
+
 ## [2.14.0] - 2026-11-21
 
 Built and checked by CI only: nothing in this release had been run on a phone when it was published.
