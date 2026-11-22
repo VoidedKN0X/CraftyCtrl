@@ -82,7 +82,7 @@
     <string name="lock_title">CraftyCtrl ist gesperrt</string>
     <string name="lock_fingerprint_title">CraftyCtrl entsperren</string>
     <string name="lock_fingerprint_subtitle">Bestätige, dass du es bist, um deine Server zu verwalten</string>
-    <string name="lock_forgot_body">Die PIN kann nicht wiederhergestellt werden, weil sie deine Crafty-Anmeldung verschlüsselt. CraftyCtrl meldet sich ab, schaltet Serverwarnungen aus und vergisst Paneladresse und Anmeldung auf diesem Handy. Deine Server auf Crafty bleiben unberührt.</string>
+    <string name="lock_forgot_body">Die PIN kann nicht wiederhergestellt werden, weil sie deine Crafty-Anmeldung verschlüsselt. CraftyCtrl meldet sich ab, schaltet Serverwarnungen aus und vergisst Paneladresse und Anmeldung auf diesem Handy. Deine Server auf Crafty bleiben unberührt. Wenn dein Handy eine Displaysperre hat, bestätigst du zuerst damit.</string>
     <string name="lock_forgot_confirm">Abmelden und zurücksetzen</string>
     <string name="lock_choose_intro">Mindestens %1$d Ziffern, anders als die PIN deines Handys. Wenn du sie vergisst, kommst du nur durch Abmelden und erneutes Anmelden wieder hinein.</string>
     <string name="lock_migrate_intro">PINs brauchen jetzt mindestens %1$d Ziffern und müssen sich von der PIN deines Handys unterscheiden. Solange die App gesperrt ist, ist deine Crafty-Anmeldung damit verschlüsselt.</string>
@@ -954,6 +954,7 @@
     <string name="progress_still_starting_x">%1$s startet noch</string>
     <string name="progress_still_stopping_x">%1$s stoppt noch</string>
     <string name="progress_open_to_check">Öffne CraftyCtrl, um zu sehen, wie es gelaufen ist.</string>
+    <string name="progress_open_to_follow">Läuft noch. Öffne CraftyCtrl, um es zu verfolgen.</string>
     <string name="progress_backing_up_x">%1$s wird gesichert…</string>
     <string name="progress_percent">%1$d%%</string>
     <string name="progress_backup_still_x">Das Backup von %1$s läuft noch</string>
@@ -1089,4 +1090,6 @@
     <string name="backup_change_screenshots">In Screenshots ausblenden wird eingeschaltet</string>
     <string name="backup_change_recents">In letzten Apps ausblenden wird eingeschaltet</string>
     <string name="backup_change_players">Spielerwarnungen: %1$s Server wird zu %2$s Server</string>
+    <string name="lock_reset_prompt_title">App-Sperre von CraftyCtrl zurücksetzen</string>
+    <string name="lock_reset_prompt_subtitle">Bestätige mit der Displaysperre deines Handys, dass du es bist</string>
 </resources>

@@ -80,7 +80,7 @@
     <string name="lock_title">CraftyCtrl is locked</string>
     <string name="lock_fingerprint_title">Unlock CraftyCtrl</string>
     <string name="lock_fingerprint_subtitle">Confirm it\'s you to manage your servers</string>
-    <string name="lock_forgot_body">The PIN can\'t be recovered, because it encrypts your Crafty login. CraftyCtrl will sign out, turn off server alerts and forget the panel address and login on this phone. Your servers on Crafty aren\'t touched.</string>
+    <string name="lock_forgot_body">The PIN can\'t be recovered, because it encrypts your Crafty login. CraftyCtrl will sign out, turn off server alerts and forget the panel address and login on this phone. Your servers on Crafty aren\'t touched. If your phone has a screen lock, you\'ll confirm with it first.</string>
     <string name="lock_forgot_confirm">Sign out and reset</string>
     <string name="lock_choose_intro">At least %1$d digits, different from your phone\'s PIN. If you forget it, the only way back in is to sign out and sign in again.</string>
     <string name="lock_migrate_intro">PINs now need at least %1$d digits, different from your phone\'s PIN. Your Crafty login is encrypted with it while the app is locked.</string>
@@ -952,6 +952,7 @@
     <string name="progress_still_starting_x">%1$s is still starting</string>
     <string name="progress_still_stopping_x">%1$s is still stopping</string>
     <string name="progress_open_to_check">Open CraftyCtrl to see how it went.</string>
+    <string name="progress_open_to_follow">Still working. Open CraftyCtrl to follow it.</string>
     <string name="progress_backing_up_x">Backing up %1$s…</string>
     <string name="progress_percent">%1$d%%</string>
     <string name="progress_backup_still_x">The backup of %1$s is still running</string>
@@ -1087,4 +1088,6 @@
     <string name="backup_change_screenshots">Hide in screenshots is switched on</string>
     <string name="backup_change_recents">Hide in recent apps is switched on</string>
     <string name="backup_change_players">Player alerts: %1$s servers becomes %2$s servers</string>
+    <string name="lock_reset_prompt_title">Reset CraftyCtrl\'s app lock</string>
+    <string name="lock_reset_prompt_subtitle">Use your phone\'s screen lock to confirm it\'s you</string>
 </resources>

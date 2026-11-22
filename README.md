@@ -22,7 +22,7 @@ Part of the [Ctrl series](#the-ctrl-series) by VKNXWorks.
 - **Plugins and mods**: turn them on or off, add or remove jars
 - **File browser** with a built-in text editor, upload, unzip, download to the phone (a folder as a zip) and more
 - **Backups and scheduled tasks**: run, edit, restore and schedule; restoring asks you to type RESTORE first; download a backup to the phone
-- **A progress notification** while a server starts or stops or a backup runs, ending with how it went
+- **A progress notification** while a server starts or stops or a backup runs, ending with how it went (when you leave the app and server alerts are off, it says to open CraftyCtrl to follow it, because Android pauses the app in the background)
 - **Create, clone, update and delete** Java and Bedrock servers; deleting asks you to type the server name
 - **Users, roles and the audit log** of the panel: add, change and delete users and roles, and read who did what
 - **Several panels**: stay signed in to more than one Crafty panel and switch between them from the You page
@@ -121,7 +121,7 @@ Turn it on under **Settings > Privacy and security > App lock** (tap your profil
 - **Wrong PINs:** after 5 tries you wait 30 seconds, doubling up to 15 minutes. Restarting the app or the phone, or changing the clock, doesn't skip the wait.
 - **Lock again:** as soon as you leave the app (the default), after 1, 5 or 15 minutes or 1 hour away, or only when the app restarts. Picking a file to upload, opening a link or the Minecraft EULA, and opening battery settings from CraftyCtrl don't count as leaving, unless you stay away for more than 5 minutes.
 - **Change app PIN** asks for your current PIN first, and turning the app lock off asks for the PIN too.
-- **Forgot your PIN?** It can't be recovered, because it encrypts your login. The lock screen offers to sign out, turn off server alerts and forget the panel address and login on this phone; your servers on Crafty aren't touched.
+- **Forgot your PIN?** It can't be recovered, because it encrypts your login. The lock screen offers to sign out, turn off server alerts and forget the panel address and login on this phone; your servers on Crafty aren't touched. If the phone has a screen lock, you confirm with it (or a fingerprint) first, so someone who picks up your unlocked phone can't just reset the lock.
 - **With the app lock on**, the recent-apps screen always shows a blank card.
 - **Server alerts keep working while locked**: while alerts are on, they keep their own copy of your Crafty login, encrypted with the Android Keystore as without the app lock. Turn alerts off to keep the login sealed with your PIN only.
 

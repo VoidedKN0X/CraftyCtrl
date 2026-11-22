@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -62,6 +63,7 @@ import com.vknxworks.craftyctrl.ui.lock.PinRequests
 import com.vknxworks.craftyctrl.ui.lock.biometricAvailable
 import com.vknxworks.craftyctrl.ui.lock.findFragmentActivity
 import com.vknxworks.craftyctrl.ui.lock.showVaultPrompt
+import kotlinx.coroutines.launch
 import com.vknxworks.craftyctrl.ui.settings.Group
 import com.vknxworks.craftyctrl.ui.settings.GroupChoice
 import com.vknxworks.craftyctrl.ui.settings.GroupRow
@@ -343,33 +345,43 @@ private fun SettingsBackupGroup(onApplied: () -> Unit) {
     val context = LocalContext.current
     var pending by remember { mutableStateOf<com.vknxworks.craftyctrl.data.SettingsBackup?>(null) }
     fun toast(id: Int) = Toast.makeText(context, id, Toast.LENGTH_LONG).show()
+    // Reading and writing the document can block (a cloud or USB provider): off the main thread.
+    val ioScope = rememberCoroutineScope()
 
     val exporter = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        val ok = runCatching {
-            val text = com.vknxworks.craftyctrl.data.SettingsBackup.current(context).toJson()
-            context.contentResolver.openOutputStream(uri, "w")?.use { it.write(text.toByteArray(Charsets.UTF_8)) } ?: error("no stream")
-        }.isSuccess
-        toast(if (ok) R.string.backup_settings_exported else R.string.backup_settings_export_failed)
+        val text = com.vknxworks.craftyctrl.data.SettingsBackup.current(context).toJson()
+        ioScope.launch {
+            val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri, "w")?.use { it.write(text.toByteArray(Charsets.UTF_8)) } ?: error("no stream")
+                }.isSuccess
+            }
+            toast(if (ok) R.string.backup_settings_exported else R.string.backup_settings_export_failed)
+        }
     }
     val importer = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        val text = runCatching {
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                // A settings file is tiny; stop reading anything that isn't.
-                val bytes = input.readNBytes(com.vknxworks.craftyctrl.data.SettingsBackup.MAX_BYTES + 1)
-                if (bytes.size > com.vknxworks.craftyctrl.data.SettingsBackup.MAX_BYTES) null else String(bytes, Charsets.UTF_8)
+        ioScope.launch {
+            val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        // A settings file is tiny; stop reading anything that isn't.
+                        val bytes = input.readNBytes(com.vknxworks.craftyctrl.data.SettingsBackup.MAX_BYTES + 1)
+                        if (bytes.size > com.vknxworks.craftyctrl.data.SettingsBackup.MAX_BYTES) null else String(bytes, Charsets.UTF_8)
+                    }
+                }.getOrNull()
             }
-        }.getOrNull()
-        val parsed = text?.let { com.vknxworks.craftyctrl.data.SettingsBackup.parse(it) }
-        when {
-            parsed == null -> toast(R.string.backup_settings_not_a_file)
-            parsed.changesFrom(com.vknxworks.craftyctrl.data.SettingsBackup.current(context)).isEmpty() -> toast(R.string.backup_settings_nothing_to_change)
-            else -> pending = parsed
+            val parsed = text?.let { com.vknxworks.craftyctrl.data.SettingsBackup.parse(it) }
+            when {
+                parsed == null -> toast(R.string.backup_settings_not_a_file)
+                parsed.changesFrom(com.vknxworks.craftyctrl.data.SettingsBackup.current(context)).isEmpty() -> toast(R.string.backup_settings_nothing_to_change)
+                else -> pending = parsed
+            }
         }
     }
 

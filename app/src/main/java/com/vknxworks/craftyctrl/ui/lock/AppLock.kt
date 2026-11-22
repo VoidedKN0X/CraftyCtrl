@@ -455,7 +455,14 @@ fun LockScreen(vm: AppLockViewModel, onForgot: () -> Unit) {
             onDismiss = { forgetting = false },
         ) {
             forgetting = false
-            onForgot()
+            // Only the phone's owner may reset the app lock: confirm with the phone's own screen lock (or a
+            // strong fingerprint) first. A phone without a screen lock keeps this confirmation alone.
+            com.vknxworks.craftyctrl.ui.verifyUser(
+                activity,
+                context.getString(R.string.lock_reset_prompt_title),
+                context.getString(R.string.lock_reset_prompt_subtitle),
+                onSuccess = onForgot,
+            )
         }
     }
 }

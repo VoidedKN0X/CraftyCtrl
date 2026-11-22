@@ -3,6 +3,20 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Unreleased
+
+### Fixed
+
+- **The progress notification no longer hangs when you leave the app.** After tapping Start, Stop or Backup and switching to another app (with server alerts off), Android pauses CraftyCtrl within seconds, so the "Starting…" or "Backing up 23 %" notification used to stay stuck in the shade, unremovable, for up to an hour, and the result never came. Now, as soon as CraftyCtrl leaves the screen while server alerts aren't running, the notification is no longer pinned: it keeps its title, says "Still working. Open CraftyCtrl to follow it." and can be swiped away. When you open CraftyCtrl again it carries on following the start, stop or backup as before and shows the result. With server alerts on (the alerts service keeps the app running) nothing changes.
+- **A backup's progress no longer reconnects every 2 seconds when the live connection fails.** When Crafty's WebSocket can't be used (for example a reverse proxy without WebSocket support), the backup notification used to open a new connection every 2 seconds for up to an hour. It now waits longer after each failure (2, 4, 8… up to 60 seconds) and stops trying if Crafty refuses the login; the notification still ends on its own as before.
+- **No stray first alert after adding a second panel.** When you added another panel, what the alert checks remembered about the first panel's servers (including player names) stayed on the phone, and the first check on the new panel could compare against a different server with the same number and raise a false "stopped" or "player joined" alert. Adding a panel now starts the alert checks fresh, as switching panels already did.
+- **Smoother sign-in and panel changes.** Saving the login after signing in or adding a panel (encryption with the phone's secure key store) and removing a panel from the list now happen in the background instead of briefly freezing the screen.
+- **Uploads, downloads and the settings file no longer block the screen on slow storage.** Reading a picked file's name and size before an upload, finishing a download, and saving or reading the settings file are now done in the background, which matters when the file is on a cloud drive or USB stick. A download whose last write to the storage fails now counts as failed (and leaves no half file) instead of "Downloaded".
+
+### Security
+
+- **"Forgot PIN?" now asks for the phone's own screen lock first.** Resetting the app lock signs you out and forgets the login, so it shouldn't be open to anyone who picks up your unlocked phone. After you confirm, CraftyCtrl asks for the phone's PIN, pattern, password or a fingerprint; only then is the lock reset. Cancelling leaves everything as it was. A phone without a screen lock keeps the old confirmation alone, as before.
+
 ## [2.15.2] - 2026-11-22
 
 Built and checked by CI only: nothing in this release had been run on a phone when it was published.

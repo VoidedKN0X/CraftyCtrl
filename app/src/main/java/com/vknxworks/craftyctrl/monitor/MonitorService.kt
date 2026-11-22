@@ -178,6 +178,9 @@ class MonitorService : Service() {
 
         @Volatile
         private var isRunning = false
+
+        /** The foreground monitor is running (it keeps the app's process from being frozen in the background). */
+        val running: Boolean get() = isRunning
         private const val STATUS_ID = 1001
         private const val CHANNEL_STATUS = Alerts.CHANNEL_STATUS
 

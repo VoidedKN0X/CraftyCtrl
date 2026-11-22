@@ -78,7 +78,7 @@
     <string name="lock_title">CraftyCtrl is vergrendeld</string>
     <string name="lock_fingerprint_title">CraftyCtrl ontgrendelen</string>
     <string name="lock_fingerprint_subtitle">Bevestig dat jij het bent om je servers te beheren</string>
-    <string name="lock_forgot_body">De pincode kan niet worden hersteld, want ze versleutelt je Crafty-login. CraftyCtrl meldt je af, zet servermeldingen uit en vergeet het paneeladres en de login op deze telefoon. Aan je servers op Crafty verandert niets.</string>
+    <string name="lock_forgot_body">De pincode kan niet worden hersteld, want ze versleutelt je Crafty-login. CraftyCtrl meldt je af, zet servermeldingen uit en vergeet het paneeladres en de login op deze telefoon. Aan je servers op Crafty verandert niets. Heeft je telefoon een schermvergrendeling, dan bevestig je eerst daarmee.</string>
     <string name="lock_forgot_confirm">Afmelden en resetten</string>
     <string name="lock_choose_intro">Minstens %1$d cijfers, anders dan de pincode van je telefoon. Als je ze vergeet, kan je alleen nog binnen door je af te melden en opnieuw aan te melden.</string>
     <string name="lock_migrate_intro">Pincodes hebben nu minstens %1$d cijfers nodig, anders dan de pincode van je telefoon. Je Crafty-login wordt ermee versleuteld zolang de app vergrendeld is.</string>
@@ -945,6 +945,7 @@
     <string name="progress_still_starting_x">%1$s is nog aan het starten</string>
     <string name="progress_still_stopping_x">%1$s is nog aan het stoppen</string>
     <string name="progress_open_to_check">Open CraftyCtrl om te zien hoe het is afgelopen.</string>
+    <string name="progress_open_to_follow">Nog bezig. Open CraftyCtrl om het te volgen.</string>
     <string name="progress_backing_up_x">Back-up van %1$s maken…</string>
     <string name="progress_percent">%1$d%%</string>
     <string name="progress_backup_still_x">De back-up van %1$s loopt nog</string>
@@ -1071,4 +1072,6 @@
     <string name="backup_change_screenshots">Verbergen in screenshots wordt aangezet</string>
     <string name="backup_change_recents">Verbergen in recente apps wordt aangezet</string>
     <string name="backup_change_players">Spelermeldingen: %1$s servers wordt %2$s servers</string>
+    <string name="lock_reset_prompt_title">App-vergrendeling van CraftyCtrl resetten</string>
+    <string name="lock_reset_prompt_subtitle">Bevestig met de schermvergrendeling van je telefoon dat jij het bent</string>
 </resources>

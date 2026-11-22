@@ -82,7 +82,7 @@
     <string name="lock_title">CraftyCtrl est verrouillé</string>
     <string name="lock_fingerprint_title">Déverrouiller CraftyCtrl</string>
     <string name="lock_fingerprint_subtitle">Confirmez votre identité pour gérer vos serveurs</string>
-    <string name="lock_forgot_body">Le code PIN ne peut pas être récupéré, car il chiffre votre connexion Crafty. CraftyCtrl va se déconnecter, désactiver les alertes serveur et oublier l\'adresse du panneau et la connexion sur ce téléphone. Vos serveurs sur Crafty ne sont pas touchés.</string>
+    <string name="lock_forgot_body">Le code PIN ne peut pas être récupéré, car il chiffre votre connexion Crafty. CraftyCtrl va se déconnecter, désactiver les alertes serveur et oublier l\'adresse du panneau et la connexion sur ce téléphone. Vos serveurs sur Crafty ne sont pas touchés. Si votre téléphone a un verrouillage d\'écran, vous le confirmerez d\'abord avec celui-ci.</string>
     <string name="lock_forgot_confirm">Se déconnecter et réinitialiser</string>
     <string name="lock_choose_intro">Au moins %1$d chiffres, différent du code PIN de votre téléphone. Si vous l\'oubliez, la seule solution est de vous déconnecter puis de vous reconnecter.</string>
     <string name="lock_migrate_intro">Les codes PIN doivent maintenant compter au moins %1$d chiffres, différents du code PIN de votre téléphone. Votre connexion Crafty est chiffrée avec lui tant que l\'application est verrouillée.</string>
@@ -954,6 +954,7 @@
     <string name="progress_still_starting_x">%1$s démarre encore</string>
     <string name="progress_still_stopping_x">%1$s s\'arrête encore</string>
     <string name="progress_open_to_check">Ouvrez CraftyCtrl pour voir le résultat.</string>
+    <string name="progress_open_to_follow">Toujours en cours. Ouvrez CraftyCtrl pour suivre l\'avancement.</string>
     <string name="progress_backing_up_x">Sauvegarde de %1$s…</string>
     <string name="progress_percent">%1$d%%</string>
     <string name="progress_backup_still_x">La sauvegarde de %1$s est toujours en cours</string>
@@ -1089,4 +1090,6 @@
     <string name="backup_change_screenshots">Masquer dans les captures d\'écran est activé</string>
     <string name="backup_change_recents">Masquer dans les applis récentes est activé</string>
     <string name="backup_change_players">Alertes joueurs : %1$s serveurs devient %2$s serveurs</string>
+    <string name="lock_reset_prompt_title">Réinitialiser le verrouillage de CraftyCtrl</string>
+    <string name="lock_reset_prompt_subtitle">Utilisez le verrouillage d\'écran de votre téléphone pour confirmer votre identité</string>
 </resources>

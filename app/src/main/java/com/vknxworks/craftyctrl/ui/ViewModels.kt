@@ -140,9 +140,13 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Forgets one of the other panels on this phone. */
     fun removePanel(panel: com.vknxworks.craftyctrl.data.SavedPanel) {
-        store.removeOther(panel)
-        otherPanels = store.others()
-        if (!store.usesAddress(panel.baseUrl)) com.vknxworks.craftyctrl.data.CertPins.forget(panel.baseUrl)
+        viewModelScope.launch {
+            otherPanels = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                store.removeOther(panel)
+                if (!store.usesAddress(panel.baseUrl)) com.vknxworks.craftyctrl.data.CertPins.forget(panel.baseUrl)
+                store.others()
+            }
+        }
     }
 
     fun signIn(
@@ -174,9 +178,16 @@ class SessionViewModel(app: Application) : AndroidViewModel(app) {
                 CraftyApi(base, token).servers()
                 val s = Session(base, mode, username.trim().takeIf { mode == AuthMode.PASSWORD })
                 // Adding a panel: the one that was signed in stays signed in and waits with the others.
-                if (session != null && session != s) store.stashActive()
-                store.save(s, token)
-                store.syncBackgroundCopy(settings.alertsEnabled)
+                val otherPanelBefore = session != null && session != s
+                // Keystore encryption and synchronous writes: off the main thread, like switchTo.
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    if (otherPanelBefore) store.stashActive()
+                    store.save(s, token)
+                    store.syncBackgroundCopy(settings.alertsEnabled)
+                }
+                // What the alert checks remembered (with player names) belongs to the panel that was on screen
+                // before; a new panel starts fresh, as when switching.
+                if (otherPanelBefore) com.vknxworks.craftyctrl.monitor.Checker.reset(getApplication<Application>())
                 com.vknxworks.craftyctrl.data.lock.Lock.liveToken = token
                 otherPanels = store.others()
                 addingPanel = false
@@ -734,15 +745,19 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
         viewModelScope.launch {
             uploadProgress = 0f
             try {
-                var name = "upload.bin"
-                var size = -1L
-                resolver.query(uri, null, null, null, null)?.use { c ->
-                    if (c.moveToFirst()) {
-                        val n = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                        val sz = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
-                        if (n >= 0) name = c.getString(n) ?: name
-                        if (sz >= 0 && !c.isNull(sz)) size = c.getLong(sz)
+                // Asking the file's provider (possibly a cloud or USB one) can block: off the main thread.
+                val (name, size) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    var name = "upload.bin"
+                    var size = -1L
+                    resolver.query(uri, null, null, null, null)?.use { c ->
+                        if (c.moveToFirst()) {
+                            val n = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                            val sz = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                            if (n >= 0) name = c.getString(n) ?: name
+                            if (sz >= 0 && !c.isNull(sz)) size = c.getLong(sz)
+                        }
                     }
+                    name to size
                 }
                 if (size < 0) {
                     _messages.send(str(R.string.couldn_t_read_the_file_size))
@@ -810,8 +825,12 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     ) {
         if (downloadedBytes != null) {
             // One download at a time; the document that was just created for this one stays empty, so remove it.
-            runCatching { android.provider.DocumentsContract.deleteDocument(resolver, target) }
-            viewModelScope.launch { _messages.send(str(R.string.download_already_running)) }
+            viewModelScope.launch {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { android.provider.DocumentsContract.deleteDocument(resolver, target) }
+                }
+                _messages.send(str(R.string.download_already_running))
+            }
             return
         }
         downloadName = name
@@ -825,15 +844,23 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
                     return@launch
                 }
                 var lastShown = 0L
-                out.use { sink ->
-                    fetch(sink) { bytes ->
+                try {
+                    fetch(out) { bytes ->
                         // Not every 64 KB piece needs to redraw the screen.
                         if (bytes - lastShown >= 512 * 1024) {
                             lastShown = bytes
                             downloadedBytes = bytes
                         }
                     }
+                } catch (e: Throwable) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) {
+                        runCatching { out.close() }
+                    }
+                    throw e
                 }
+                // Closing writes the file out, which can block on a cloud or USB provider: off the main thread.
+                // A failed close is a failed download.
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { out.close() }
                 done = true
                 _messages.send(str(R.string.downloaded_x, name))
             } catch (e: CancellationException) {

@@ -30,6 +30,10 @@ import kotlinx.serialization.json.doubleOrNull
  * app's process: if Android closes the app, the notification removes itself after its time limit
  * (setTimeoutAfter), and nothing is left behind. While the app is locked there is no token, so the
  * notification waits; it picks up again when you unlock.
+ *
+ * Once the app leaves the screen and the alerts monitor isn't running, Android soon freezes the app's process,
+ * so the follow-up can't go on. The notification then stops being "ongoing" and says to open CraftyCtrl to
+ * follow it (it can be swiped away); when the app is back on screen the follow-up carries on as before.
  */
 object ActionProgress {
     enum class Kind { START, STOP, BACKUP }
@@ -45,6 +49,37 @@ object ActionProgress {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val jobs = HashMap<String, Job>()
+
+    /** The last "still working" notification of each running follow-up, to show it again when the app leaves or comes back. */
+    private class Shown(
+        val context: Context,
+        val serverId: String,
+        val kind: Kind,
+        val title: String,
+        val text: String?,
+        val percent: Int?,
+        val limitMs: Long,
+    )
+    private val shown = HashMap<Int, Shown>()
+
+    /** The app is off screen (main thread only). */
+    private var inBackground = false
+
+    /** The app went off screen: unless the alerts monitor keeps the process alive, nothing stays "ongoing". */
+    fun onAppBackground() {
+        inBackground = true
+        if (!MonitorService.running) shown.values.toList().forEach { repost(it) }
+    }
+
+    /** The app is back on screen: the follow-ups carry on, so their notifications are "ongoing" again. */
+    fun onAppForeground() {
+        val was = inBackground
+        inBackground = false
+        if (was) shown.values.toList().forEach { repost(it) }
+    }
+
+    private fun repost(s: Shown) =
+        post(s.context, s.serverId, s.kind, s.title, s.text, ongoing = true, percent = s.percent, limitMs = s.limitMs)
 
     private fun ensureChannel(context: Context) {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
@@ -69,13 +104,18 @@ object ActionProgress {
         // A start replaces a stop's notification on the same server and the other way round.
         if (kind != Kind.BACKUP) {
             val other = if (kind == Kind.START) Kind.STOP else Kind.START
-            NotificationManagerCompat.from(app).cancel(notificationId(serverId, other))
+            val otherId = notificationId(serverId, other)
+            shown.remove(otherId)
+            NotificationManagerCompat.from(app).cancel(otherId)
         }
         jobs[key] = scope.launch {
             try {
                 if (kind == Kind.BACKUP) followBackup(app, api, serverId, serverName, backupId) else followPower(app, api, serverId, serverName, kind)
             } finally {
-                if (jobs[key] === coroutineContext[Job]) jobs.remove(key)
+                if (jobs[key] === coroutineContext[Job]) {
+                    jobs.remove(key)
+                    shown.remove(notificationId(serverId, kind))
+                }
             }
         }
     }
@@ -143,24 +183,46 @@ object ActionProgress {
         var percent: Int? = null
         var finished = false
         var socket: ConsoleSocket? = null
+        // Like the server page: a socket that keeps failing is retried after 2, 4, 8 ... up to 60 seconds, not on
+        // every turn of the loop, and not at all once Crafty refused the login.
+        var socketFailures = 0
+        var socketRefused = false
+        var nextSocketAt = 0L
         fun openSocket() {
             val token = api.currentToken() ?: return
+            var self: ConsoleSocket? = null
             val s = ConsoleSocket(api.baseUrl, serverId, token, object : ConsoleSocket.Listener {
-                override fun onOpen() {}
+                override fun onOpen() {
+                    scope.launch { if (socket === self && self != null) socketFailures = 0 }
+                }
                 override fun onLine(line: String) {}
                 override fun onClosed(unauthorized: Boolean) {
-                    scope.launch { if (socket != null) socket = null }
+                    scope.launch {
+                        // A late callback from a socket that was already replaced or closed changes nothing.
+                        if (socket !== self || self == null) return@launch
+                        socket = null
+                        if (unauthorized) socketRefused = true
+                        nextSocketAt = android.os.SystemClock.elapsedRealtime() + SocketBackoff.waitMs(socketFailures)
+                        socketFailures++
+                    }
                 }
                 override fun onEvent(event: String, data: JsonElement) {
                     if (event != "backup_status") return
                     val p = ((data as? JsonObject)?.get("percent") as? JsonPrimitive)?.doubleOrNull ?: return
                     scope.launch {
+                        if (socket !== self || self == null) return@launch
                         percent = p.toInt().coerceIn(0, 100)
                         if (p >= 100.0) finished = true
                     }
                 }
             })
-            if (s.connect()) socket = s
+            self = s
+            if (s.connect()) {
+                socket = s
+            } else {
+                nextSocketAt = android.os.SystemClock.elapsedRealtime() + SocketBackoff.waitMs(socketFailures)
+                socketFailures++
+            }
         }
         try {
             val deadline = android.os.SystemClock.elapsedRealtime() + BACKUP_LIMIT_MS
@@ -168,7 +230,7 @@ object ActionProgress {
             var sawProgress = false
             var quietChecks = 0
             while (android.os.SystemClock.elapsedRealtime() < deadline && !finished) {
-                if (socket == null) openSocket()
+                if (socket == null && !socketRefused && android.os.SystemClock.elapsedRealtime() >= nextSocketAt) openSocket()
                 delay(POLL_MS)
                 val p = percent
                 if (p != null && p != shown && !finished) {
@@ -217,7 +279,14 @@ object ActionProgress {
         percent: Int?,
         limitMs: Long,
     ) {
+        val id = notificationId(serverId, kind)
+        if (ongoing) shown[id] = Shown(context, serverId, kind, title, text, percent, limitMs) else shown.remove(id)
         if (!Alerts.canNotify(context)) return
+        // Off screen without the alerts monitor the process is about to be frozen: say so instead of a bar
+        // that would stay stuck, and let it be swiped away.
+        val frozenSoon = ongoing && inBackground && !MonitorService.running
+        val showOngoing = ongoing && !frozenSoon
+        val shownText = if (frozenSoon) str(R.string.progress_open_to_follow) else text
         val public = str(
             when {
                 !ongoing -> R.string.progress_public_done
@@ -229,10 +298,10 @@ object ActionProgress {
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setOnlyAlertOnce(true)
-            .setOngoing(ongoing)
-            .setAutoCancel(!ongoing)
+            .setOngoing(showOngoing)
+            .setAutoCancel(!showOngoing)
             .setContentIntent(Alerts.openAppIntent(context))
-            .setCategory(if (ongoing) NotificationCompat.CATEGORY_PROGRESS else NotificationCompat.CATEGORY_STATUS)
+            .setCategory(if (showOngoing) NotificationCompat.CATEGORY_PROGRESS else NotificationCompat.CATEGORY_STATUS)
             // Removes itself if the app is closed before the work is done, and some time after the result.
             .setTimeoutAfter(limitMs + 30_000L)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
@@ -243,10 +312,10 @@ object ActionProgress {
                     .setContentText(str(R.string.unlock_to_see_details))
                     .build(),
             )
-        if (!text.isNullOrBlank()) b.setContentText(text)
-        if (ongoing) {
+        if (!shownText.isNullOrBlank()) b.setContentText(shownText)
+        if (showOngoing) {
             if (percent != null) b.setProgress(100, percent, false) else b.setProgress(0, 0, true)
         }
-        NotificationManagerCompat.from(context).notify(notificationId(serverId, kind), b.build())
+        NotificationManagerCompat.from(context).notify(id, b.build())
     }
 }

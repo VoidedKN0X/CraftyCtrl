@@ -105,6 +105,13 @@ class MainActivity : FragmentActivity() {
         super.onStart()
         // Keeps the alerts service in step with settings (it can't start itself from the background).
         MonitorService.sync(this)
+        com.vknxworks.craftyctrl.monitor.ActionProgress.onAppForeground()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Start/stop/backup progress can't be followed once Android freezes the app in the background.
+        if (!isChangingConfigurations) com.vknxworks.craftyctrl.monitor.ActionProgress.onAppBackground()
     }
 }
 
