@@ -214,7 +214,6 @@
     <string name="not_signed_in_or_the_session">Niet aangemeld, of de sessie is verlopen.</string>
     <string name="invalid_url">Ongeldige URL</string>
     <string name="network_error_x">Netwerkfout: %1$s</string>
-    <string name="x_chars_total">\n…(%1$s tekens in totaal)</string>
     <string name="crafty_didn_t_send_this_server">Crafty stuurde de instellingen van deze server niet mee.</string>
     <string name="got_a_response_that_isn_t">Kreeg een antwoord dat niet van Crafty komt. Controleer het paneeladres.</string>
     <string name="mojang_s_name_lookup_failed_http">Naam opzoeken bij Mojang is mislukt (HTTP %1$s).</string>
@@ -413,7 +412,6 @@
     <string name="crafty_rejected_that_api_key">Crafty weigerde die API-sleutel.</string>
     <string name="no_servers_are_running">Er draaien geen servers.</string>
     <string name="couldn_t_send_to_x">Versturen naar %1$s lukte niet</string>
-    <string name="running">Bezig…</string>
     <string name="that_s_a_file_not_a">Dat is een bestand, geen map.</string>
     <string name="use_a_plain_name_without_or">Gebruik een gewone naam, zonder / of \\.</string>
     <string name="folder_created">Map gemaakt</string>
@@ -627,7 +625,6 @@
     <string name="more">Meer</string>
     <string name="update_server_software">Serversoftware bijwerken</string>
     <string name="clone_server">Server klonen</string>
-    <string name="diagnostics">Diagnose</string>
     <string name="update_server_software_2">Serversoftware bijwerken?</string>
     <string name="this_server_has_no_update_url">Voor deze server is geen update-URL ingesteld, dus Crafty heeft niets om te downloaden. Voeg eerst de downloadlink van de nieuwe jar toe in Serveropties.</string>
     <string name="crafty_downloads_the_server_jar_again">Crafty downloadt de server-jar opnieuw van:\n%1$s\n\nDe server wordt eerst gestopt en de oude jar wordt vervangen. Maak een back-up van de wereld voor een grote versiesprong.</string>
@@ -643,8 +640,6 @@
     <string name="the_server_folder_world_configs_server">De servermap (wereld, configuratie, server-jar) wordt definitief verwijderd.</string>
     <string name="files_stay_on_the_crafty_machine">De bestanden blijven op de Crafty-machine; alleen de server in Crafty wordt verwijderd.</string>
     <string name="type_the_server_name_to_confirm">Typ de servernaam om te bevestigen</string>
-    <string name="raw_replies_from_crafty_for_backups">Ruwe antwoorden van Crafty voor back-ups en planningen. Kopieer ze en stuur ze door om deze tabbladen te laten herstellen.</string>
-    <string name="craftyctrl_diagnostics">CraftyCtrl-diagnose</string>
     <string name="copied">Gekopieerd</string>
     <string name="copy">Kopiëren</string>
     <string name="close">Sluiten</string>

@@ -422,29 +422,6 @@ class CraftyApi(
         }
     }
 
-    /** Status code and body of a request, never throwing. Used by the diagnostics view. */
-    suspend fun raw(path: String, postJson: String? = null): String {
-        val (code, body) = if (postJson == null) getRaw(path) else postRaw(path, postJson)
-        if (code == 0) return body
-        val shown = if (body.length > RAW_LIMIT) body.take(RAW_LIMIT) + str(R.string.x_chars_total, body.length) else body
-        return "HTTP $code\n$shown"
-    }
-
-    private suspend fun postRaw(path: String, json: String): Pair<Int, String> = withContext(Dispatchers.IO) {
-        val url = "$baseUrl/api/v2$path".toHttpUrlOrNull() ?: return@withContext 0 to str(R.string.invalid_url)
-        val request = Request.Builder()
-            .url(url)
-            .header("Accept", "application/json")
-            .apply { token?.let { header("Authorization", "Bearer $it") } }
-            .post(json.toRequestBody(JSON_TYPE))
-            .build()
-        try {
-            client(baseUrl).newCall(request).execute().use { resp -> resp.code to resp.body?.string().orEmpty() }
-        } catch (e: IOException) {
-            0 to str(R.string.network_error_x, networkMessage(e))
-        }
-    }
-
     suspend fun createTask(serverId: String, fields: JsonObject) {
         call("POST", "/servers/$serverId/tasks", jsonBody(fields))
     }
@@ -748,7 +725,6 @@ class CraftyApi(
         private const val MAX_TASK_PROBE = 300
         private const val TASK_PROBE_BATCH = 20
         private const val TASK_PROBE_GAP = 60
-        private const val RAW_LIMIT = 4000
         private const val UPLOAD_CHUNK = 4 * 1024 * 1024
         private val OCTET = "application/octet-stream".toMediaType()
         private val TEXT = "text/plain; charset=utf-8".toMediaType()

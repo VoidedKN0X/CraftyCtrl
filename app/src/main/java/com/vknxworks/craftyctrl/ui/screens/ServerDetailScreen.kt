@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -51,7 +50,6 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Backup
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Dangerous
 import androidx.compose.material.icons.filled.Group
@@ -115,7 +113,6 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -314,11 +311,6 @@ fun ServerDetailScreen(
                             )
                             HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.diagnostics)) },
-                                leadingIcon = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
-                                onClick = { overflow = false; vm.runDiagnostics() },
-                            )
-                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.delete_server), color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = { Icon(Icons.Filled.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                                 onClick = { overflow = false; confirmDeleteServer = true },
@@ -367,8 +359,6 @@ fun ServerDetailScreen(
             }
         }
     }
-
-    vm.diagnostics?.let { report -> DiagnosticsDialog(report, onClose = vm::closeDiagnostics) }
 
     if (confirmUpdate) {
         val url = vm.config?.updateUrl
@@ -491,50 +481,6 @@ private fun DeleteServerDialog(
             }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.cancel)) } },
-    )
-}
-
-@Composable
-private fun DiagnosticsDialog(report: String, onClose: () -> Unit) {
-    val clipboard = com.vknxworks.craftyctrl.ui.rememberSensitiveClipboard()
-    var copied by remember { mutableStateOf(false) }
-    CtrlDialog(
-        onDismissRequest = onClose,
-        title = { Text(stringResource(R.string.diagnostics)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    stringResource(R.string.raw_replies_from_crafty_for_backups),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Surface(
-                    color = ConsoleBackground,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
-                ) {
-                    Text(
-                        report,
-                        color = ConsoleText,
-                        fontFamily = Mono,
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp,
-                        modifier = Modifier
-                            .verticalScroll(rememberScrollState())
-                            .padding(10.dp),
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    clipboard.copy(report, str(R.string.craftyctrl_diagnostics))
-                    copied = true
-                },
-            ) { Text(if (copied) stringResource(R.string.copied) else stringResource(R.string.copy)) }
-        },
-        dismissButton = { TextButton(onClick = onClose) { Text(stringResource(R.string.close)) } },
     )
 }
 

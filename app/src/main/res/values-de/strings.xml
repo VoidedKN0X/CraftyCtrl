@@ -220,7 +220,6 @@
     <string name="not_signed_in_or_the_session">Nicht angemeldet, oder die Sitzung ist abgelaufen.</string>
     <string name="invalid_url">Ungültige URL</string>
     <string name="network_error_x">Netzwerkfehler: %1$s</string>
-    <string name="x_chars_total">\n…(%1$s Zeichen insgesamt)</string>
     <string name="crafty_didn_t_send_this_server">Crafty hat die Einstellungen dieses Servers nicht gesendet.</string>
     <string name="got_a_response_that_isn_t">Antwort erhalten, die nicht von Crafty stammt. Prüfe die Paneladresse.</string>
     <string name="mojang_s_name_lookup_failed_http">Die Namenssuche von Mojang ist fehlgeschlagen (HTTP %1$s).</string>
@@ -419,7 +418,6 @@
     <string name="crafty_rejected_that_api_key">Crafty hat diesen API-Schlüssel abgelehnt.</string>
     <string name="no_servers_are_running">Keine Server laufen.</string>
     <string name="couldn_t_send_to_x">Senden an %1$s nicht möglich</string>
-    <string name="running">Läuft…</string>
     <string name="that_s_a_file_not_a">Das ist eine Datei, kein Ordner.</string>
     <string name="use_a_plain_name_without_or">Verwende einen einfachen Namen, ohne / oder \\.</string>
     <string name="folder_created">Ordner erstellt</string>
@@ -633,7 +631,6 @@
     <string name="more">Mehr</string>
     <string name="update_server_software">Serversoftware aktualisieren</string>
     <string name="clone_server">Server klonen</string>
-    <string name="diagnostics">Diagnose</string>
     <string name="update_server_software_2">Serversoftware aktualisieren?</string>
     <string name="this_server_has_no_update_url">Für diesen Server ist keine Update-URL gesetzt, daher hat Crafty nichts herunterzuladen. Trage zuerst den Download-Link der neuen Jar in den Serveroptionen ein.</string>
     <string name="crafty_downloads_the_server_jar_again">Crafty lädt die Server-Jar erneut herunter von:\n%1$s\n\nDer Server wird zuerst gestoppt und die alte Jar ersetzt. Sichere die Welt vor einem großen Versionssprung.</string>
@@ -649,8 +646,6 @@
     <string name="the_server_folder_world_configs_server">Der Serverordner (Welt, Konfigurationen, Server-Jar) wird endgültig gelöscht.</string>
     <string name="files_stay_on_the_crafty_machine">Die Dateien bleiben auf dem Crafty-Rechner; nur der Servereintrag wird entfernt.</string>
     <string name="type_the_server_name_to_confirm">Gib zur Bestätigung den Servernamen ein</string>
-    <string name="raw_replies_from_crafty_for_backups">Rohe Antworten von Crafty zu Backups und Zeitplänen. Kopiere und schick sie, damit diese Tabs repariert werden können.</string>
-    <string name="craftyctrl_diagnostics">CraftyCtrl-Diagnose</string>
     <string name="copied">Kopiert</string>
     <string name="copy">Kopieren</string>
     <string name="close">Schließen</string>

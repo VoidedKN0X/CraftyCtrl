@@ -3,6 +3,13 @@
 Each version below becomes a GitHub release. To publish a new one: bump `versionCode` and
 `versionName` in `app/build.gradle.kts`, add a matching `## [x.y.z]` section here, and push to `main`.
 
+## Unreleased
+
+### Removed
+
+- **Diagnostics is gone from the server menu.** The **⋮** menu on a server no longer has **Diagnostics**, the item that sent eight test requests to Crafty (stats, server, backups, history, panel stats, backup files and the file list) and showed the raw replies in a dialog with a Copy button. The code that made those requests and built the report is gone too. Nothing else in the menu or the app changes.
+- **Log lines are stripped from the release build.** The release build already removed debug, verbose and info log lines; it now also removes warning, error and other log lines, so nothing CraftyCtrl or a library writes to Android's log ends up in the app you install. CraftyCtrl's own code doesn't log at all.
+
 ## [2.15.1] - 2026-11-21
 
 Built and checked by CI only: nothing in this release had been run on a phone when it was published.

@@ -218,7 +218,6 @@
     <string name="not_signed_in_or_the_session">Not signed in, or the session expired.</string>
     <string name="invalid_url">Invalid URL</string>
     <string name="network_error_x">Network error: %1$s</string>
-    <string name="x_chars_total">\n…(%1$s chars total)</string>
     <string name="crafty_didn_t_send_this_server">Crafty didn\'t send this server\'s settings.</string>
     <string name="got_a_response_that_isn_t">Got a response that isn\'t from Crafty. Check the panel address.</string>
     <string name="mojang_s_name_lookup_failed_http">Mojang\'s name lookup failed (HTTP %1$s).</string>
@@ -417,7 +416,6 @@
     <string name="crafty_rejected_that_api_key">Crafty rejected that API key.</string>
     <string name="no_servers_are_running">No servers are running.</string>
     <string name="couldn_t_send_to_x">Couldn\'t send to %1$s</string>
-    <string name="running">Running…</string>
     <string name="that_s_a_file_not_a">That\'s a file, not a folder.</string>
     <string name="use_a_plain_name_without_or">Use a plain name, without / or \\.</string>
     <string name="folder_created">Folder created</string>
@@ -631,7 +629,6 @@
     <string name="more">More</string>
     <string name="update_server_software">Update server software</string>
     <string name="clone_server">Clone server</string>
-    <string name="diagnostics">Diagnostics</string>
     <string name="update_server_software_2">Update server software?</string>
     <string name="this_server_has_no_update_url">This server has no update URL set, so Crafty has nothing to download. Add the new jar\'s download link in Server options first.</string>
     <string name="crafty_downloads_the_server_jar_again">Crafty downloads the server jar again from:\n%1$s\n\nThe server is stopped first and the old jar is replaced. Back up the world before a big version jump.</string>
@@ -647,8 +644,6 @@
     <string name="the_server_folder_world_configs_server">The server folder (world, configs, server jar) is permanently deleted.</string>
     <string name="files_stay_on_the_crafty_machine">Files stay on the Crafty machine; only the server entry is removed.</string>
     <string name="type_the_server_name_to_confirm">Type the server name to confirm</string>
-    <string name="raw_replies_from_crafty_for_backups">Raw replies from Crafty for backups and schedules. Copy and send them over to get these tabs fixed.</string>
-    <string name="craftyctrl_diagnostics">CraftyCtrl diagnostics</string>
     <string name="copied">Copied</string>
     <string name="copy">Copy</string>
     <string name="close">Close</string>

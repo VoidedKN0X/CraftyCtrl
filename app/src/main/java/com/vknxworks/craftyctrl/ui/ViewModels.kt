@@ -511,45 +511,6 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
 
     val recentCommands = mutableStateListOf<String>()
 
-    /** Raw API responses for troubleshooting; null when the diagnostics view is closed. */
-    var diagnostics by mutableStateOf<String?>(null)
-        private set
-
-    fun runDiagnostics() {
-        diagnostics = str(R.string.running)
-        viewModelScope.launch {
-            val root = info?.path.orEmpty()
-            val checks = listOf(
-                Triple("GET", "/servers/$serverId/stats", null),
-                Triple("GET", "/servers/$serverId", null),
-                Triple("GET", "/servers/$serverId/backups", null),
-                Triple("GET", "/servers/$serverId/history", null),
-                Triple("GET", "/crafty/stats", null),
-                Triple("GET", "/servers/$serverId/backups/backup/${backups.data?.firstOrNull()?.id ?: "default"}/files", null),
-                Triple("GET", "/servers/$serverId/backups/backup/${backups.data?.firstOrNull()?.id ?: "default"}", null),
-                Triple("POST", "/servers/$serverId/files", """{"page":"files","path":${jsonQuote(root)}}"""),
-            )
-            val report = StringBuilder("Server $serverId\n")
-            for ((method, p, body) in checks) {
-                report.append("\n── $method /api/v2$p").append(body?.let { " $it" }.orEmpty()).append('\n')
-                // Throws when the app locks while the checks run; stop there instead of crashing.
-                val result = try {
-                    api.raw(p, body)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    report.append(e.userMessage()).append('\n')
-                    diagnostics = report.toString()
-                    return@launch
-                }
-                report.append(result).append('\n')
-                diagnostics = report.toString()
-            }
-        }
-    }
-
-    private fun jsonQuote(s: String) = "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
-
     // ------------------------------------------------------------ server info
 
     /** Name, type (Java/Bedrock) and folder; loaded once. */
@@ -917,10 +878,6 @@ class ServerDetailViewModel(private val api: CraftyApi, val serverId: String) : 
     /** Shows a short message in the snackbar. */
     fun notify(text: String) {
         viewModelScope.launch { _messages.send(text) }
-    }
-
-    fun closeDiagnostics() {
-        diagnostics = null
     }
 
     private val _messages = Channel<String>(Channel.BUFFERED)
